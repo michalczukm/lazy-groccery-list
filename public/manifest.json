@@ -1,0 +1,14 @@
+{
+  "name": "Lista Zakupów AI",
+  "short_name": "Zakupy AI",
+  "description": "Inteligentna lista zakupów z Mistral AI",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f0f1a",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

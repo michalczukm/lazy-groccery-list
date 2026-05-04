@@ -1,0 +1,18 @@
+{
+  "name": "lazy-shopping-list",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy --minify",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
+  },
+  "dependencies": {
+    "hono": "^4.12.16",
+    "htm": "^3.1.1",
+    "htmx.org": "^2.0.10"
+  },
+  "devDependencies": {
+    "typed-htmx": "^0.3.1",
+    "wrangler": "^4.87.0"
+  }
+}
