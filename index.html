@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Zakupy AI</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Zakupy AI">
+  <style>
+    :root {
+      --navy:    #1a1a2e;
+      --navy-dk: #0f0f1a;
+      --accent:  #a8edea;
+      --accent2: #fed6e3;
+      --green:   #10b981;
+      --red:     #ef4444;
+      --text:    #1a1a2e;
+      --muted:   #999;
+      --border:  #f0f0f0;
+      --card:    #ffffff;
+      --safe-top:    env(safe-area-inset-top,    0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html, body { height:100%; overflow:hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--navy-dk);
+      color: var(--text);
+      display:flex; flex-direction:column;
+      max-width:480px; margin:0 auto; height:100%;
+    }
+
+    /* HEADER */
+    #app-header {
+      background:var(--navy); flex-shrink:0;
+      padding:14px 20px;
+      padding-top:calc(14px + var(--safe-top));
+      color:white;
+    }
+    #header-row { display:flex; align-items:center; justify-content:space-between; }
+    #header-title { font-size:19px; font-weight:700; letter-spacing:-0.4px; }
+    #header-sub   { font-size:12px; opacity:0.4; margin-top:2px; }
+    #api-key-btn {
+      background:rgba(255,255,255,0.1); border:none; color:white;
+      padding:6px 12px; border-radius:99px; font-size:12px; cursor:pointer;
+      display:flex; align-items:center; gap:5px; transition:background 0.2s;
+      font-family:inherit; white-space:nowrap;
+    }
+    #api-key-btn:active { background:rgba(255,255,255,0.2); }
+    .key-dot { width:7px; height:7px; border-radius:50%; background:#f59e0b; transition:background 0.3s; }
+    .key-dot.ok { background:var(--green); }
+
+    /* MAIN */
+    #main-content { flex:1; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; }
+
+    /* VIEWS */
+    .view { display:none; padding:16px; padding-bottom:calc(80px + var(--safe-bottom)); min-height:100%; }
+    .view.active { display:block; }
+
+    /* BOTTOM NAV */
+    #bottom-nav {
+      display:flex; background:var(--navy);
+      border-top:1px solid rgba(255,255,255,0.07);
+      padding-bottom:var(--safe-bottom); flex-shrink:0;
+    }
+    .nav-item {
+      flex:1; display:flex; flex-direction:column;
+      align-items:center; gap:3px; padding:10px 8px;
+      background:none; border:none; cursor:pointer;
+      color:rgba(255,255,255,0.35); transition:color 0.2s;
+      font-size:10px; letter-spacing:0.3px; font-family:inherit;
+    }
+    .nav-item .ni { font-size:20px; }
+    .nav-item.active { color:var(--accent); }
+
+    /* MODAL */
+    #modal-overlay {
+      position:fixed; inset:0; background:rgba(0,0,0,0.6);
+      z-index:300; display:flex; align-items:flex-end;
+    }
+    #modal-overlay.hidden { display:none; }
+    .modal-sheet {
+      width:100%; background:white; border-radius:24px 24px 0 0;
+      padding:28px 20px calc(24px + var(--safe-bottom));
+      max-width:480px; margin:0 auto;
+      max-height:92vh; overflow-y:auto;
+    }
+    .modal-handle {
+      width:38px; height:4px; border-radius:99px;
+      background:#e0e0e0; margin:0 auto 22px;
+    }
+    .modal-title { font-size:18px; font-weight:700; margin-bottom:6px; }
+    .modal-sub   { font-size:13px; color:var(--muted); margin-bottom:18px; line-height:1.5; }
+    .field-label { font-size:12px; color:var(--muted); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:6px; }
+
+    .text-input {
+      width:100%; padding:13px 15px; border:2px solid #e5e5e5;
+      border-radius:12px; font-size:15px; font-family:inherit;
+      outline:none; transition:border-color 0.2s; color:var(--text);
+    }
+    .text-input:focus { border-color:#667eea; }
+
+    .model-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:20px; }
+    .model-card {
+      border:2px solid #e5e5e5; border-radius:12px; padding:12px;
+      cursor:pointer; transition:all 0.15s;
+    }
+    .model-card.selected { border-color:var(--navy); background:#f4f4ff; }
+    .model-card .mc-name  { font-size:13px; font-weight:600; margin-bottom:2px; }
+    .model-card .mc-desc  { font-size:11px; color:var(--muted); line-height:1.4; }
+    .model-card .mc-price { font-size:11px; color:var(--green); font-weight:600; margin-top:4px; }
+
+    .security-note {
+      background:#fffbea; border:1px solid #f0d060; border-radius:10px;
+      padding:11px 13px; font-size:12px; color:#6a4f10;
+      margin-bottom:16px; line-height:1.5;
+    }
+
+    /* BUTTONS */
+    .btn {
+      display:block; width:100%; padding:15px; border:none;
+      border-radius:14px; font-size:15px; font-weight:600;
+      cursor:pointer; transition:opacity 0.15s, transform 0.1s; font-family:inherit;
+    }
+    .btn:active   { transform:scale(0.98); opacity:0.85; }
+    .btn:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
+    .btn-primary   { background:var(--navy); color:white; margin-top:12px; }
+    .btn-secondary { background:#f0f0f0; color:#555; margin-top:8px; }
+    .btn-danger    { background:#fdeaea; color:#b03030; }
+    .btn-small     { padding:8px 14px; width:auto; font-size:13px; }
+    .btn-ghost     { background:none; color:var(--red); font-size:13px; margin-top:8px; border:none; cursor:pointer; font-family:inherit; width:100%; padding:10px; }
+
+    /* SETUP SCREEN */
+    #setup-screen {
+      display:none; flex-direction:column; align-items:center;
+      justify-content:center; min-height:80vh; padding:24px; text-align:center;
+    }
+    #setup-screen.active { display:flex; }
+    .setup-icon  { font-size:60px; margin-bottom:20px; }
+    .setup-title { font-size:22px; font-weight:700; color:white; margin-bottom:8px; }
+    .setup-desc  { font-size:14px; color:rgba(255,255,255,0.45); line-height:1.7; margin-bottom:28px; }
+    .setup-card  { background:white; border-radius:20px; padding:24px; width:100%; text-align:left; }
+
+    /* STATUS BADGE */
+    .status-badge {
+      display:flex; align-items:center; gap:8px;
+      padding:10px 14px; border-radius:12px;
+      margin-bottom:14px; font-size:13px; line-height:1.4;
+    }
+    .status-badge.ready { background:#e6faf0; color:#1a7a45; }
+    .status-badge.error { background:#fdeaea; color:#b03030; }
+    .status-badge.idle  { background:#f2f2f2; color:#666; }
+    .sdot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .status-badge.ready .sdot { background:#1a7a45; }
+    .status-badge.error .sdot { background:#b03030; }
+    .status-badge.idle  .sdot { background:#aaa; }
+
+    textarea {
+      width:100%; height:190px; resize:none;
+      border:2px solid #e5e5e5; border-radius:16px;
+      padding:14px; font-size:15px; font-family:inherit;
+      outline:none; transition:border-color 0.2s; background:white; color:var(--text);
+    }
+    textarea:focus { border-color:#667eea; }
+    textarea::placeholder { color:#c0c0c0; }
+
+    /* PROGRESS */
+    .progress-card {
+      background:var(--navy); color:white;
+      border-radius:18px; padding:18px 20px; margin-bottom:14px;
+    }
+    .list-title {
+      font-size:17px; font-weight:700; margin-bottom:12px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .progress-track { height:5px; background:rgba(255,255,255,0.15); border-radius:99px; overflow:hidden; }
+    .progress-fill  {
+      height:100%; border-radius:99px;
+      background:linear-gradient(90deg, var(--accent), var(--accent2));
+      transition:width 0.4s ease;
+    }
+    .progress-label { font-size:12px; opacity:0.5; margin-top:7px; }
+
+    .save-bar { display:flex; gap:8px; margin-bottom:14px; }
+    .save-bar .btn { margin-top:0; }
+
+    /* CATEGORIES */
+    .cat-block { margin-bottom:14px; }
+    .cat-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:6px 4px 8px; cursor:pointer; user-select:none;
+    }
+    .cat-header-left {
+      display:flex; align-items:center; gap:7px;
+      font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
+      color:rgba(255,255,255,0.45);
+    }
+    .cat-count { opacity:0.6; }
+    .cat-done-badge {
+      background:rgba(168,237,234,0.2); color:var(--accent);
+      font-size:10px; padding:2px 8px; border-radius:99px;
+    }
+    .cat-chevron { color:rgba(255,255,255,0.3); font-size:11px; transition:transform 0.3s ease; }
+    .cat-chevron.up { transform:rotate(-90deg); }
+    .cat-grid {
+      display:grid; grid-template-rows:1fr;
+      transition:grid-template-rows 0.3s ease, opacity 0.25s ease; opacity:1;
+    }
+    .cat-grid.collapsed { grid-template-rows:0fr; opacity:0; }
+    .cat-grid-inner { overflow:hidden; min-height:0; }
+    .cat-items { background:var(--card); border-radius:16px; box-shadow:0 2px 14px rgba(0,0,0,0.07); overflow:hidden; }
+
+    /* ITEMS */
+    .item {
+      display:flex; align-items:center; padding:13px 15px;
+      border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.15s;
+    }
+    .item:last-child { border-bottom:none; }
+    .item:active { background:#f8f8f8; }
+    .cb {
+      width:24px; height:24px; border-radius:7px;
+      border:2px solid #d8d8d8; flex-shrink:0; margin-right:12px;
+      display:flex; align-items:center; justify-content:center; transition:all 0.18s;
+    }
+    .item.done .cb { background:var(--navy); border-color:var(--navy); }
+    .item-name { font-size:15px; transition:color 0.18s; }
+    .item.done .item-name { color:#c0c0c0; text-decoration:line-through; }
+
+    /* HISTORY */
+    .section-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+    .section-top h2 { color:white; font-size:18px; }
+    .hist-card {
+      background:var(--card); border-radius:16px;
+      padding:16px; margin-bottom:10px;
+      box-shadow:0 2px 10px rgba(0,0,0,0.07);
+      cursor:pointer; position:relative; transition:transform 0.12s;
+    }
+    .hist-card:active { transform:scale(0.99); }
+    .hist-date  { font-size:11px; color:var(--muted); margin-bottom:3px; }
+    .hist-title { font-size:15px; font-weight:700; margin-bottom:10px; }
+    .hist-tags  { display:flex; flex-wrap:wrap; gap:6px; }
+    .hist-tag   { font-size:11px; padding:3px 9px; background:#f2f2f2; border-radius:99px; color:#666; }
+    .hist-del   {
+      position:absolute; top:12px; right:12px;
+      background:none; border:none; color:#ddd; font-size:17px;
+      cursor:pointer; padding:4px; transition:color 0.2s;
+    }
+    .hist-del:hover { color:var(--red); }
+    .empty-state { text-align:center; padding:60px 24px; color:rgba(255,255,255,0.3); }
+    .empty-state .big { font-size:48px; margin-bottom:12px; }
+    .empty-state p { font-size:14px; line-height:1.7; }
+
+    /* LOADING */
+    #loading-overlay {
+      position:fixed; inset:0; background:rgba(10,10,22,0.75);
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center; z-index:500;
+    }
+    #loading-overlay.hidden { display:none; }
+    .spinner {
+      width:38px; height:38px;
+      border:3px solid rgba(255,255,255,0.15);
+      border-top-color:var(--accent); border-radius:50%;
+      animation:spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    #loading-text { color:rgba(255,255,255,0.7); margin-top:15px; font-size:14px; }
+
+    /* TOAST */
+    #toast {
+      position:fixed; bottom:calc(74px + var(--safe-bottom) + 10px);
+      left:50%; transform:translateX(-50%) translateY(8px);
+      background:var(--navy); color:white;
+      padding:11px 20px; border-radius:99px;
+      font-size:13px; white-space:nowrap;
+      opacity:0; transition:opacity 0.25s, transform 0.25s;
+      z-index:400; pointer-events:none;
+    }
+    #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    .hidden { display:none !important; }
+
+    /* KEY INPUT WRAPPER */
+    .input-wrap { position:relative; margin-bottom:20px; }
+    .input-wrap .reveal-btn {
+      position:absolute; right:10px; top:50%; transform:translateY(-50%);
+      background:none; border:none; color:var(--muted);
+      font-size:12px; cursor:pointer; font-family:inherit; padding:4px 8px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading-overlay" class="hidden">
+  <div class="spinner"></div>
+  <div id="loading-text">Przetwarzam…</div>
+</div>
+<div id="toast"></div>
+
+<!-- SETTINGS MODAL -->
+<div id="modal-overlay" class="hidden" onclick="handleOverlayClick(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚙️ Konfiguracja API</div>
+    <div class="modal-sub">Klucz jest zapisywany w localStorage tej przeglądarki — nie trafia nigdzie poza Mistral API.</div>
+
+    <div class="security-note">
+      🔒 localStorage jest dostępny tylko przez JS z tej samej domeny/portu. Dla osobistej PWA to wystarczające — nie wklejaj klucza z uprawnieniami szerszymi niż <strong>Inference</strong>.
+    </div>
+
+    <div class="field-label">Klucz API Mistral</div>
+    <div class="input-wrap">
+      <input type="password" id="key-input" class="text-input"
+        placeholder="••••••••••••••••••••••••"
+        style="padding-right:72px">
+      <button class="reveal-btn" onclick="toggleReveal('key-input', this)">Pokaż</button>
+    </div>
+
+    <div class="field-label" style="margin-bottom:10px">Model</div>
+    <div class="model-grid">
+      <div class="model-card selected" data-model="mistral-small-latest" onclick="selectModel(this)">
+        <div class="mc-name">Small Latest ⭐</div>
+        <div class="mc-desc">Zalecany. Dobry do kategoryzacji po polsku.</div>
+        <div class="mc-price">~$0.10 / 1M</div>
+      </div>
+      <div class="model-card" data-model="open-mistral-nemo" onclick="selectModel(this)">
+        <div class="mc-name">Nemo</div>
+        <div class="mc-desc">Najtańszy open-source. Może słabiej po polsku.</div>
+        <div class="mc-price">~$0.03 / 1M</div>
+      </div>
+      <div class="model-card" data-model="mistral-medium-latest" onclick="selectModel(this)">
+        <div class="mc-name">Medium Latest</div>
+        <div class="mc-desc">Mocniejszy, gdy Small zawodzi.</div>
+        <div class="mc-price">~$0.40 / 1M</div>
+      </div>
+      <div class="model-card" data-model="mistral-large-latest" onclick="selectModel(this)">
+        <div class="mc-name">Large Latest</div>
+        <div class="mc-desc">Najlepszy model Mistral.</div>
+        <div class="mc-price">~$2.00 / 1M</div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="saveSettings()">💾 Zapisz ustawienia</button>
+    <button class="btn-ghost" onclick="clearApiKey()">🗑 Usuń klucz API</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header id="app-header">
+  <div id="header-row">
+    <div>
+      <div id="header-title">🛒 Zakupy AI</div>
+      <div id="header-sub">Nowa lista</div>
+    </div>
+    <button id="api-key-btn" onclick="openModal()">
+      <div class="key-dot" id="key-dot"></div>
+      <span id="key-btn-label">Klucz API</span>
+    </button>
+  </div>
+</header>
+
+<main id="main-content">
+
+  <!-- SETUP SCREEN (no key) -->
+  <div id="setup-screen">
+    <div class="setup-icon">🔑</div>
+    <div class="setup-title">Potrzebny klucz API</div>
+    <div class="setup-desc">Podaj klucz Mistral API — AI skategoryzuje Twoje listy zakupów lokalnie, bez żadnego serwera pośredniego.</div>
+    <div class="setup-card">
+      <div class="field-label">Klucz API Mistral</div>
+      <div class="input-wrap">
+        <input type="password" id="setup-key-input" class="text-input"
+          placeholder="••••••••••••••••••••••••"
+          style="padding-right:72px">
+        <button class="reveal-btn" onclick="toggleReveal('setup-key-input', this)">Pokaż</button>
+      </div>
+      <div class="security-note" style="margin-bottom:0">
+        Klucz wygenerujesz na <strong>console.mistral.ai</strong> → API Keys.<br>
+        Użyj tylko uprawnień <em>Inference</em>.
+      </div>
+      <button class="btn btn-primary" onclick="saveFromSetup()">Zapisz i zacznij →</button>
+    </div>
+  </div>
+
+  <!-- INPUT VIEW -->
+  <section id="view-input" class="view">
+    <div class="status-badge idle" id="status-badge">
+      <div class="sdot"></div>
+      <span id="status-text">Gotowy — wpisz listę zakupów</span>
+    </div>
+
+    <textarea id="shopping-input"
+      placeholder="Wklej lub wpisz listę zakupów…&#10;&#10;Np:&#10;Mleko&#10;Jogurt grecki&#10;Chleb&#10;Filet z kurczaka&#10;Pomidory 600g&#10;(lub cokolwiek ze notatkami w nawiasach)"></textarea>
+
+    <button id="process-btn" class="btn btn-primary" onclick="processWithMistral()">
+      ✨ Zrób listę z AI
+    </button>
+  </section>
+
+  <!-- LIST VIEW -->
+  <section id="view-list" class="view">
+    <div class="progress-card">
+      <div class="list-title" id="list-title-label">Lista zakupów</div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+      <div class="progress-label" id="progress-label">0 / 0</div>
+    </div>
+    <div class="save-bar hidden" id="save-bar">
+      <button class="btn btn-primary" style="flex:1" onclick="saveCurrentList()">💾 Zapisz listę</button>
+      <button class="btn btn-secondary" style="flex:0;padding:15px 18px;width:auto;margin:0" onclick="discardCurrentList()">✕</button>
+    </div>
+    <div id="categories-container"></div>
+  </section>
+
+  <!-- HISTORY VIEW -->
+  <section id="view-history" class="view">
+    <div class="section-top">
+      <h2>Historia list</h2>
+      <button class="btn btn-danger btn-small" onclick="clearAllHistory()">🗑 Wyczyść</button>
+    </div>
+    <div id="history-container"></div>
+  </section>
+
+</main>
+
+<nav id="bottom-nav">
+  <button class="nav-item active" id="nav-input" onclick="navigateTo('input')">
+    <span class="ni">✏️</span>Nowa
+  </button>
+  <button class="nav-item" id="nav-list" onclick="navigateTo('list')">
+    <span class="ni">📋</span>Lista
+  </button>
+  <button class="nav-item" id="nav-history" onclick="navigateTo('history')">
+    <span class="ni">📚</span>Historia
+  </button>
+</nav>
+
+<script>
+// ── CONFIG ─────────────────────────────────
+const LS_KEY    = 'zakupy_api_key';
+const LS_MODEL  = 'zakupy_model';
+const DEF_MODEL = 'mistral-small-latest';
+
+const getKey   = () => localStorage.getItem(LS_KEY)   || '';
+const getModel = () => localStorage.getItem(LS_MODEL) || DEF_MODEL;
+
+// ── INDEXEDDB ──────────────────────────────
+const DB = (() => {
+  let db;
+  const open = () => new Promise((res,rej) => {
+    const r = indexedDB.open('ZakupyAI', 1);
+    r.onupgradeneeded = e => e.target.result.createObjectStore('lists',{keyPath:'id'});
+    r.onsuccess = e => { db = e.target.result; res(); };
+    r.onerror   = () => rej(r.error);
+  });
+  const tx   = m => db.transaction('lists',m).objectStore('lists');
+  const wrap = r => new Promise((res,rej) => { r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+  return {
+    init:   open,
+    save:   l  => wrap(tx('readwrite').put(l)),
+    getAll: () => wrap(tx('readonly').getAll()).then(a => a.sort((a,b)=>b.date-a.date)),
+    del:    id => wrap(tx('readwrite').delete(id)),
+    clear:  () => wrap(tx('readwrite').clear()),
+  };
+})();
+
+// ── MODAL ──────────────────────────────────
+function openModal() {
+  document.getElementById('key-input').value = getKey();
+  syncModelCards(getModel());
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+function closeModal() { document.getElementById('modal-overlay').classList.add('hidden'); }
+function handleOverlayClick(e) { if (e.target.id === 'modal-overlay') closeModal(); }
+
+function syncModelCards(model) {
+  document.querySelectorAll('.model-card').forEach(c =>
+    c.classList.toggle('selected', c.dataset.model === model));
+}
+function selectModel(el) {
+  document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function toggleReveal(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  inp.type  = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? 'Pokaż' : 'Ukryj';
+}
+
+function saveSettings() {
+  const key = document.getElementById('key-input').value.trim();
+  if (!key) { toast('Wpisz klucz API'); return; }
+  const sel = document.querySelector('.model-card.selected');
+  localStorage.setItem(LS_KEY,   key);
+  localStorage.setItem(LS_MODEL, sel ? sel.dataset.model : DEF_MODEL);
+  updateKeyIndicator();
+  closeModal();
+  toast('Ustawienia zapisane ✓');
+  showMainApp();
+}
+function saveFromSetup() {
+  const key = document.getElementById('setup-key-input').value.trim();
+  if (!key) { toast('Wpisz klucz API'); return; }
+  localStorage.setItem(LS_KEY,   key);
+  localStorage.setItem(LS_MODEL, DEF_MODEL);
+  updateKeyIndicator();
+  showMainApp();
+  toast('Klucz zapisany ✓');
+}
+function clearApiKey() {
+  if (!confirm('Usunąć zapisany klucz API?')) return;
+  localStorage.removeItem(LS_KEY);
+  updateKeyIndicator();
+  closeModal();
+  checkKeyAndRoute();
+  toast('Klucz usunięty');
+}
+function updateKeyIndicator() {
+  const has = !!getKey();
+  document.getElementById('key-dot').className = 'key-dot' + (has ? ' ok' : '');
+  document.getElementById('key-btn-label').textContent =
+    has ? getModel().replace('-latest','') : 'Klucz API';
+}
+
+// ── ROUTING ────────────────────────────────
+function checkKeyAndRoute() {
+  if (getKey()) showMainApp(); else showSetupScreen();
+}
+function showSetupScreen() {
+  document.getElementById('setup-screen').classList.add('active');
+  document.getElementById('bottom-nav').style.display = 'none';
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+}
+function showMainApp() {
+  document.getElementById('setup-screen').classList.remove('active');
+  document.getElementById('bottom-nav').style.display = 'flex';
+  navigateTo('input');
+}
+
+// ── MISTRAL API ────────────────────────────
+const SYSTEM = `Jesteś asystentem do kategoryzowania list zakupów po polsku.
+Dostajesz surową listę produktów (po jednym na linię, mogą być notatki w nawiasach).
+Przypisz każdy produkt do odpowiedniej kategorii. Zachowaj ORYGINALNE nazwy produktów razem z uwagami w nawiasach.
+
+Dostępne kategorie (użyj tylko tych, które mają produkty):
+- nabiał 🥛 : mleko, jogurty, sery, twarogi, jajka, śmietana, masło, skyr, serek, actimel
+- mięso i wędliny 🥩 : mięso surowe, kurczak, wędlina, parówki, kiełbasa, szynka
+- warzywa 🥦 : wszystkie warzywa świeże, włoszczyzna, cukinia, papryka
+- owoce 🍎 : wszystkie owoce świeże
+- pieczywo 🍞 : chleb, bułki, bagietki, tortille
+- napoje 🥤 : soki, woda, napoje gazowane
+- suche produkty 🌾 : płatki, ryż, makaron, kasza, mąka, orzechy
+- przyprawy i sosy 🧂 : oleje, oliwy, sosy, octy, musztarda
+- gotowe dania 🍱 : gotowe sałatki, dania gotowe, mrożonki
+- chemia i higiena 🧴 : środki czystości, kosmetyki, artykuły higieny
+- inne 🛒 : wszystko co nie pasuje do powyższych
+
+Zwróć WYŁĄCZNIE poprawny JSON bez żadnego markdown ani komentarzy:
+{"categories":[{"name":"nabiał","emoji":"🥛","items":["Jogurt grecki","Skyr"]}]}`;
+
+async function processWithMistral() {
+  const raw = document.getElementById('shopping-input').value.trim();
+  if (!raw)     { toast('Wpisz listę zakupów 📝'); return; }
+  if (!getKey()) { openModal(); return; }
+
+  const model = getModel();
+  setStatus('idle', `Wysyłam do ${model.replace('-latest','')}…`);
+  showLoading('Mistral AI kategoryzuje listę…');
+
+  try {
+    const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+      method:  'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${getKey()}` },
+      body: JSON.stringify({
+        model, max_tokens:1000, temperature:0.1,
+        messages:[
+          { role:'system', content:SYSTEM },
+          { role:'user',   content:`Skategoryzuj tę listę zakupów:\n${raw}` },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({}));
+      if (res.status === 401) throw new Error('Nieprawidłowy klucz API. Sprawdź ustawienia.');
+      if (res.status === 429) throw new Error('Limit zapytań przekroczony. Spróbuj za chwilę.');
+      throw new Error(err?.message || `Błąd API (${res.status})`);
+    }
+
+    const data    = await res.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    const clean   = content.replace(/^```(?:json)?\n?/m,'').replace(/\n?```$/m,'').trim();
+
+    let parsed;
+    try { parsed = JSON.parse(clean); }
+    catch { throw new Error('AI zwróciło niepoprawny JSON. Spróbuj ponownie.'); }
+    if (!Array.isArray(parsed?.categories)) throw new Error('Brak kategorii w odpowiedzi AI.');
+
+    currentList = {
+      id: Date.now(), title:'Zakupy ' + fmtDate(Date.now()),
+      date: Date.now(), saved:false, model,
+      categories: parsed.categories
+        .filter(c => c.items?.length)
+        .map(c => ({
+          name:c.name||'inne', emoji:c.emoji||'📦',
+          collapsed:false, manualExpand:false,
+          items:c.items.map(n=>({name:n, checked:false})),
+        })),
+    };
+
+    hideLoading();
+    setStatus('ready', `Gotowe — ${model.replace('-latest','')}`);
+    renderList();
+    navigateTo('list');
+  } catch(e) {
+    hideLoading();
+    setStatus('error', e.message);
+    toast(e.message, 4000);
+  }
+}
+
+// ── LIST ───────────────────────────────────
+let currentList = null;
+
+function renderList() {
+  const container = document.getElementById('categories-container');
+  if (!currentList) {
+    container.innerHTML =
+      `<div class="empty-state"><div class="big">📝</div>
+       <p>Brak aktywnej listy.<br>Stwórz nową w zakładce "Nowa".</p></div>`;
+    document.getElementById('save-bar').classList.add('hidden');
+    document.getElementById('list-title-label').textContent = 'Lista zakupów';
+    document.getElementById('progress-fill').style.width = '0%';
+    document.getElementById('progress-label').textContent = '0 / 0';
+    return;
+  }
+
+  document.getElementById('list-title-label').textContent = currentList.title;
+  document.getElementById('save-bar').classList.toggle('hidden', currentList.saved);
+
+  const all  = currentList.categories.flatMap(c=>c.items);
+  const done = all.filter(i=>i.checked).length;
+  document.getElementById('progress-fill').style.width = all.length ? `${done/all.length*100}%` : '0%';
+  document.getElementById('progress-label').textContent = `${done} / ${all.length}`;
+
+  container.innerHTML = '';
+  currentList.categories.forEach((cat,ci) => {
+    const catDone = cat.items.filter(i=>i.checked).length;
+    const allDone = catDone === cat.items.length && cat.items.length > 0;
+    const block = document.createElement('div');
+    block.className = 'cat-block';
+    block.innerHTML = `
+      <div class="cat-header" onclick="toggleCat(${ci})">
+        <div class="cat-header-left">
+          <span>${cat.emoji}</span><span>${escHtml(cat.name)}</span>
+          <span class="cat-count">(${catDone}/${cat.items.length})</span>
+          ${allDone ? '<span class="cat-done-badge">✓ gotowe</span>' : ''}
+        </div>
+        <span class="cat-chevron ${cat.collapsed ? 'up' : ''}">▼</span>
+      </div>
+      <div class="cat-grid ${cat.collapsed ? 'collapsed' : ''}">
+        <div class="cat-grid-inner">
+          <div class="cat-items">
+            ${cat.items.map((item,ii)=>`
+              <div class="item ${item.checked?'done':''}" onclick="toggleItem(${ci},${ii})">
+                <div class="cb">${item.checked
+                  ? `<svg width="13" height="10" viewBox="0 0 13 10" fill="none">
+                       <path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2"
+                         stroke-linecap="round" stroke-linejoin="round"/></svg>` : ''}</div>
+                <span class="item-name">${escHtml(item.name)}</span>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>`;
+    container.appendChild(block);
+  });
+}
+
+function toggleItem(ci,ii) {
+  const cat  = currentList.categories[ci];
+  cat.items[ii].checked = !cat.items[ii].checked;
+  if (cat.items[ii].checked && cat.items.every(i=>i.checked) && !cat.manualExpand) {
+    setTimeout(()=>{ cat.collapsed=true; renderList(); }, 450);
+  } else if (!cat.items[ii].checked) {
+    cat.collapsed=false; cat.manualExpand=false;
+  }
+  if (currentList.saved) DB.save(currentList);
+  renderList();
+}
+function toggleCat(ci) {
+  const cat = currentList.categories[ci];
+  cat.collapsed    = !cat.collapsed;
+  cat.manualExpand = !cat.collapsed;
+  renderList();
+}
+async function saveCurrentList() {
+  currentList.saved = true;
+  await DB.save(currentList);
+  document.getElementById('save-bar').classList.add('hidden');
+  toast('Lista zapisana 💾');
+}
+function discardCurrentList() {
+  if (!confirm('Odrzucić bieżącą listę?')) return;
+  currentList = null; renderList(); navigateTo('input');
+}
+
+// ── HISTORY ────────────────────────────────
+async function renderHistory() {
+  const con   = document.getElementById('history-container');
+  const lists = await DB.getAll();
+  if (!lists.length) {
+    con.innerHTML =
+      `<div class="empty-state"><div class="big">📭</div>
+       <p>Brak zapisanych list.<br>Stwórz pierwszą w zakładce "Nowa".</p></div>`;
+    return;
+  }
+  con.innerHTML = lists.map(l => {
+    const items = l.categories.flatMap(c=>c.items);
+    const done  = items.filter(i=>i.checked).length;
+    const cats  = l.categories.map(c=>`<span class="hist-tag">${c.emoji} ${escHtml(c.name)}</span>`).join('');
+    const mdl   = l.model ? `<span class="hist-tag">🤖 ${l.model.replace('-latest','')}</span>` : '';
+    return `
+      <div class="hist-card" onclick="loadHistory(${l.id})">
+        <button class="hist-del" onclick="event.stopPropagation();delHistory(${l.id})">🗑</button>
+        <div class="hist-date">${fmtDateFull(l.date)}</div>
+        <div class="hist-title">${escHtml(l.title)}</div>
+        <div class="hist-tags">
+          <span class="hist-tag">📦 ${items.length} produktów</span>
+          <span class="hist-tag">✓ ${done} kupionych</span>
+          ${mdl}${cats}
+        </div>
+      </div>`;
+  }).join('');
+}
+async function loadHistory(id) {
+  const lists = await DB.getAll();
+  const l = lists.find(l=>l.id===id); if (!l) return;
+  l.categories.forEach(c=>{ c.collapsed??=false; c.manualExpand??=false; });
+  currentList = l; renderList(); navigateTo('list');
+}
+async function delHistory(id) {
+  if (!confirm('Usunąć tę listę?')) return;
+  await DB.del(id);
+  if (currentList?.id===id) currentList=null;
+  renderHistory(); toast('Lista usunięta');
+}
+async function clearAllHistory() {
+  if (!confirm('Usunąć WSZYSTKIE zapisane listy?')) return;
+  await DB.clear();
+  if (currentList?.saved) currentList=null;
+  renderHistory(); toast('Historia wyczyszczona 🗑');
+}
+
+// ── NAV ────────────────────────────────────
+const META = {
+  input:   { title:'🛒 Zakupy AI', sub:'Nowa lista' },
+  list:    { title:'📋 Lista',     sub:'' },
+  history: { title:'📚 Historia',  sub:'Poprzednie listy' },
+};
+function navigateTo(name) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+  const m = META[name];
+  document.getElementById('header-title').textContent = m.title;
+  document.getElementById('header-sub').textContent =
+    name==='list' && currentList ? currentList.title : m.sub;
+  if (name==='history') renderHistory();
+  if (name==='list')    renderList();
+}
+
+// ── UTILS ──────────────────────────────────
+function setStatus(type, text) {
+  document.getElementById('status-badge').className = 'status-badge ' + type;
+  document.getElementById('status-text').textContent = text;
+}
+function showLoading(t) {
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  document.getElementById('loading-text').textContent = t||'Ładuję…';
+}
+function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
+
+let _toastTimer;
+function toast(msg, dur=2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(()=>el.classList.remove('show'), dur);
+}
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtDate(ts) {
+  return new Date(ts).toLocaleDateString('pl-PL',{day:'numeric',month:'short'});
+}
+function fmtDateFull(ts) {
+  return new Date(ts).toLocaleString('pl-PL',{
+    day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'
+  });
+}
+
+// ── SERVICE WORKER ─────────────────────────
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+
+// ── INIT ───────────────────────────────────
+DB.init().then(()=>{ updateKeyIndicator(); checkKeyAndRoute(); });
+</script>
+</body>
+</html>
