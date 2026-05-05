@@ -80,7 +80,7 @@ function clearApiKey() {
 function updateKeyIndicator() {
   const has = !!getKey()
   const dot = document.getElementById('key-dot')
-  if (dot) dot.className = `w-2 h-2 rounded-full ${has ? 'bg-[#10b981]' : 'bg-amber-400'}`
+  if (dot) dot.className = `w-2 h-2 rounded-full ${has ? 'bg-emerald-500' : 'bg-amber-400'}`
   const label = document.getElementById('key-btn-label')
   if (label) label.textContent = has ? 'Mistral' : 'Klucz API'
 }
@@ -323,20 +323,22 @@ function ShoppingList({ list, onSave, onDiscard }) {
 
   return html`
     <div>
-      <div class="bg-navy text-white rounded-[18px] p-5 mb-4">
-        <div class="text-[17px] font-bold mb-3 truncate">${list.title}</div>
-        <div class="h-[5px] bg-white/15 rounded-full overflow-hidden">
+      <div class="mb-5 pt-1">
+        <div class="flex items-baseline justify-between mb-2">
+          <div class="text-[17px] font-semibold text-white/90 truncate pr-3">${list.title}</div>
+          <div class="text-[12px] text-white/35 shrink-0">${done} / ${allItems.length}</div>
+        </div>
+        <div class="h-[2px] bg-white/[0.07] rounded-full overflow-hidden">
           <div class="progress-fill h-full rounded-full"
             style=${{ width: allItems.length ? `${done / allItems.length * 100}%` : '0%' }} />
         </div>
-        <div class="text-[12px] opacity-50 mt-2">${done} / ${allItems.length}</div>
       </div>
 
       ${cats.map((cat, ci) => {
         const catDone = cat.items.filter(i => i.checked).length
         const catAllDone = catDone === cat.items.length && cat.items.length > 0
         return html`
-          <div class="mb-3" key=${cat.name + ci}>
+          <div class="border-t border-white/[0.07] pt-1 mb-1" key=${cat.name + ci}>
             <div class="flex items-center justify-between py-2 px-1 cursor-pointer select-none"
               onClick=${() => toggleCat(ci)}>
               <div class="flex items-center gap-2 text-[11px] tracking-widest uppercase text-white/45">
@@ -349,16 +351,16 @@ function ShoppingList({ list, onSave, onDiscard }) {
             </div>
             <div class="cat-grid ${cat.collapsed ? 'collapsed' : ''}">
               <div class="cat-grid-inner">
-                <div class="bg-white rounded-2xl overflow-hidden shadow-sm">
+                <div>
                   ${cat.items.map((item, ii) => html`
-                    <div class="flex items-center px-4 py-[13px] border-b border-gray-100 last:border-0 cursor-pointer active:bg-gray-50 ${item.checked ? 'opacity-60' : ''}"
+                    <div class="flex items-center px-1 py-[13px] border-b border-white/[0.07] last:border-0 cursor-pointer active:opacity-70"
                       onClick=${() => toggleItem(ci, ii)} key=${ii}>
-                      <div class="w-6 h-6 rounded-[7px] border-2 shrink-0 mr-3 flex items-center justify-center transition-all ${item.checked ? 'bg-navy border-navy' : 'border-gray-300'}">
-                        ${item.checked && html`<svg width="13" height="10" viewBox="0 0 13 10" fill="none">
-                          <path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <div class="w-5 h-5 rounded-[6px] border shrink-0 mr-3 flex items-center justify-center transition-all ${item.checked ? 'bg-accent border-accent' : 'border-white/20'}">
+                        ${item.checked && html`<svg width="11" height="8" viewBox="0 0 13 10" fill="none">
+                          <path d="M1 5L5 9L12 1" stroke="#0f0f1a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>`}
                       </div>
-                      <span class="text-[15px] ${item.checked ? 'text-gray-300 line-through' : ''}">${item.name}</span>
+                      <span class="text-[15px] ${item.checked ? 'text-white/25 line-through' : 'text-white/90'}">${item.name}</span>
                     </div>
                   `)}
                 </div>
@@ -373,9 +375,9 @@ function ShoppingList({ list, onSave, onDiscard }) {
 function HistoryList({ lists, onLoad, onDelete, onClear }) {
   const header = html`
     <div class="flex justify-between items-center mb-4">
-      <h2 class="text-white text-lg font-bold">Historia list</h2>
-      <button class="bg-red-50 text-red-700 py-2 px-3.5 rounded-xl text-[13px] font-semibold cursor-pointer border-none"
-        onClick=${onClear}>🗑 Wyczyść</button>
+      <h2 class="text-white/60 text-[12px] font-semibold tracking-widest uppercase">Historia list</h2>
+      <button class="text-red-400/60 text-[12px] cursor-pointer border-none bg-transparent py-1 px-2 active:text-red-400"
+        onClick=${onClear}>Wyczyść</button>
     </div>`
 
   if (!lists.length) return html`
@@ -394,17 +396,17 @@ function HistoryList({ lists, onLoad, onDelete, onClear }) {
         const items = l.categories.flatMap(c => c.items)
         const done  = items.filter(i => i.checked).length
         return html`
-          <div class="bg-white rounded-2xl p-4 mb-2.5 shadow-sm cursor-pointer relative active:scale-[0.99] transition-transform"
+          <div class="py-3.5 border-b border-white/[0.07] cursor-pointer relative active:opacity-60 transition-opacity"
             onClick=${() => onLoad(l.id)} key=${l.id}>
-            <button class="absolute top-3 right-3 bg-transparent border-none text-gray-300 text-[17px] cursor-pointer p-1 hover:text-red-500 transition-colors"
+            <button class="absolute top-3 right-3 bg-transparent border-none text-white/20 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
               onClick=${e => { e.stopPropagation(); onDelete(l.id) }}>🗑</button>
-            <div class="text-[11px] text-gray-400 mb-0.5">${fmtDateFull(l.date)}</div>
-            <div class="text-[15px] font-bold mb-2.5">${l.title}</div>
+            <div class="text-[11px] text-white/30 mb-0.5">${fmtDateFull(l.date)}</div>
+            <div class="text-[15px] font-semibold text-white/90 mb-2">${l.title}</div>
             <div class="flex flex-wrap gap-1.5">
-              <span class="text-[11px] px-2.5 py-1 bg-gray-100 rounded-full text-gray-500">📦 ${items.length} produktów</span>
-              <span class="text-[11px] px-2.5 py-1 bg-gray-100 rounded-full text-gray-500">✓ ${done} kupionych</span>
+              <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/35">📦 ${items.length} produktów</span>
+              <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/35">✓ ${done} kupionych</span>
               ${l.categories.map(c => html`
-                <span class="text-[11px] px-2.5 py-1 bg-gray-100 rounded-full text-gray-500">${c.emoji} ${c.name}</span>
+                <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/35">${c.emoji} ${c.name}</span>
               `)}
             </div>
           </div>`

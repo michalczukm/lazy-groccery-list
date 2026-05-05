@@ -40,14 +40,14 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => (
         __html: `
           .nav-item { @apply flex-1 flex flex-col items-center gap-0.5 py-2.5 px-2 bg-transparent border-none cursor-pointer text-white/35 text-[10px] tracking-wide; }
           .nav-item.active { @apply text-accent; }
-          .status-badge { @apply flex items-center gap-2 py-2.5 px-3.5 rounded-xl mb-3 text-[13px]; }
-          .status-badge.idle  { @apply bg-gray-100 text-gray-600; }
-          .status-badge.ready { @apply bg-green-50 text-green-800; }
-          .status-badge.error { @apply bg-red-50 text-red-800; }
-          .sdot { @apply w-2 h-2 rounded-full shrink-0; }
-          .status-badge.idle  .sdot { @apply bg-gray-400; }
-          .status-badge.ready .sdot { @apply bg-green-700; }
-          .status-badge.error .sdot { @apply bg-red-700; }
+          .status-badge { @apply flex items-center gap-2 mb-3 text-[12px]; }
+          .status-badge.idle  { @apply text-white/35; }
+          .status-badge.ready { @apply text-accent; }
+          .status-badge.error { @apply text-red-400; }
+          .sdot { @apply w-1.5 h-1.5 rounded-full shrink-0; }
+          .status-badge.idle  .sdot { @apply bg-white/25; }
+          .status-badge.ready .sdot { @apply bg-accent; }
+          .status-badge.error .sdot { @apply bg-red-400; }
         `
       }} />
       <style dangerouslySetInnerHTML={{
@@ -66,7 +66,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => (
       }} />
     </head>
 
-    <body class="font-sans bg-navy-dark text-gray-900 flex flex-col max-w-[480px] mx-auto h-full overflow-hidden">
+    <body class="font-sans bg-navy-dark text-white flex flex-col max-w-[480px] mx-auto h-full overflow-hidden">
 
       {/* Loading overlay */}
       <div id="loading-overlay" class="hidden fixed inset-0 bg-black/75 flex flex-col items-center justify-center z-50">
@@ -91,7 +91,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => (
             <div id="header-sub" class="text-[12px] opacity-40 mt-0.5">Nowa lista</div>
           </div>
           <button id="api-key-btn" onclick="App.openModal()"
-            class="bg-white/10 text-white px-3 py-1.5 rounded-full text-[12px] flex items-center gap-1.5 whitespace-nowrap active:bg-white/20 border-none cursor-pointer">
+            class="bg-transparent text-white/60 px-3 py-1.5 rounded-full text-[12px] flex items-center gap-1.5 whitespace-nowrap border border-white/10 cursor-pointer active:border-white/20">
             <div id="key-dot" class="w-2 h-2 rounded-full bg-amber-400" />
             <span id="key-btn-label">Klucz API</span>
           </button>
@@ -105,8 +105,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => (
       </main>
 
       {/* Bottom nav */}
-      <nav id="bottom-nav" class="flex bg-navy border-t border-white/[0.07] shrink-0"
-        style="padding-bottom:env(safe-area-inset-bottom,0px)">
+      <nav id="bottom-nav" class="flex bg-navy shrink-0 border-t border-white/[0.07]" style="padding-bottom:env(safe-area-inset-bottom,0px)">
         <button class="nav-item active" data-view="input"
           hx-get="/views/input" hx-target="#main-content" hx-swap="innerHTML"
           onclick="App.handleNavClick(this)">
