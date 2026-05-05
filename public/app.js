@@ -507,7 +507,29 @@ window.App = {
   saveCurrentList, discardCurrentList, clearAllHistory,
 }
 
+// ── Invite ────────────────────────────────────────────────────────────────────
+async function handleInviteToken() {
+  const params = new URLSearchParams(window.location.search)
+  const token = params.get('token')
+  if (!token) return
+  try {
+    const res = await fetch(`/api/invite?token=${encodeURIComponent(token)}`)
+    if (!res.ok) { toast('Nieprawidłowy link zaproszenia'); return }
+    const { key } = await res.json()
+    localStorage.setItem(LS_KEY, key)
+    history.replaceState(null, '', window.location.pathname)
+    updateKeyIndicator()
+    toast('Klucz API ustawiony ✓ Możesz korzystać z aplikacji', 4000)
+  } catch {
+    toast('Nieprawidłowy link zaproszenia')
+  }
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
 
-DB.init().then(() => { updateKeyIndicator(); checkKeyAndRoute() })
+DB.init().then(async () => {
+  updateKeyIndicator()
+  await handleInviteToken()
+  checkKeyAndRoute()
+})
