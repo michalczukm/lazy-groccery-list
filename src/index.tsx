@@ -7,7 +7,13 @@ import { ListView } from './views/list'
 import { HistoryView } from './views/history'
 import { SetupView } from './views/setup'
 
-const app = new Hono()
+interface Env {
+  INVITE_TOKEN: string
+  MISTRAL_API_KEY: string
+  INVITE_KV: KVNamespace
+}
+
+const app = new Hono<{ Bindings: Env }>()
 
 app.use(secureHeaders({
   contentSecurityPolicy: {
@@ -20,6 +26,19 @@ app.use(secureHeaders({
     manifestSrc: ["'self'"],
   },
 }))
+
+app.get('/api/invite', async (c) => {
+  const token = c.req.query('token')
+  if (!token || token !== c.env.INVITE_TOKEN) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
+
+  const countStr = await c.env.INVITE_KV.get('invite:usage')
+  const count = parseInt(countStr ?? '0', 10) + 1
+  await c.env.INVITE_KV.put('invite:usage', String(count))
+
+  return c.json({ key: c.env.MISTRAL_API_KEY })
+})
 
 app.get(
   '/',
