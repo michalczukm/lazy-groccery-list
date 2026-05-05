@@ -2,6 +2,9 @@
 
 PWA shopping list app that automatically makes your groccery list from plain text and categorizes it. Runs on Cloudflare Workers.
 
+![create list](./docs/list-demo-1.png)
+![list view](./docs/list-demo-2.png)
+
 ## Stack
 
 - **[Hono](https://hono.dev/)** — server + JSX rendering
