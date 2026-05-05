@@ -105,7 +105,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => (
       </main>
 
       {/* Bottom nav */}
-      <nav id="bottom-nav" class="flex bg-navy shrink-0 border-t border-white/[0.07]" style="padding-bottom:env(safe-area-inset-bottom,0px)">
+      <nav id="bottom-nav" class="flex bg-navy shrink-0 border-t border-white/[0.07]" style="padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))">
         <button class="nav-item active" data-view="input"
           hx-get="/views/input" hx-target="#main-content" hx-swap="innerHTML"
           onclick="App.handleNavClick(this)">

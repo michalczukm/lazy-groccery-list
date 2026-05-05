@@ -13,6 +13,22 @@ interface Env {
   INVITE_KV: KVNamespace
 }
 
+const timingSafeEqual = (value: string, reference: string) => {
+  const encoder = new TextEncoder();
+
+  const valueEncoded = encoder.encode(value);
+  const referenceEndoded = encoder.encode(reference);
+  // Do not return early when lengths differ — that leaks the secret's
+  // length through timing.  Instead, always perform a constant-time
+  // comparison: when the lengths match compare directly; otherwise
+  // compare the user input against itself (always true) and negate.
+  const lengthsMatch = valueEncoded.byteLength === referenceEndoded.byteLength;
+
+  return lengthsMatch
+    ? crypto.subtle.timingSafeEqual(valueEncoded, referenceEndoded)
+    : !crypto.subtle.timingSafeEqual(valueEncoded, valueEncoded);
+}
+
 const app = new Hono<{ Bindings: Env }>()
 
 app.use(secureHeaders({
@@ -27,18 +43,17 @@ app.use(secureHeaders({
   },
 }))
 
+/**
+ * Hemingway:
+ * - deploy new version to Clouflare Workers
+ * - update the invite token in the KV store
+ * - update the Mistral API key in the KV store
+ * - update the invite token in the .env file
+ * - check if KV is updated (counter) --> also, document that there might be race condition while saving to KV, but it is negligible for this scale
+ */
 app.get('/api/invite', async (c) => {
   const token = c.req.query('token')
-
-  const timingSafeEqual = (a: string, b: string): boolean => {
-    const ea = new TextEncoder().encode(a)
-    const eb = new TextEncoder().encode(b)
-    if (ea.length !== eb.length) return false
-    let diff = 0
-    for (let i = 0; i < ea.length; i++) diff |= ea[i] ^ eb[i]
-    return diff === 0
-  }
-
+  console.log("c.env.INVITE_TOKEN", c.env.INVITE_TOKEN, token)
   if (!token || !timingSafeEqual(token, c.env.INVITE_TOKEN)) {
     return c.json({ error: 'Unauthorized' }, 401)
   }
