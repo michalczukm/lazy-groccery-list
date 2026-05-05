@@ -1,6 +1,6 @@
 import { render } from 'preact'
 import { useState, useEffect, useRef } from 'preact/hooks'
-import html from 'htm/preact'
+import { html } from 'htm/preact'
 import confetti from 'canvas-confetti'
 
 // CONFIG
@@ -202,7 +202,7 @@ async function processWithMistral() {
 
     currentList = {
       id: Date.now(), title: 'Zakupy ' + fmtDate(Date.now()),
-      date: Date.now(), saved: false, model: MODEL,
+      date: Date.now(), saved: true, model: MODEL,
       categories: parsed.categories
         .filter(c => c.items?.length)
         .map(c => ({
@@ -211,6 +211,7 @@ async function processWithMistral() {
           items: c.items.map(n => ({ name: n, checked: false })),
         })),
     }
+    await DB.save(currentList)
 
     hideLoading()
     setStatus('ready', 'Gotowe — Mistral Small')
@@ -330,15 +331,6 @@ function ShoppingList({ list, onSave, onDiscard }) {
         </div>
         <div class="text-[12px] opacity-50 mt-2">${done} / ${allItems.length}</div>
       </div>
-
-      ${!isSaved && html`
-        <div class="flex gap-2 mb-4">
-          <button class="flex-1 bg-navy text-white py-4 rounded-[14px] text-[15px] font-semibold cursor-pointer border-none active:scale-[0.98] active:opacity-85"
-            onClick=${handleSave}>💾 Zapisz listę</button>
-          <button class="bg-gray-100 text-gray-600 py-4 px-5 rounded-[14px] text-[15px] font-semibold cursor-pointer border-none active:scale-[0.98]"
-            onClick=${onDiscard}>✕</button>
-        </div>
-      `}
 
       ${cats.map((cat, ci) => {
         const catDone = cat.items.filter(i => i.checked).length

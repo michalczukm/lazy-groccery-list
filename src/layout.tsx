@@ -31,7 +31,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => (
         imports: {
           "preact":           "https://esm.sh/preact@10",
           "preact/hooks":     "https://esm.sh/preact@10/hooks",
-          "htm/preact":       "https://esm.sh/htm@3.1.1?preact",
+          "htm/preact":       "https://esm.sh/htm@3.1.1/preact",
           "canvas-confetti":  "https://esm.sh/canvas-confetti@1.6.0",
         }
       })}} />

@@ -442,12 +442,11 @@
 
 <script>
 // ── CONFIG ─────────────────────────────────
-const LS_KEY    = 'zakupy_api_key';
-const LS_MODEL  = 'zakupy_model';
+const LS_KEY    = 'llm_api_key';
 const DEF_MODEL = 'mistral-small-latest';
 
-const getKey   = () => localStorage.getItem(LS_KEY)   || '';
-const getModel = () => localStorage.getItem(LS_MODEL) || DEF_MODEL;
+const getKey   = () => localStorage.getItem(LS_KEY) || '';
+const getModel = () => DEF_MODEL;
 
 // ── INDEXEDDB ──────────────────────────────
 const DB = (() => {
