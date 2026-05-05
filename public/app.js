@@ -13,7 +13,7 @@ const getKey = () => localStorage.getItem(LS_KEY) || ''
 const DB = (() => {
   let db
   const open = () => new Promise((res, rej) => {
-    const r = indexedDB.open('ZakupyAI', 1)
+    const r = indexedDB.open('LazyGrocceryList', 1)
     r.onupgradeneeded = e => e.target.result.createObjectStore('lists', { keyPath: 'id' })
     r.onsuccess = e => { db = e.target.result; res() }
     r.onerror   = () => rej(r.error)

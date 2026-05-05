@@ -23,7 +23,7 @@ No test or lint scripts exist.
 **Data flow:**
 1. User pastes raw shopping text in the input view.
 2. `processWithMistral()` in `app.js` calls Mistral AI API directly from the browser (`mistral-small-latest`, Polish category schema, temperature 0.1).
-3. Categorized JSON is stored in IndexedDB (`ZakupyAI` db, `lists` store).
+3. Categorized JSON is stored in IndexedDB (`LazyGrocceryList` db, `lists` store).
 4. Preact `ShoppingList` component renders from IndexedDB state; checked items auto-save back.
 
 **API key:** User-provided Mistral key stored in `localStorage` (`zakupy_api_key`). Never sent to the Workers backend — all AI calls go browser → Mistral API directly. CSP in `src/index.tsx` permits `connect-src https://api.mistral.ai`.
