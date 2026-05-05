@@ -1,21 +1,23 @@
-```txt
-npm install
-npm run dev
+# Lazy List (🍓 the groccery list)
+
+PWA shopping list app that automatically makes your groccery list from plain text and categorizes it. Runs on Cloudflare Workers.
+
+## Stack
+
+- **[Hono](https://hono.dev/)** — server + JSX rendering
+- **[HTMX](https://htmx.org/)** — partial HTML swaps
+- **[Cloudflare Workers](https://workers.cloudflare.com/)** — edge runtime
+- PWA with service worker and installable manifest
+
+## Dev
+
+```sh
+pnpm install
+pnpm dev
 ```
 
-```txt
-npm run deploy
-```
+## Deploy
 
-[For generating/synchronizing types based on your Worker configuration run](https://developers.cloudflare.com/workers/wrangler/commands/#types):
-
-```txt
-npm run cf-typegen
-```
-
-Pass the `CloudflareBindings` as generics when instantiation `Hono`:
-
-```ts
-// src/index.ts
-const app = new Hono<{ Bindings: CloudflareBindings }>()
+```sh
+pnpm deploy
 ```

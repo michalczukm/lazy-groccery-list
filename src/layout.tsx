@@ -6,13 +6,13 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => (
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-      <title>Zakupy AI</title>
+      <title>Lazy List</title>
       <link rel="manifest" href="/manifest.json" />
       <link rel="icon" href="/icon.svg" />
       <meta name="theme-color" content="#1a1a2e" />
       <meta name="apple-mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-      <meta name="apple-mobile-web-app-title" content="Zakupy AI" />
+      <meta name="apple-mobile-web-app-title" content="Lazy List" />
 
       <script src="https://cdn.tailwindcss.com" />
       <script dangerouslySetInnerHTML={{
@@ -38,14 +38,14 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => (
 
       <style type="text/tailwindcss" dangerouslySetInnerHTML={{
         __html: `
-          .nav-item { @apply flex-1 flex flex-col items-center gap-0.5 py-2.5 px-2 bg-transparent border-none cursor-pointer text-white/35 text-[10px] tracking-wide; }
+          .nav-item { @apply flex-1 flex flex-col items-center gap-0.5 py-2.5 px-2 bg-transparent border-none cursor-pointer text-white/50 text-[10px] tracking-wide; }
           .nav-item.active { @apply text-accent; }
           .status-badge { @apply flex items-center gap-2 mb-3 text-[12px]; }
-          .status-badge.idle  { @apply text-white/35; }
+          .status-badge.idle  { @apply text-white/50; }
           .status-badge.ready { @apply text-accent; }
           .status-badge.error { @apply text-red-400; }
           .sdot { @apply w-1.5 h-1.5 rounded-full shrink-0; }
-          .status-badge.idle  .sdot { @apply bg-white/25; }
+          .status-badge.idle  .sdot { @apply bg-white/35; }
           .status-badge.ready .sdot { @apply bg-accent; }
           .status-badge.error .sdot { @apply bg-red-400; }
         `
@@ -87,8 +87,8 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => (
         style="padding-top:calc(14px + env(safe-area-inset-top,0px));padding-bottom:14px">
         <div class="flex items-center justify-between">
           <div>
-            <div id="header-title" class="text-[19px] font-bold tracking-tight">🛒 Zakupy AI</div>
-            <div id="header-sub" class="text-[12px] opacity-40 mt-0.5">Nowa lista</div>
+            <div id="header-title" class="text-[19px] font-bold tracking-tight">🛒 Lazy List</div>
+            <div id="header-sub" class="text-[12px] opacity-55 mt-0.5">Nowa lista</div>
           </div>
           <button id="api-key-btn" onclick="App.openModal()"
             class="bg-transparent text-white/60 px-3 py-1.5 rounded-full text-[12px] flex items-center gap-1.5 whitespace-nowrap border border-white/10 cursor-pointer active:border-white/20">

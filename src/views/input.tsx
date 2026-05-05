@@ -1,14 +1,14 @@
 import type { FC } from 'hono/jsx'
 
 export const InputView: FC = () => (
-  <div class="p-4" style="padding-bottom:calc(80px + env(safe-area-inset-bottom,0px))">
+  <div class="flex flex-col h-full p-4" style="padding-bottom:calc(80px + env(safe-area-inset-bottom,0px))">
     <div id="status-badge" class="status-badge idle">
       <div class="sdot" />
       <span id="status-text">Gotowy — wpisz listę zakupów</span>
     </div>
 
     <textarea id="shopping-input"
-      class="w-full h-[190px] resize-none border border-white/10 rounded-xl p-3.5 text-[15px] outline-none bg-navy text-white/90 placeholder:text-white/20 focus:border-accent/40"
+      class="w-full flex-1 min-h-0 resize-none border border-white/10 rounded-xl p-3.5 text-[15px] outline-none bg-navy text-white/90 placeholder:text-white/30 focus:border-accent/40"
       placeholder={'Wklej lub wpisz listę zakupów…\n\nNp:\nMleko\nJogurt grecki\nChleb\nFilet z kurczaka\nPomidory 600g'}
     />
 

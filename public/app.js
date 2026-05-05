@@ -108,7 +108,7 @@ function showMainApp() {
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 const META = {
-  input:   { title: '🛒 Zakupy AI', sub: 'Nowa lista' },
+  input:   { title: '🛒 Lazy List', sub: 'Nowa lista' },
   list:    { title: '📋 Lista',     sub: '' },
   history: { title: '📚 Historia',  sub: 'Poprzednie listy' },
 }
@@ -158,18 +158,43 @@ Dostępne kategorie (użyj tylko tych, które mają produkty):
 - przyprawy i sosy 🧂 : oleje, oliwy, sosy, octy, musztarda
 - gotowe dania 🍱 : gotowe sałatki, dania gotowe, mrożonki
 - chemia i higiena 🧴 : środki czystości, kosmetyki, artykuły higieny
-- inne 🛒 : wszystko co nie pasuje do powyższych
+- inne 🛒 : wszystko co nie pasuje do powyższych`
 
-Zwróć WYŁĄCZNIE poprawny JSON bez żadnego markdown ani komentarzy:
-{"categories":[{"name":"nabiał","emoji":"🥛","items":["Jogurt grecki","Skyr"]}]}`
+const RESPONSE_SCHEMA = {
+  type: 'json_schema',
+  json_schema: {
+    name: 'shopping_categories',
+    strict: true,
+    schema: {
+      type: 'object',
+      properties: {
+        categories: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name:  { type: 'string' },
+              emoji: { type: 'string' },
+              items: { type: 'array', items: { type: 'string' } },
+            },
+            required: ['name', 'emoji', 'items'],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ['categories'],
+      additionalProperties: false,
+    },
+  },
+}
 
 async function processWithMistral() {
   const raw = document.getElementById('shopping-input').value.trim()
   if (!raw)     { toast('Wpisz listę zakupów 📝'); return }
   if (!getKey()) { openModal(); return }
 
-  setStatus('idle', 'Wysyłam do Mistral…')
-  showLoading('Mistral AI kategoryzuje listę…')
+  setStatus('idle', 'Wysyłam…')
+  showLoading('Kategoryzuję listę…')
 
   try {
     const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
@@ -177,6 +202,7 @@ async function processWithMistral() {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getKey()}` },
       body: JSON.stringify({
         model: MODEL, max_tokens: 1000, temperature: 0.1,
+        response_format: RESPONSE_SCHEMA,
         messages: [
           { role: 'system', content: SYSTEM },
           { role: 'user',   content: `Skategoryzuj tę listę zakupów:\n${raw}` },
@@ -193,10 +219,9 @@ async function processWithMistral() {
 
     const data    = await res.json()
     const content = data.choices?.[0]?.message?.content || ''
-    const clean   = content.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim()
 
     let parsed
-    try { parsed = JSON.parse(clean) }
+    try { parsed = JSON.parse(content) }
     catch { throw new Error('AI zwróciło niepoprawny JSON. Spróbuj ponownie.') }
     if (!Array.isArray(parsed?.categories)) throw new Error('Brak kategorii w odpowiedzi AI.')
 
@@ -279,7 +304,7 @@ function ShoppingList({ list, onSave, onDiscard }) {
   }, [allDone])
 
   if (!list) return html`
-    <div class="text-center py-16 px-6 text-white/30">
+    <div class="text-center py-16 px-6 text-white/45">
       <div class="text-[48px] mb-3">📝</div>
       <p class="text-[14px] leading-7">Brak aktywnej listy.<br>Stwórz nową w zakładce "Nowa".</p>
     </div>`
@@ -326,7 +351,7 @@ function ShoppingList({ list, onSave, onDiscard }) {
       <div class="mb-5 pt-1">
         <div class="flex items-baseline justify-between mb-2">
           <div class="text-[17px] font-semibold text-white/90 truncate pr-3">${list.title}</div>
-          <div class="text-[12px] text-white/35 shrink-0">${done} / ${allItems.length}</div>
+          <div class="text-[12px] text-white/50 shrink-0">${done} / ${allItems.length}</div>
         </div>
         <div class="h-[2px] bg-white/[0.07] rounded-full overflow-hidden">
           <div class="progress-fill h-full rounded-full"
@@ -341,13 +366,13 @@ function ShoppingList({ list, onSave, onDiscard }) {
           <div class="border-t border-white/[0.07] pt-1 mb-1" key=${cat.name + ci}>
             <div class="flex items-center justify-between py-2 px-1 cursor-pointer select-none"
               onClick=${() => toggleCat(ci)}>
-              <div class="flex items-center gap-2 text-[11px] tracking-widest uppercase text-white/45">
+              <div class="flex items-center gap-2 text-[11px] tracking-widest uppercase text-white/55">
                 <span>${cat.emoji}</span>
                 <span>${cat.name}</span>
                 <span class="opacity-60">(${catDone}/${cat.items.length})</span>
                 ${catAllDone && html`<span class="bg-accent/20 text-accent text-[10px] px-2 py-0.5 rounded-full">✓ gotowe</span>`}
               </div>
-              <span class="cat-chevron text-white/30 text-[11px] ${cat.collapsed ? 'up' : ''}">▼</span>
+              <span class="cat-chevron text-white/45 text-[11px] ${cat.collapsed ? 'up' : ''}">▼</span>
             </div>
             <div class="cat-grid ${cat.collapsed ? 'collapsed' : ''}">
               <div class="cat-grid-inner">
@@ -355,12 +380,12 @@ function ShoppingList({ list, onSave, onDiscard }) {
                   ${cat.items.map((item, ii) => html`
                     <div class="flex items-center px-1 py-[13px] border-b border-white/[0.07] last:border-0 cursor-pointer active:opacity-70"
                       onClick=${() => toggleItem(ci, ii)} key=${ii}>
-                      <div class="w-5 h-5 rounded-[6px] border shrink-0 mr-3 flex items-center justify-center transition-all ${item.checked ? 'bg-accent border-accent' : 'border-white/20'}">
+                      <div class="w-5 h-5 rounded-[6px] border shrink-0 mr-3 flex items-center justify-center transition-all ${item.checked ? 'bg-accent border-accent' : 'border-white/30'}">
                         ${item.checked && html`<svg width="11" height="8" viewBox="0 0 13 10" fill="none">
                           <path d="M1 5L5 9L12 1" stroke="#0f0f1a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>`}
                       </div>
-                      <span class="text-[15px] ${item.checked ? 'text-white/25 line-through' : 'text-white/90'}">${item.name}</span>
+                      <span class="text-[15px] ${item.checked ? 'text-white/40 line-through' : 'text-white/90'}">${item.name}</span>
                     </div>
                   `)}
                 </div>
@@ -383,7 +408,7 @@ function HistoryList({ lists, onLoad, onDelete, onClear }) {
   if (!lists.length) return html`
     <div>
       ${header}
-      <div class="text-center py-16 px-6 text-white/30">
+      <div class="text-center py-16 px-6 text-white/45">
         <div class="text-[48px] mb-3">📭</div>
         <p class="text-[14px] leading-7">Brak zapisanych list.<br>Stwórz pierwszą w zakładce "Nowa".</p>
       </div>
@@ -398,15 +423,15 @@ function HistoryList({ lists, onLoad, onDelete, onClear }) {
         return html`
           <div class="py-3.5 border-b border-white/[0.07] cursor-pointer relative active:opacity-60 transition-opacity"
             onClick=${() => onLoad(l.id)} key=${l.id}>
-            <button class="absolute top-3 right-3 bg-transparent border-none text-white/20 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
+            <button class="absolute top-3 right-3 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
               onClick=${e => { e.stopPropagation(); onDelete(l.id) }}>🗑</button>
-            <div class="text-[11px] text-white/30 mb-0.5">${fmtDateFull(l.date)}</div>
+            <div class="text-[11px] text-white/45 mb-0.5">${fmtDateFull(l.date)}</div>
             <div class="text-[15px] font-semibold text-white/90 mb-2">${l.title}</div>
             <div class="flex flex-wrap gap-1.5">
-              <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/35">📦 ${items.length} produktów</span>
-              <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/35">✓ ${done} kupionych</span>
+              <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50">📦 ${items.length} produktów</span>
+              <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50">✓ ${done} kupionych</span>
               ${l.categories.map(c => html`
-                <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/35">${c.emoji} ${c.name}</span>
+                <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50">${c.emoji} ${c.name}</span>
               `)}
             </div>
           </div>`

@@ -1,7 +1,7 @@
 {
-  "name": "Lista Zakupów AI",
-  "short_name": "Zakupy AI",
-  "description": "Inteligentna lista zakupów z Mistral AI",
+  "name": "Lazy List",
+  "short_name": "Lazy List",
+  "description": "AI-powered shopping list",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
