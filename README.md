@@ -18,6 +18,8 @@ pnpm dev
 
 ## Deploy
 
+Add "run" to avoid pnpm moaning about workspace.
+
 ```sh
-pnpm deploy
+pnpm run deploy
 ```

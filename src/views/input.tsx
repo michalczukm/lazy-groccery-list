@@ -15,7 +15,7 @@ export const InputView: FC = () => (
     <button id="process-btn"
       class="block w-full bg-navy text-accent py-3.5 rounded-xl text-[15px] font-semibold cursor-pointer mt-3 border border-accent/20 active:scale-[0.98] active:opacity-85"
       onclick="App.processWithMistral()">
-      ✨ Zrób listę z AI
+      ✨ Generuj listę
     </button>
   </div>
 )
