@@ -29,12 +29,22 @@ app.use(secureHeaders({
 
 app.get('/api/invite', async (c) => {
   const token = c.req.query('token')
-  if (!token || token !== c.env.INVITE_TOKEN) {
+
+  const timingSafeEqual = (a: string, b: string): boolean => {
+    const ea = new TextEncoder().encode(a)
+    const eb = new TextEncoder().encode(b)
+    if (ea.length !== eb.length) return false
+    let diff = 0
+    for (let i = 0; i < ea.length; i++) diff |= ea[i] ^ eb[i]
+    return diff === 0
+  }
+
+  if (!token || !timingSafeEqual(token, c.env.INVITE_TOKEN)) {
     return c.json({ error: 'Unauthorized' }, 401)
   }
 
   const countStr = await c.env.INVITE_KV.get('invite:usage')
-  const count = parseInt(countStr ?? '0', 10) + 1
+  const count = (parseInt(countStr ?? '0', 10) || 0) + 1
   await c.env.INVITE_KV.put('invite:usage', String(count))
 
   return c.json({ key: c.env.MISTRAL_API_KEY })
