@@ -144,7 +144,7 @@ function updateHeader(name) {
 
 // ── Mistral API ───────────────────────────────────────────────────────────────
 const SYSTEM = `Jesteś asystentem do kategoryzowania list zakupów po polsku.
-Dostajesz surową listę produktów (po jednym na linię, mogą być notatki w nawiasach).
+Dostajesz surową listę produktów (mogą być po jednym na linię, mogą być notatki w nawiasach, niektóre mogą być łączone np przez "i" albo "oraz").
 Przypisz każdy produkt do odpowiedniej kategorii. Zachowaj ORYGINALNE nazwy produktów razem z uwagami w nawiasach.
 
 Dostępne kategorie (użyj tylko tych, które mają produkty):

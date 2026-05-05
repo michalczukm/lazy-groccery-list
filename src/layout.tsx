@@ -88,7 +88,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => (
         <div class="flex items-center justify-between">
           <div>
             <div id="header-title" class="text-[19px] font-bold tracking-tight">🛒 Lazy List</div>
-            <div id="header-sub" class="text-[12px] opacity-55 mt-0.5">Nowa lista</div>
+            <div id="header-sub" class="text-[12px] opacity-55 mt-0.5 min-h-[1rem]">Nowa lista</div>
           </div>
           <button id="api-key-btn" onclick="App.openModal()"
             class="bg-transparent text-white/60 px-3 py-1.5 rounded-full text-[12px] flex items-center gap-1.5 whitespace-nowrap border border-white/10 cursor-pointer active:border-white/20">
