@@ -1,7 +1,9 @@
-import { render } from 'preact'
+import { render, h } from 'preact'
 import { useState, useEffect, useRef } from 'preact/hooks'
-import { html } from 'htm/preact'
+import htm from 'htm'
 import confetti from 'canvas-confetti'
+
+const html = htm.bind(h)
 
 // CONFIG
 const LS_KEY = 'zakupy_api_key'
@@ -349,9 +351,22 @@ function ShoppingList({ list, onSave, onDiscard }) {
   return html`
     <div>
       <div class="mb-5 pt-1">
-        <div class="flex items-baseline justify-between mb-2">
+        <div class="flex items-center justify-between mb-2">
           <div class="text-[17px] font-semibold text-white/90 truncate pr-3">${list.title}</div>
-          <div class="text-[12px] text-white/50 shrink-0">${done} / ${allItems.length}</div>
+          <div class="flex items-center gap-3 shrink-0">
+            <div class="text-[12px] text-white/50">${done} / ${allItems.length}</div>
+            <button
+              class="text-white/40 bg-transparent border-none cursor-pointer p-1 active:text-accent transition-colors"
+              onClick=${() => shareList({ ...list, categories: cats })}
+              title="Udostępnij listę"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                <polyline points="16 6 12 2 8 6"/>
+                <line x1="12" y1="2" x2="12" y2="15"/>
+              </svg>
+            </button>
+          </div>
         </div>
         <div class="h-[2px] bg-white/[0.07] rounded-full overflow-hidden">
           <div class="progress-fill h-full rounded-full"
@@ -499,6 +514,92 @@ function fmtDateFull(ts) {
   })
 }
 
+// ── Share state encoding ───────────────────────────────────────────────────────
+async function encodeState(list) {
+  const payload = {
+    title: list.title,
+    date: list.date,
+    categories: list.categories.map(c => ({
+      name: c.name,
+      emoji: c.emoji,
+      items: c.items.map(i => ({ name: i.name, checked: i.checked })),
+    })),
+  }
+  const stream = new CompressionStream('gzip')
+  const writer = stream.writable.getWriter()
+  const bufPromise = new Response(stream.readable).arrayBuffer()
+  await writer.write(new TextEncoder().encode(JSON.stringify(payload)))
+  await writer.close()
+  const buf = await bufPromise
+  const binary = Array.from(new Uint8Array(buf), b => String.fromCharCode(b)).join('')
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+}
+
+async function decodeState(str) {
+  let bytes
+  try {
+    const binary = atob(str.replace(/-/g, '+').replace(/_/g, '/'))
+    bytes = Uint8Array.from(binary, c => c.charCodeAt(0))
+  } catch {
+    throw new Error('decodeState: invalid base64url input')
+  }
+  if (bytes.byteLength > 200 * 1024) throw new Error('decodeState: input too large')
+  const stream = new DecompressionStream('gzip')
+  const writer = stream.writable.getWriter()
+  const bufPromise = new Response(stream.readable).arrayBuffer()
+  await writer.write(bytes)
+  await writer.close()
+  const buf = await bufPromise
+  if (buf.byteLength > 1024 * 1024) throw new Error('decodeState: payload too large')
+  const payload = JSON.parse(new TextDecoder().decode(buf))
+  if (!Array.isArray(payload?.categories)) throw new Error('decodeState: invalid payload shape')
+  return payload
+}
+
+async function shareList(list) {
+  try {
+    const encoded = await encodeState(list)
+    const url = `${location.origin}/?state=${encoded}`
+    if (navigator.share) {
+      await navigator.share({ title: list.title, url })
+    } else if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url)
+      toast('Link skopiowany 🔗')
+    } else {
+      toast('Link: ' + url, 6000)
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') toast('Nie udało się udostępnić')
+  }
+}
+
+async function handleSharedState() {
+  const state = new URLSearchParams(location.search).get('state')
+  if (!state) return false
+  try {
+    const payload = await decodeState(state)
+    currentList = {
+      id: Date.now(),
+      title: payload.title,
+      date: payload.date,
+      saved: false,
+      model: '',
+      categories: payload.categories.map(c => ({
+        name: c.name,
+        emoji: c.emoji,
+        collapsed: false,
+        manualExpand: false,
+        items: c.items.map(i => ({ name: i.name, checked: i.checked })),
+      })),
+    }
+    history.replaceState(null, '', '/')
+    return true
+  } catch {
+    toast('Nieprawidłowy link')
+    return false
+  }
+}
+
 // ── window.App namespace ──────────────────────────────────────────────────────
 window.App = {
   openModal, closeModal, handleOverlayClick, toggleReveal,
@@ -531,5 +632,11 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').cat
 DB.init().then(async () => {
   updateKeyIndicator()
   await handleInviteToken()
-  checkKeyAndRoute()
+  const wasShared = await handleSharedState()
+  if (wasShared) {
+    document.getElementById('bottom-nav').style.display = ''
+    navigateTo('list')
+  } else {
+    checkKeyAndRoute()
+  }
 })
