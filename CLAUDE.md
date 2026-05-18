@@ -53,4 +53,6 @@ No test or lint scripts exist.
 
 ## Testing
 
+Run: `pnpm test`
+
 - [Share feature testing guide](docs/testing-share-feature.md) — manual steps, automated snippets, known bugs fixed, edge cases.

@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
-    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "test": "vitest"
   },
   "dependencies": {
     "hono": "4.12.16",
@@ -12,7 +13,9 @@
     "htmx.org": "2.0.10"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.16.6",
     "typed-htmx": "0.3.1",
+    "vitest": "^4.1.0",
     "wrangler": "4.88.0"
   }
 }

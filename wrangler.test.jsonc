@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "lazy-shopping-list",
+  "main": "src/index.tsx",
+  "compatibility_date": "2026-05-04",
+  "assets": {
+    "directory": "./public"
+  },
+  "vars": {
+    "INVITE_TOKEN": "test-token-abc123",
+    "MISTRAL_API_KEY": "test-mistral-key"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "INVITE_KV",
+      "id": "test-kv-id"
+    }
+  ]
+}
