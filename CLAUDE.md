@@ -50,3 +50,7 @@ No test or lint scripts exist.
 ```
 
 **UI language:** Polish throughout (category names, labels, prompts).
+
+## Testing
+
+- [Share feature testing guide](docs/testing-share-feature.md) — manual steps, automated snippets, known bugs fixed, edge cases.
