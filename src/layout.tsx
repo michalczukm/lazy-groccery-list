@@ -82,6 +82,31 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => (
 
       <Modal />
 
+      {/* Amend list modal */}
+      <div id="amend-modal-overlay"
+        class="hidden fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+        onclick="App.handleAmendOverlayClick(event)">
+        <div class="w-full max-w-md bg-navy border border-white/10 rounded-2xl p-5 shadow-2xl">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-white/90 text-[16px] font-semibold">Dodaj do listy</h2>
+            <button class="text-white/45 bg-transparent border-none cursor-pointer text-[18px] p-1 active:text-white/80"
+              onclick="App.closeAmendModal()" aria-label="Zamknij">✕</button>
+          </div>
+
+          <textarea id="amend-input"
+            class="w-full h-40 resize-none border border-white/10 rounded-xl p-3 text-[15px] outline-none bg-black/30 text-white/90 placeholder:text-white/30 focus:border-accent/40"
+            placeholder={'Wklej dodatkowe produkty…\n\nNp:\nMasło\nPapryka czerwona\nMakaron spaghetti'}
+          />
+
+          <div class="flex gap-2 mt-3">
+            <button class="flex-1 bg-transparent text-white/60 py-3 rounded-xl text-[14px] font-medium cursor-pointer border border-white/10 active:opacity-70"
+              onclick="App.closeAmendModal()">Anuluj</button>
+            <button class="flex-1 bg-navy text-accent py-3 rounded-xl text-[14px] font-semibold cursor-pointer border border-accent/20 active:scale-[0.98] active:opacity-85"
+              onclick="App.amendCurrentList()">✨ Dodaj</button>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       <header class="bg-navy shrink-0 px-5 text-white"
         style="padding-top:calc(14px + env(safe-area-inset-top,0px));padding-bottom:14px">

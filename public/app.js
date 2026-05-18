@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'preact/hooks'
 import htm from 'htm'
 import confetti from 'canvas-confetti'
 import { encodeState, decodeState } from './share-state.js'
+import { mergeAmendInto } from './merge-amend.js'
 
 const html = htm.bind(h)
 
@@ -49,6 +50,19 @@ function closeModal() {
 }
 function handleOverlayClick(e) {
   if (e.target.id === 'modal-overlay') closeModal()
+}
+function openAmendModal() {
+  if (!currentList) { toast('Brak aktywnej listy'); return }
+  const amendElement = document.getElementById('amend-input')
+  if (amendElement) amendElement.value = ''
+  document.getElementById('amend-modal-overlay').classList.remove('hidden')
+  setTimeout(() => amendElement?.focus(), 50)
+}
+function closeAmendModal() {
+  document.getElementById('amend-modal-overlay').classList.add('hidden')
+}
+function handleAmendOverlayClick(e) {
+  if (e.target.id === 'amend-modal-overlay') closeAmendModal()
 }
 function toggleReveal(inputId, btn) {
   const inp = document.getElementById(inputId)
@@ -191,6 +205,41 @@ const RESPONSE_SCHEMA = {
   },
 }
 
+async function callMistral(rawText) {
+  const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getKey()}` },
+    body: JSON.stringify({
+      model: MODEL, max_tokens: 1000, temperature: 0.1,
+      response_format: RESPONSE_SCHEMA,
+      messages: [
+        { role: 'system', content: SYSTEM },
+        { role: 'user',   content: `Skategoryzuj tę listę zakupów:\n${rawText}` },
+      ],
+    }),
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    if (res.status === 401) throw new Error('Nieprawidłowy klucz API. Sprawdź ustawienia.')
+    if (res.status === 429) throw new Error('Limit zapytań przekroczony. Spróbuj za chwilę.')
+    throw new Error(err?.message || `Błąd API (${res.status})`)
+  }
+
+  const data    = await res.json()
+  const content = data.choices?.[0]?.message?.content || ''
+
+  try {
+    const parsed = JSON.parse(content)
+    if (!Array.isArray(parsed?.categories)) throw new Error('Brak kategorii w odpowiedzi AI.')
+
+    return parsed.categories
+  }
+  catch (_err) {
+    throw new Error('AI zwróciło niepoprawny JSON. Spróbuj ponownie.')
+  }
+}
+
 async function processWithMistral() {
   const raw = document.getElementById('shopping-input').value.trim()
   if (!raw)     { toast('Wpisz listę zakupów 📝'); return }
@@ -200,38 +249,12 @@ async function processWithMistral() {
   showLoading('Kategoryzuję listę…')
 
   try {
-    const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getKey()}` },
-      body: JSON.stringify({
-        model: MODEL, max_tokens: 1000, temperature: 0.1,
-        response_format: RESPONSE_SCHEMA,
-        messages: [
-          { role: 'system', content: SYSTEM },
-          { role: 'user',   content: `Skategoryzuj tę listę zakupów:\n${raw}` },
-        ],
-      }),
-    })
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      if (res.status === 401) throw new Error('Nieprawidłowy klucz API. Sprawdź ustawienia.')
-      if (res.status === 429) throw new Error('Limit zapytań przekroczony. Spróbuj za chwilę.')
-      throw new Error(err?.message || `Błąd API (${res.status})`)
-    }
-
-    const data    = await res.json()
-    const content = data.choices?.[0]?.message?.content || ''
-
-    let parsed
-    try { parsed = JSON.parse(content) }
-    catch { throw new Error('AI zwróciło niepoprawny JSON. Spróbuj ponownie.') }
-    if (!Array.isArray(parsed?.categories)) throw new Error('Brak kategorii w odpowiedzi AI.')
+    const categories = await callMistral(raw)
 
     currentList = {
       id: Date.now(), title: 'Zakupy ' + fmtDate(Date.now()),
       date: Date.now(), saved: true, model: MODEL,
-      categories: parsed.categories
+      categories: categories
         .filter(c => c.items?.length)
         .map(c => ({
           name: c.name || 'inne', emoji: c.emoji || '📦',
@@ -247,6 +270,36 @@ async function processWithMistral() {
   } catch (e) {
     hideLoading()
     setStatus('error', e.message)
+    toast(e.message, 4000)
+  }
+}
+
+async function amendCurrentList() {
+  if (!currentList) { toast('Brak aktywnej listy'); return }
+  const raw = document.getElementById('amend-input').value.trim()
+  if (!raw)      { toast('Wpisz listę zakupów 📝'); return }
+  if (!getKey()) { closeAmendModal(); openModal(); return }
+
+  showLoading('Dodaję do listy…')
+
+  try {
+    const newCategories = await callMistral(raw)
+    const { categories, added, skipped } = mergeAmendInto(currentList, newCategories)
+
+    currentList.categories = categories
+    if (currentList.saved) await DB.save(currentList)
+
+    window.dispatchEvent(new CustomEvent('list:updated'))
+
+    hideLoading()
+    closeAmendModal()
+
+    if (added === 0 && skipped === 0) toast('Nic nie dodano')
+    else if (added === 0)             toast(`Wszystko już na liście (${skipped} duplikatów)`)
+    else if (skipped === 0)           toast(`Dodano ${added} ✓`)
+    else                              toast(`Dodano ${added} (${skipped} duplikatów)`)
+  } catch (e) {
+    hideLoading()
     toast(e.message, 4000)
   }
 }
@@ -292,12 +345,12 @@ async function clearAllHistory() {
 
 // ── ShoppingList island ───────────────────────────────────────────────────────
 function ShoppingList({ list, onSave, onDiscard }) {
-  const [cats, setCats] = useState(list ? list.categories : [])
+  const [categories, setCategories] = useState(list ? list.categories : [])
   const [isSaved, setIsSaved] = useState(list ? list.saved : false)
   const collapseRef = useRef(null)
   const prevAllDone = useRef(false)
 
-  const allItems = cats.flatMap(c => c.items)
+  const allItems = categories.flatMap(c => c.items)
   const done = allItems.filter(i => i.checked).length
   const allDone = allItems.length > 0 && allItems.every(i => i.checked)
 
@@ -305,6 +358,14 @@ function ShoppingList({ list, onSave, onDiscard }) {
     if (allDone && !prevAllDone.current) confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } })
     prevAllDone.current = allDone
   }, [allDone])
+
+  useEffect(() => {
+    const handler = () => setCategories(
+      currentList.categories.map(c => ({ ...c, items: [...c.items] }))
+    )
+    window.addEventListener('list:updated', handler)
+    return () => window.removeEventListener('list:updated', handler)
+  }, [])
 
   if (!list) return html`
     <div class="text-center py-16 px-6 text-white/45">
@@ -314,7 +375,7 @@ function ShoppingList({ list, onSave, onDiscard }) {
 
   function toggleItem(ci, ii) {
     let willCollapse = false
-    const next = cats.map((c, catIdx) => {
+    const next = categories.map((c, catIdx) => {
       if (catIdx !== ci) return c
       const newItems = c.items.map((item, itemIdx) =>
         itemIdx !== ii ? item : { ...item, checked: !item.checked }
@@ -324,11 +385,11 @@ function ShoppingList({ list, onSave, onDiscard }) {
       if (newItems.every(i => i.checked) && !c.manualExpand) willCollapse = true
       return { ...c, items: newItems }
     })
-    setCats(next)
+    setCategories(next)
     if (willCollapse) {
       clearTimeout(collapseRef.current)
       collapseRef.current = setTimeout(() => {
-        setCats(p => p.map((c, i) => i === ci ? { ...c, collapsed: true } : c))
+        setCategories(p => p.map((c, i) => i === ci ? { ...c, collapsed: true } : c))
       }, 450)
     }
     if (isSaved) {
@@ -338,15 +399,9 @@ function ShoppingList({ list, onSave, onDiscard }) {
   }
 
   function toggleCat(ci) {
-    setCats(p => p.map((c, i) =>
+    setCategories(p => p.map((c, i) =>
       i !== ci ? c : { ...c, collapsed: !c.collapsed, manualExpand: c.collapsed }
     ))
-  }
-
-  async function handleSave() {
-    currentList.categories = cats
-    await onSave()
-    setIsSaved(true)
   }
 
   return html`
@@ -358,7 +413,18 @@ function ShoppingList({ list, onSave, onDiscard }) {
             <div class="text-[12px] text-white/50">${done} / ${allItems.length}</div>
             <button
               class="text-white/40 bg-transparent border-none cursor-pointer p-1 active:text-accent transition-colors"
-              onClick=${() => shareList({ ...list, categories: cats })}
+              onClick=${() => window.App.openAmendModal()}
+              title="Dodaj do listy"
+              aria-label="Dodaj do listy"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+            </button>
+            <button
+              class="text-white/40 bg-transparent border-none cursor-pointer p-1 active:text-accent transition-colors"
+              onClick=${() => shareList({ ...list, categories: categories })}
               title="Udostępnij listę"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -375,7 +441,7 @@ function ShoppingList({ list, onSave, onDiscard }) {
         </div>
       </div>
 
-      ${cats.map((cat, ci) => {
+      ${categories.map((cat, ci) => {
         const catDone = cat.items.filter(i => i.checked).length
         const catAllDone = catDone === cat.items.length && cat.items.length > 0
         return html`
@@ -566,6 +632,7 @@ window.App = {
   saveSettings, saveFromSetup, clearApiKey,
   processWithMistral, handleNavClick,
   saveCurrentList, discardCurrentList, clearAllHistory,
+  openAmendModal, closeAmendModal, handleAmendOverlayClick, amendCurrentList,
 }
 
 // ── Invite ────────────────────────────────────────────────────────────────────
