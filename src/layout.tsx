@@ -29,10 +29,11 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => (
 
       <script type="importmap" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         imports: {
-          "preact":           "https://esm.sh/preact@10",
-          "preact/hooks":     "https://esm.sh/preact@10/hooks",
-          "htm":              "https://esm.sh/htm@3.1.1",
-          "canvas-confetti":  "https://esm.sh/canvas-confetti@1.6.0",
+          "preact":            "https://esm.sh/preact@10.29.2",
+          "preact/hooks":      "https://esm.sh/preact@10.29.2/hooks",
+          "@preact/signals":   "https://esm.sh/@preact/signals@1.3.4",
+          "htm":               "https://esm.sh/htm@3.1.1",
+          "canvas-confetti":   "https://esm.sh/canvas-confetti@1.6.0",
         }
       })}} />
 

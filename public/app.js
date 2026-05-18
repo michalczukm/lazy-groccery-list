@@ -1,5 +1,6 @@
 import { render, h } from 'preact'
-import { useState, useEffect, useRef } from 'preact/hooks'
+import { useEffect, useRef } from 'preact/hooks'
+import { signal } from '@preact/signals'
 import htm from 'htm'
 import confetti from 'canvas-confetti'
 import { encodeState, decodeState } from './share-state.js'
@@ -37,7 +38,7 @@ const DB = (() => {
 })()
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let currentList = null
+const currentList = signal(null)
 let currentView = 'input'
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
@@ -52,7 +53,7 @@ function handleOverlayClick(e) {
   if (e.target.id === 'modal-overlay') closeModal()
 }
 function openAmendModal() {
-  if (!currentList) { toast('Brak aktywnej listy'); return }
+  if (!currentList.value) { toast('Brak aktywnej listy'); return }
   const amendElement = document.getElementById('amend-input')
   if (amendElement) amendElement.value = ''
   document.getElementById('amend-modal-overlay').classList.remove('hidden')
@@ -156,7 +157,7 @@ function updateHeader(name) {
   const titleEl = document.getElementById('header-title')
   const subEl   = document.getElementById('header-sub')
   if (titleEl) titleEl.textContent = m.title
-  if (subEl)   subEl.textContent   = (name === 'list' && currentList) ? currentList.title : m.sub
+  if (subEl)   subEl.textContent   = (name === 'list' && currentList.value) ? currentList.value.title : m.sub
 }
 
 // ── Mistral API ───────────────────────────────────────────────────────────────
@@ -251,7 +252,7 @@ async function processWithMistral() {
   try {
     const categories = await callMistral(raw)
 
-    currentList = {
+    currentList.value = {
       id: Date.now(), title: 'Zakupy ' + fmtDate(Date.now()),
       date: Date.now(), saved: true, model: MODEL,
       categories: categories
@@ -262,7 +263,7 @@ async function processWithMistral() {
           items: c.items.map(n => ({ name: n, checked: false })),
         })),
     }
-    await DB.save(currentList)
+    await DB.save(currentList.value)
 
     hideLoading()
     setStatus('ready', 'Gotowe — Mistral Small')
@@ -275,7 +276,7 @@ async function processWithMistral() {
 }
 
 async function amendCurrentList() {
-  if (!currentList) { toast('Brak aktywnej listy'); return }
+  if (!currentList.value) { toast('Brak aktywnej listy'); return }
   const raw = document.getElementById('amend-input').value.trim()
   if (!raw)      { toast('Wpisz listę zakupów 📝'); return }
   if (!getKey()) { closeAmendModal(); openModal(); return }
@@ -284,12 +285,11 @@ async function amendCurrentList() {
 
   try {
     const newCategories = await callMistral(raw)
-    const { categories, added, skipped } = mergeAmendInto(currentList, newCategories)
+    const { categories, added, skipped } = mergeAmendInto(currentList.value, newCategories)
 
-    currentList.categories = categories
-    if (currentList.saved) await DB.save(currentList)
-
-    window.dispatchEvent(new CustomEvent('list:updated'))
+    const updated = { ...currentList.value, categories }
+    if (updated.saved) await DB.save(updated)
+    currentList.value = updated
 
     hideLoading()
     closeAmendModal()
@@ -306,14 +306,15 @@ async function amendCurrentList() {
 
 // ── List actions ──────────────────────────────────────────────────────────────
 async function saveCurrentList() {
-  currentList.saved = true
-  await DB.save(currentList)
+  const saved = { ...currentList.value, saved: true }
+  await DB.save(saved)
+  currentList.value = saved
   toast('Lista zapisana 💾')
 }
 
 function discardCurrentList() {
   if (!confirm('Odrzucić bieżącą listę?')) return
-  currentList = null
+  currentList.value = null
   navigateTo('input')
 }
 
@@ -323,14 +324,14 @@ async function loadHistory(id) {
   const l = lists.find(l => l.id === id)
   if (!l) return
   l.categories.forEach(c => { c.collapsed ??= false; c.manualExpand ??= false })
-  currentList = l
+  currentList.value = l
   navigateTo('list')
 }
 
 async function delHistory(id) {
   if (!confirm('Usunąć tę listę?')) return
   await DB.del(id)
-  if (currentList?.id === id) currentList = null
+  if (currentList.value?.id === id) currentList.value = null
   await mountHistoryIsland()
   toast('Lista usunięta')
 }
@@ -338,18 +339,18 @@ async function delHistory(id) {
 async function clearAllHistory() {
   if (!confirm('Usunąć WSZYSTKIE zapisane listy?')) return
   await DB.clear()
-  if (currentList?.saved) currentList = null
+  if (currentList.value?.saved) currentList.value = null
   await mountHistoryIsland()
   toast('Historia wyczyszczona 🗑')
 }
 
 // ── ShoppingList island ───────────────────────────────────────────────────────
-function ShoppingList({ list, onSave, onDiscard }) {
-  const [categories, setCategories] = useState(list ? list.categories : [])
-  const [isSaved, setIsSaved] = useState(list ? list.saved : false)
+function ShoppingList({ onSave, onDiscard }) {
+  const list = currentList.value
   const collapseRef = useRef(null)
   const prevAllDone = useRef(false)
 
+  const categories = list?.categories ?? []
   const allItems = categories.flatMap(c => c.items)
   const done = allItems.filter(i => i.checked).length
   const allDone = allItems.length > 0 && allItems.every(i => i.checked)
@@ -358,14 +359,6 @@ function ShoppingList({ list, onSave, onDiscard }) {
     if (allDone && !prevAllDone.current) confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } })
     prevAllDone.current = allDone
   }, [allDone])
-
-  useEffect(() => {
-    const handler = () => setCategories(
-      currentList.categories.map(c => ({ ...c, items: [...c.items] }))
-    )
-    window.addEventListener('list:updated', handler)
-    return () => window.removeEventListener('list:updated', handler)
-  }, [])
 
   if (!list) return html`
     <div class="text-center py-16 px-6 text-white/45">
@@ -385,23 +378,22 @@ function ShoppingList({ list, onSave, onDiscard }) {
       if (newItems.every(i => i.checked) && !c.manualExpand) willCollapse = true
       return { ...c, items: newItems }
     })
-    setCategories(next)
+    currentList.value = { ...list, categories: next }
     if (willCollapse) {
       clearTimeout(collapseRef.current)
       collapseRef.current = setTimeout(() => {
-        setCategories(p => p.map((c, i) => i === ci ? { ...c, collapsed: true } : c))
+        currentList.value = { ...currentList.value, categories: currentList.value.categories.map((c, i) => i === ci ? { ...c, collapsed: true } : c) }
       }, 450)
     }
-    if (isSaved) {
-      currentList.categories = next
-      DB.save(currentList).catch(e => console.error('Auto-save failed', e))
+    if (list.saved) {
+      DB.save(currentList.value).catch(e => console.error('Auto-save failed', e))
     }
   }
 
   function toggleCat(ci) {
-    setCategories(p => p.map((c, i) =>
+    currentList.value = { ...list, categories: list.categories.map((c, i) =>
       i !== ci ? c : { ...c, collapsed: !c.collapsed, manualExpand: c.collapsed }
-    ))
+    )}
   }
 
   return html`
@@ -424,7 +416,7 @@ function ShoppingList({ list, onSave, onDiscard }) {
             </button>
             <button
               class="text-white/40 bg-transparent border-none cursor-pointer p-1 active:text-accent transition-colors"
-              onClick=${() => shareList({ ...list, categories: categories })}
+              onClick=${() => shareList(currentList.value)}
               title="Udostępnij listę"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -525,7 +517,7 @@ function HistoryList({ lists, onLoad, onDelete, onClear }) {
 function mountListIsland() {
   const el = document.getElementById('categories-container')
   if (el) render(
-    html`<${ShoppingList} list=${currentList} onSave=${saveCurrentList} onDiscard=${discardCurrentList} />`,
+    html`<${ShoppingList} onSave=${saveCurrentList} onDiscard=${discardCurrentList} />`,
     el
   )
 }
@@ -604,7 +596,7 @@ async function handleSharedState() {
   if (!state) return false
   try {
     const payload = await decodeState(state)
-    currentList = {
+    currentList.value = {
       id: Date.now(),
       title: payload.title,
       date: payload.date,
