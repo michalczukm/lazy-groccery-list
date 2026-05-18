@@ -70,7 +70,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => (
     <body class="font-sans bg-navy-dark text-white flex flex-col max-w-[480px] mx-auto h-full overflow-hidden">
 
       {/* Loading overlay */}
-      <div id="loading-overlay" class="hidden fixed inset-0 bg-black/75 flex flex-col items-center justify-center z-50">
+      <div id="loading-overlay" class="hidden fixed inset-0 bg-black/75 flex flex-col items-center justify-center z-[70]">
         <div class="w-10 h-10 rounded-full border-[3px] border-white/15 border-t-accent animate-spin" />
         <div id="loading-text" class="text-white/70 mt-4 text-sm">Przetwarzam…</div>
       </div>
