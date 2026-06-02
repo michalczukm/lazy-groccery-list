@@ -1,49 +1,79 @@
-import { SELF, env } from 'cloudflare:test'
+import { SELF } from 'cloudflare:test'
 import { describe, it, expect } from 'vitest'
 
-describe('GET /api/invite', () => {
-  it('returns 401 with no token', async () => {
-    const res = await SELF.fetch('https://example.com/api/invite')
-    expect(res.status).toBe(401)
-    expect(await res.json()).toEqual({ error: 'Unauthorized' })
+describe('POST /api/session', () => {
+  it('returns 403 when Origin does not match request URL origin', async () => {
+    const res = await SELF.fetch('https://example.com/api/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Origin': 'https://evil.com' },
+      body: JSON.stringify({ turnstileToken: 'dummy' }),
+    })
+    expect(res.status).toBe(403)
+    expect(await res.json()).toEqual({ code: 'forbidden' })
   })
 
-  it('returns 401 with wrong token', async () => {
-    const res = await SELF.fetch('https://example.com/api/invite?token=wrong-token')
-    expect(res.status).toBe(401)
-    expect(await res.json()).toEqual({ error: 'Unauthorized' })
+  it('returns 400 when turnstileToken is missing', async () => {
+    const res = await SELF.fetch('https://example.com/api/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Origin': 'https://example.com' },
+      body: JSON.stringify({}),
+    })
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({ code: 'missing-token' })
+  })
+})
+
+describe('POST /api/categorize', () => {
+  it('returns 403 when Origin does not match request URL origin', async () => {
+    const res = await SELF.fetch('https://example.com/api/categorize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Origin': 'https://evil.com' },
+      body: JSON.stringify({ text: 'mleko, chleb' }),
+    })
+    expect(res.status).toBe(403)
+    expect(await res.json()).toEqual({ code: 'forbidden' })
   })
 
-  it('returns 200 with Mistral key for valid token', async () => {
-    const { INVITE_TOKEN, MISTRAL_API_KEY } = env as { INVITE_TOKEN: string; MISTRAL_API_KEY: string }
-    const res = await SELF.fetch(`https://example.com/api/invite?token=${encodeURIComponent(INVITE_TOKEN)}`)
-    expect(res.status).toBe(200)
-    const body = await res.json() as { key: string }
-    expect(body.key).toBe(MISTRAL_API_KEY)
+  it('returns 401 when session cookie is missing', async () => {
+    const res = await SELF.fetch('https://example.com/api/categorize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Origin': 'https://example.com' },
+      body: JSON.stringify({ text: 'mleko, chleb' }),
+    })
+    expect(res.status).toBe(401)
+    expect(await res.json()).toEqual({ code: 'captcha-required' })
+  })
+
+  it('returns 401 when session cookie is invalid', async () => {
+    const res = await SELF.fetch('https://example.com/api/categorize', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Origin': 'https://example.com',
+        'Cookie': 'lazy_list_session=invalid-cookie-value',
+      },
+      body: JSON.stringify({ text: 'mleko, chleb' }),
+    })
+    expect(res.status).toBe(401)
+    expect(await res.json()).toEqual({ code: 'captcha-required' })
   })
 })
 
 describe('View routes', () => {
-  it('GET /views/input returns HTML', async () => {
+  it('returns HTML when GET /views/input', async () => {
     const res = await SELF.fetch('https://example.com/views/input')
     expect(res.status).toBe(200)
     expect(res.headers.get('content-type')).toContain('text/html')
   })
 
-  it('GET /views/list returns HTML', async () => {
+  it('returns HTML when GET /views/list', async () => {
     const res = await SELF.fetch('https://example.com/views/list')
     expect(res.status).toBe(200)
     expect(res.headers.get('content-type')).toContain('text/html')
   })
 
-  it('GET /views/history returns HTML', async () => {
+  it('returns HTML when GET /views/history', async () => {
     const res = await SELF.fetch('https://example.com/views/history')
-    expect(res.status).toBe(200)
-    expect(res.headers.get('content-type')).toContain('text/html')
-  })
-
-  it('GET /views/setup returns HTML', async () => {
-    const res = await SELF.fetch('https://example.com/views/setup')
     expect(res.status).toBe(200)
     expect(res.headers.get('content-type')).toContain('text/html')
   })

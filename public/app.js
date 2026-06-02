@@ -8,12 +8,6 @@ import { mergeAmendInto } from './merge-amend.js'
 
 const html = htm.bind(h)
 
-// CONFIG
-const LS_KEY = 'zakupy_api_key'
-const MODEL  = 'mistral-small-latest'
-
-const getKey = () => localStorage.getItem(LS_KEY) || ''
-
 // ── IndexedDB ──────────────────────────────────────────────────────────────────
 const DB = (() => {
   let db
@@ -42,16 +36,6 @@ const currentList = signal(null)
 let currentView = 'input'
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
-function openModal() {
-  document.getElementById('key-input').value = getKey()
-  document.getElementById('modal-overlay').classList.remove('hidden')
-}
-function closeModal() {
-  document.getElementById('modal-overlay').classList.add('hidden')
-}
-function handleOverlayClick(e) {
-  if (e.target.id === 'modal-overlay') closeModal()
-}
 function openAmendModal() {
   if (!currentList.value) { toast('Brak aktywnej listy'); return }
   const amendElement = document.getElementById('amend-input')
@@ -65,54 +49,7 @@ function closeAmendModal() {
 function handleAmendOverlayClick(e) {
   if (e.target.id === 'amend-modal-overlay') closeAmendModal()
 }
-function toggleReveal(inputId, btn) {
-  const inp = document.getElementById(inputId)
-  inp.type = inp.type === 'password' ? 'text' : 'password'
-  btn.textContent = inp.type === 'password' ? 'Pokaż' : 'Ukryj'
-}
-function saveSettings() {
-  const key = document.getElementById('key-input').value.trim()
-  if (!key) { toast('Wpisz klucz API'); return }
-  localStorage.setItem(LS_KEY, key)
-  updateKeyIndicator()
-  closeModal()
-  toast('Ustawienia zapisane ✓')
-  showMainApp()
-}
-function saveFromSetup() {
-  const key = document.getElementById('setup-key-input').value.trim()
-  if (!key) { toast('Wpisz klucz API'); return }
-  localStorage.setItem(LS_KEY, key)
-  updateKeyIndicator()
-  showMainApp()
-  toast('Klucz zapisany ✓')
-}
-function clearApiKey() {
-  if (!confirm('Usunąć zapisany klucz API?')) return
-  localStorage.removeItem(LS_KEY)
-  updateKeyIndicator()
-  closeModal()
-  checkKeyAndRoute()
-  toast('Klucz usunięty')
-}
-function updateKeyIndicator() {
-  const has = !!getKey()
-  const dot = document.getElementById('key-dot')
-  if (dot) dot.className = `w-2 h-2 rounded-full ${has ? 'bg-emerald-500' : 'bg-amber-400'}`
-  const label = document.getElementById('key-btn-label')
-  if (label) label.textContent = has ? 'Mistral' : 'Klucz API'
-}
-
 // ── Routing ───────────────────────────────────────────────────────────────────
-function checkKeyAndRoute() {
-  if (getKey()) {
-    showMainApp()
-  } else {
-    document.getElementById('bottom-nav').style.display = 'none'
-    currentView = 'setup'
-    htmx.ajax('GET', '/views/setup', { target: '#main-content', swap: 'innerHTML' })
-  }
-}
 function showMainApp() {
   document.getElementById('bottom-nav').style.display = ''
   if (currentView !== 'input') {
@@ -160,101 +97,79 @@ function updateHeader(name) {
   if (subEl)   subEl.textContent   = (name === 'list' && currentList.value) ? currentList.value.title : m.sub
 }
 
-// ── Mistral API ───────────────────────────────────────────────────────────────
-const SYSTEM = `Jesteś asystentem do kategoryzowania list zakupów po polsku.
-Dostajesz surową listę produktów (mogą być po jednym na linię, mogą być notatki w nawiasach, niektóre mogą być łączone np przez "i" albo "oraz").
-Przypisz każdy produkt do odpowiedniej kategorii. Zachowaj ORYGINALNE nazwy produktów razem z uwagami w nawiasach.
-
-Dostępne kategorie (użyj tylko tych, które mają produkty):
-- nabiał 🥛 : mleko, jogurty, sery, twarogi, jajka, śmietana, masło, skyr, serek, actimel
-- mięso i wędliny 🥩 : mięso surowe, kurczak, wędlina, parówki, kiełbasa, szynka
-- warzywa 🥦 : wszystkie warzywa świeże, włoszczyzna, cukinia, papryka
-- owoce 🍎 : wszystkie owoce świeże
-- pieczywo 🍞 : chleb, bułki, bagietki, tortille
-- napoje 🥤 : soki, woda, napoje gazowane
-- suche produkty 🌾 : płatki, ryż, makaron, kasza, mąka, orzechy
-- przyprawy i sosy 🧂 : oleje, oliwy, sosy, octy, musztarda
-- gotowe dania 🍱 : gotowe sałatki, dania gotowe, mrożonki
-- chemia i higiena 🧴 : środki czystości, kosmetyki, artykuły higieny
-- inne 🛒 : wszystko co nie pasuje do powyższych`
-
-const RESPONSE_SCHEMA = {
-  type: 'json_schema',
-  json_schema: {
-    name: 'shopping_categories',
-    strict: true,
-    schema: {
-      type: 'object',
-      properties: {
-        categories: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              name:  { type: 'string' },
-              emoji: { type: 'string' },
-              items: { type: 'array', items: { type: 'string' } },
-            },
-            required: ['name', 'emoji', 'items'],
-            additionalProperties: false,
-          },
-        },
-      },
-      required: ['categories'],
-      additionalProperties: false,
-    },
-  },
+// ── Server-side AI proxy ─────────────────────────────────────────────────────
+function waitForTurnstile() {
+  return new Promise((resolve) => {
+    if (window.turnstile) return resolve()
+    const id = setInterval(() => {
+      if (window.turnstile) { clearInterval(id); resolve() }
+    }, 50)
+  })
 }
 
-async function callMistral(rawText) {
-  const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getKey()}` },
-    body: JSON.stringify({
-      model: MODEL, max_tokens: 1000, temperature: 0.1,
-      response_format: RESPONSE_SCHEMA,
-      messages: [
-        { role: 'system', content: SYSTEM },
-        { role: 'user',   content: `Skategoryzuj tę listę zakupów:\n${rawText}` },
-      ],
-    }),
+async function executeTurnstile() {
+  await waitForTurnstile()
+  return new Promise((resolve, reject) => {
+    const widgetId = window.turnstile.render('#turnstile-widget', {
+      sitekey: window.__TURNSTILE_SITE_KEY__,
+      size: 'invisible',
+      'response-field': false,
+      callback: (token) => { window.turnstile.remove(widgetId); resolve(token) },
+      'error-callback': () => { window.turnstile.remove(widgetId); reject(new Error('Turnstile error')) },
+    })
+    window.turnstile.execute(widgetId)
+  })
+}
+
+async function ensureSession() {
+  const token = await executeTurnstile()
+  const res = await fetch('/api/session', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ turnstileToken: token }),
+  })
+  if (res.status !== 204) throw new Error('Captcha failed')
+}
+
+async function callCategorize(rawText, allowRetry = true) {
+  const res = await fetch('/api/categorize', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: rawText }),
   })
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    if (res.status === 401) throw new Error('Nieprawidłowy klucz API. Sprawdź ustawienia.')
-    if (res.status === 429) throw new Error('Limit zapytań przekroczony. Spróbuj za chwilę.')
-    throw new Error(err?.message || `Błąd API (${res.status})`)
+  if (res.ok) {
+    const data = await res.json()
+    if (!Array.isArray(data?.categories)) throw new Error('AI zwróciło niepoprawny format.')
+    return data.categories
   }
 
-  const data    = await res.json()
-  const content = data.choices?.[0]?.message?.content || ''
-
-  try {
-    const parsed = JSON.parse(content)
-    if (!Array.isArray(parsed?.categories)) throw new Error('Brak kategorii w odpowiedzi AI.')
-
-    return parsed.categories
+  const err = await res.json().catch(() => ({}))
+  if (res.status === 401 && err.code === 'captcha-required' && allowRetry) {
+    await ensureSession()
+    return callCategorize(rawText, false)
   }
-  catch (_err) {
-    throw new Error('AI zwróciło niepoprawny JSON. Spróbuj ponownie.')
-  }
+  if (res.status === 400) throw new Error('Lista pusta lub za długa.')
+  if (res.status === 429) throw new Error('Limit zapytań przekroczony. Spróbuj za chwilę.')
+  if (res.status === 502) throw new Error('Błąd AI. Spróbuj ponownie.')
+  throw new Error('Nieoczekiwany błąd. Spróbuj ponownie.')
 }
 
 async function processWithMistral() {
   const raw = document.getElementById('shopping-input').value.trim()
-  if (!raw)     { toast('Wpisz listę zakupów 📝'); return }
-  if (!getKey()) { openModal(); return }
+  if (!raw) { toast('Wpisz listę zakupów 📝'); return }
 
   setStatus('idle', 'Wysyłam…')
   showLoading('Kategoryzuję listę…')
 
   try {
-    const categories = await callMistral(raw)
+    const categories = await callCategorize(raw)
 
     currentList.value = {
       id: Date.now(), title: 'Zakupy ' + fmtDate(Date.now()),
-      date: Date.now(), saved: true, model: MODEL,
+      date: Date.now(), saved: true,
       categories: categories
         .filter(c => c.items?.length)
         .map(c => ({
@@ -266,7 +181,7 @@ async function processWithMistral() {
     await DB.save(currentList.value)
 
     hideLoading()
-    setStatus('ready', 'Gotowe — Mistral Small')
+    setStatus('ready', 'Gotowe')
     navigateTo('list')
   } catch (e) {
     hideLoading()
@@ -278,13 +193,12 @@ async function processWithMistral() {
 async function amendCurrentList() {
   if (!currentList.value) { toast('Brak aktywnej listy'); return }
   const raw = document.getElementById('amend-input').value.trim()
-  if (!raw)      { toast('Wpisz listę zakupów 📝'); return }
-  if (!getKey()) { closeAmendModal(); openModal(); return }
+  if (!raw) { toast('Wpisz listę zakupów 📝'); return }
 
   showLoading('Dodaję do listy…')
 
   try {
-    const newCategories = await callMistral(raw)
+    const newCategories = await callCategorize(raw)
     const { categories, added, skipped } = mergeAmendInto(currentList.value, newCategories)
 
     const updated = { ...currentList.value, categories }
@@ -620,42 +534,20 @@ async function handleSharedState() {
 
 // ── window.App namespace ──────────────────────────────────────────────────────
 window.App = {
-  openModal, closeModal, handleOverlayClick, toggleReveal,
-  saveSettings, saveFromSetup, clearApiKey,
   processWithMistral, handleNavClick,
   saveCurrentList, discardCurrentList, clearAllHistory,
   openAmendModal, closeAmendModal, handleAmendOverlayClick, amendCurrentList,
-}
-
-// ── Invite ────────────────────────────────────────────────────────────────────
-async function handleInviteToken() {
-  const params = new URLSearchParams(window.location.search)
-  const token = params.get('token')
-  if (!token) return
-  try {
-    const res = await fetch(`/api/invite?token=${encodeURIComponent(token)}`)
-    if (!res.ok) { toast('Nieprawidłowy link zaproszenia'); return }
-    const { key } = await res.json()
-    localStorage.setItem(LS_KEY, key)
-    history.replaceState(null, '', window.location.pathname)
-    updateKeyIndicator()
-    toast('Klucz API ustawiony ✓ Możesz korzystać z aplikacji', 4000)
-  } catch {
-    toast('Nieprawidłowy link zaproszenia')
-  }
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
 
 DB.init().then(async () => {
-  updateKeyIndicator()
-  await handleInviteToken()
   const wasShared = await handleSharedState()
   if (wasShared) {
     document.getElementById('bottom-nav').style.display = ''
     navigateTo('list')
   } else {
-    checkKeyAndRoute()
+    showMainApp()
   }
 })

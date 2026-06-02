@@ -6,37 +6,17 @@
   "assets": {
     "directory": "./public"
   },
-  // "compatibility_flags": [
-  //   "nodejs_compat"
-  // ],
-  // "vars": {
-  //   "MY_VAR": "my-variable"
-  // },
-  "kv_namespaces": [
-    {
-      "binding": "INVITE_KV",
-      "id": "30c93830e67a4336955d688863303c88",
-      "preview_id": "3514e267f64e49a580d8ef8e874aa0fa"
-    }
-  ],
-  // "r2_buckets": [
-  //   {
-  //     "binding": "MY_BUCKET",
-  //     "bucket_name": "my-bucket"
-  //   }
-  // ],
-  // "d1_databases": [
-  //   {
-  //     "binding": "MY_DB",
-  //     "database_name": "my-database",
-  //     "database_id": ""
-  //   }
-  // ],
-  // "ai": {
-  //   "binding": "AI"
-  // },
-  // "observability": {
-  //   "enabled": true,
-  //   "head_sampling_rate": 1
-  // }
+  "vars": {
+    "TURNSTILE_SITE_KEY": "REPLACE_WITH_PUBLIC_SITE_KEY"
+  },
+  "unsafe": {
+    "bindings": [
+      {
+        "name": "AI_RATE_LIMIT",
+        "type": "ratelimit",
+        "namespace_id": "1001",
+        "simple": { "limit": 20, "period": 60 }
+      }
+    ]
+  }
 }

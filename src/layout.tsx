@@ -1,7 +1,8 @@
 import type { FC, PropsWithChildren } from 'hono/jsx'
-import { Modal } from './components/modal'
 
-export const Layout: FC<PropsWithChildren> = ({ children }) => (
+type LayoutProps = PropsWithChildren<{ turnstileSiteKey: string }>
+
+export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
   <html lang="pl" class="h-full">
     <head>
       <meta charset="UTF-8" />
@@ -10,6 +11,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => (
       <link rel="manifest" href="/manifest.json" />
       <link rel="icon" href="/icon.svg" />
       <meta name="theme-color" content="#1a1a2e" />
+      <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
       <meta name="apple-mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       <meta name="apple-mobile-web-app-title" content="Lazy List" />
@@ -26,6 +28,8 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => (
         }`
       }} />
       <script src="https://unpkg.com/htmx.org@2.0.10/dist/htmx.min.js" />
+      <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
+      <script dangerouslySetInnerHTML={{ __html: `window.__TURNSTILE_SITE_KEY__ = ${JSON.stringify(turnstileSiteKey)};` }} />
 
       <script type="importmap" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         imports: {
@@ -81,8 +85,6 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => (
         style="bottom:calc(74px + env(safe-area-inset-bottom,0px) + 10px)"
       />
 
-      <Modal />
-
       {/* Amend list modal */}
       <div id="amend-modal-overlay"
         class="hidden fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
@@ -116,11 +118,6 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => (
             <div id="header-title" class="text-[19px] font-bold tracking-tight">🛒 Lazy List</div>
             <div id="header-sub" class="text-[12px] opacity-55 mt-0.5 min-h-[1rem]">Nowa lista</div>
           </div>
-          <button id="api-key-btn" onclick="App.openModal()"
-            class="bg-transparent text-white/60 px-3 py-1.5 rounded-full text-[12px] flex items-center gap-1.5 whitespace-nowrap border border-white/10 cursor-pointer active:border-white/20">
-            <div id="key-dot" class="w-2 h-2 rounded-full bg-amber-400" />
-            <span id="key-btn-label">Klucz API</span>
-          </button>
         </div>
       </header>
 
@@ -149,6 +146,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => (
         </button>
       </nav>
 
+      <div id="turnstile-widget" style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:80" />
       <script type="module" src="/app.js" />
     </body>
   </html>

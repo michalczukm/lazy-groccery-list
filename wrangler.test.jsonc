@@ -7,13 +7,19 @@
     "directory": "./public"
   },
   "vars": {
-    "INVITE_TOKEN": "test-token-abc123",
-    "MISTRAL_API_KEY": "test-mistral-key"
+    "MISTRAL_API_KEY": "test-mistral-key",
+    "TURNSTILE_SECRET": "test-turnstile-secret",
+    "SESSION_HMAC_SECRET": "test-hmac-secret",
+    "TURNSTILE_SITE_KEY": "test-site-key"
   },
-  "kv_namespaces": [
-    {
-      "binding": "INVITE_KV",
-      "id": "test-kv-id"
-    }
-  ]
+  "unsafe": {
+    "bindings": [
+      {
+        "name": "AI_RATE_LIMIT",
+        "type": "ratelimit",
+        "namespace_id": "1001",
+        "simple": { "limit": 20, "period": 60 }
+      }
+    ]
+  }
 }
