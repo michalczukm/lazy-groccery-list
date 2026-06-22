@@ -24,6 +24,9 @@ importers:
       typed-htmx:
         specifier: 0.3.1
         version: 0.3.1
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
       vitest:
         specifier: ^4.1.0
         version: 4.1.6(vite@8.0.13(esbuild@0.27.3))
@@ -826,6 +829,11 @@ packages:
     resolution: {integrity: sha512-6WSPsukTIOEMsVbx5wzgVSvldLmgBUVcFIm2vJlBpRPtcbDOGC5y1IYrCWNX1yUlNsrv1Ngcw4gGM8jsPyNV7w==}
     engines: {node: '>=12'}
 
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
   undici@7.24.8:
     resolution: {integrity: sha512-6KQ/+QxK49Z/p3HO6E5ZCZWNnCasyZLa5ExaVYyvPxUwKtbCPMKELJOqh7EqOle0t9cH/7d2TaaTRRa6Nhs4YQ==}
     engines: {node: '>=20.18.1'}
@@ -1616,6 +1624,8 @@ snapshots:
   typed-htmx@0.3.1:
     dependencies:
       typed-html: 3.0.1
+
+  typescript@6.0.3: {}
 
   undici@7.24.8: {}
 

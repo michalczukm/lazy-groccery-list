@@ -6,6 +6,7 @@
     "deploy": "wrangler deploy --minify",
     "release": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "typecheck": "tsc --noEmit -p tsconfig.test.json",
     "test": "vitest"
   },
   "dependencies": {
@@ -16,6 +17,7 @@
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.16.6",
     "typed-htmx": "0.3.1",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.0",
     "wrangler": "4.88.0"
   }

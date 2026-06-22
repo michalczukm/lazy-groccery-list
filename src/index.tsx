@@ -100,7 +100,7 @@ app.post('/api/categorize', async (c) => {
     return c.json({ code: 'captcha-required' }, 401)
   }
 
-  const body = await c.req.json<{ text?: string }>().catch(() => ({}))
+  const body = await c.req.json<{ text?: string }>().catch(() => ({}) as { text?: string })
   const text = (body.text ?? '').trim()
   if (!text || text.length > MAX_INPUT_CHARS) {
     return c.json({ code: 'invalid-input' }, 400)

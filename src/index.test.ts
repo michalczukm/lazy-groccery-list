@@ -78,3 +78,20 @@ describe('View routes', () => {
     expect(res.headers.get('content-type')).toContain('text/html')
   })
 })
+
+describe('GET /privacy', () => {
+  it('returns an HTML privacy page', async () => {
+    const res = await SELF.fetch('https://example.com/privacy')
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toContain('text/html')
+  })
+
+  it('mentions the Cloudflare Turnstile privacy policy and key topics', async () => {
+    const res = await SELF.fetch('https://example.com/privacy')
+    const html = await res.text()
+    expect(html).toContain('https://www.cloudflare.com/en-gb/turnstile-privacy-policy/')
+    expect(html).toContain('Turnstile')
+    expect(html).toContain('Mistral')
+    expect(html).toContain('Cookies')
+  })
+})
