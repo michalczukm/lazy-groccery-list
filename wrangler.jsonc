@@ -7,7 +7,7 @@
     "directory": "./public"
   },
   "vars": {
-    "TURNSTILE_SITE_KEY": "REPLACE_WITH_PUBLIC_SITE_KEY"
+    "TURNSTILE_SITE_KEY": "1x00000000000000000000BB"
   },
   // `unsafe.bindings` is the CF-documented config path for the ratelimit binding type.
   // Still flagged experimental in the wrangler schema; no stable top-level key yet.
