@@ -6,6 +6,7 @@ import { Layout } from './layout'
 import { InputView } from './views/input'
 import { ListView } from './views/list'
 import { HistoryView } from './views/history'
+import { PrivacyView } from './views/privacy'
 import { isSameOrigin } from './lib/origin-guard'
 import { signSession, verifySession } from './lib/cookie-session'
 import { verifyTurnstile } from './lib/turnstile'
@@ -49,7 +50,7 @@ app.post('/api/session', async (c) => {
   }
 
   const body = await c.req.json<{ turnstileToken?: string }>().catch(() => ({}))
-  if (!body.turnstileToken) {
+  if (!("turnstileToken" in body && body.turnstileToken)) {
     return c.json({ code: 'missing-token' }, 400)
   }
 
@@ -125,5 +126,7 @@ app.get(
 app.get('/views/input',   (c) => c.html(<InputView />))
 app.get('/views/list',    (c) => c.html(<ListView />))
 app.get('/views/history', (c) => c.html(<HistoryView />))
+
+app.get('/privacy', (c) => c.html(<PrivacyView />))
 
 export default app
