@@ -12,6 +12,7 @@
     "SESSION_HMAC_SECRET": "test-hmac-secret",
     "TURNSTILE_SITE_KEY": "test-site-key"
   },
+  // `unsafe.bindings`: experimental wrapper for ratelimit binding (matches wrangler.jsonc).
   "unsafe": {
     "bindings": [
       {

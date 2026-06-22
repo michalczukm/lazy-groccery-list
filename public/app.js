@@ -5,6 +5,7 @@ import htm from 'htm'
 import confetti from 'canvas-confetti'
 import { encodeState, decodeState } from './share-state.js'
 import { mergeAmendInto } from './merge-amend.js'
+import { executeTurnstile } from './turnstile.js'
 
 const html = htm.bind(h)
 
@@ -98,31 +99,8 @@ function updateHeader(name) {
 }
 
 // ── Server-side AI proxy ─────────────────────────────────────────────────────
-function waitForTurnstile() {
-  return new Promise((resolve) => {
-    if (window.turnstile) return resolve()
-    const id = setInterval(() => {
-      if (window.turnstile) { clearInterval(id); resolve() }
-    }, 50)
-  })
-}
-
-async function executeTurnstile() {
-  await waitForTurnstile()
-  return new Promise((resolve, reject) => {
-    const widgetId = window.turnstile.render('#turnstile-widget', {
-      sitekey: window.__TURNSTILE_SITE_KEY__,
-      size: 'invisible',
-      'response-field': false,
-      callback: (token) => { window.turnstile.remove(widgetId); resolve(token) },
-      'error-callback': () => { window.turnstile.remove(widgetId); reject(new Error('Turnstile error')) },
-    })
-    window.turnstile.execute(widgetId)
-  })
-}
-
 async function ensureSession() {
-  const token = await executeTurnstile()
+  const token = await executeTurnstile(window.__TURNSTILE_SITE_KEY__)
   const res = await fetch('/api/session', {
     method: 'POST',
     credentials: 'same-origin',

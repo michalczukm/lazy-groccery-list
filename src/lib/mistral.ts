@@ -1,22 +1,26 @@
 const MODEL = 'mistral-small-latest'
 const MISTRAL_URL = 'https://api.mistral.ai/v1/chat/completions'
 
+const CATEGORIES: Record<string, { emoji: string; description: string }> = {
+  'nabiał': { emoji: '🥛', description: 'mleko, jogurty, sery, twarogi, jajka, śmietana, masło, skyr, serek, actimel' },
+  'mięso i wędliny': { emoji: '🥩', description: 'mięso surowe, kurczak, wędlina, parówki, kiełbasa, szynka' },
+  'warzywa': { emoji: '🥦', description: 'wszystkie warzywa świeże, włoszczyzna, cukinia, papryka' },
+  'owoce': { emoji: '🍎', description: 'wszystkie owoce świeże' },
+  'pieczywo': { emoji: '🍞', description: 'chleb, bułki, bagietki, tortille' },
+  'napoje': { emoji: '🥤', description: 'sosy, octy, musztarda' },
+  'suche produkty': { emoji: '🌾', description: 'płatki, ryż, makaron, kasza, mąka, orzechy' },
+  'przyprawy i sosy': { emoji: '🧂', description: 'oleje, oliwy, sosy, octy, musztarda' },
+  'gotowe dania': { emoji: '🍱', description: 'gotowe sałatki, dania gotowe, mrożonki' },
+  'chemia i higiena': { emoji: '🧴', description: 'środki czystości, kosmetyki, artykuły higieny' },
+  'inne': { emoji: '🛒', description: 'wszystko co nie pasuje do powyższych' },
+} as const
+
 const SYSTEM = `Jesteś asystentem do kategoryzowania list zakupów po polsku.
 Dostajesz surową listę produktów (mogą być po jednym na linię, mogą być notatki w nawiasach, niektóre mogą być łączone np przez "i" albo "oraz").
 Przypisz każdy produkt do odpowiedniej kategorii. Zachowaj ORYGINALNE nazwy produktów razem z uwagami w nawiasach.
 
 Dostępne kategorie (użyj tylko tych, które mają produkty):
-- nabiał 🥛 : mleko, jogurty, sery, twarogi, jajka, śmietana, masło, skyr, serek, actimel
-- mięso i wędliny 🥩 : mięso surowe, kurczak, wędlina, parówki, kiełbasa, szynka
-- warzywa 🥦 : wszystkie warzywa świeże, włoszczyzna, cukinia, papryka
-- owoce 🍎 : wszystkie owoce świeże
-- pieczywo 🍞 : chleb, bułki, bagietki, tortille
-- napoje 🥤 : soki, woda, napoje gazowane
-- suche produkty 🌾 : płatki, ryż, makaron, kasza, mąka, orzechy
-- przyprawy i sosy 🧂 : oleje, oliwy, sosy, octy, musztarda
-- gotowe dania 🍱 : gotowe sałatki, dania gotowe, mrożonki
-- chemia i higiena 🧴 : środki czystości, kosmetyki, artykuły higieny
-- inne 🛒 : wszystko co nie pasuje do powyższych`
+${JSON.stringify(CATEGORIES, null, 2)}`
 
 const RESPONSE_SCHEMA = {
   type: 'json_schema',
@@ -54,9 +58,8 @@ export type CategorizeResult =
 export const categorize = async (
   rawText: string,
   apiKey: string,
-  fetchImpl: typeof fetch = fetch,
 ): Promise<CategorizeResult> => {
-  const res = await fetchImpl(MISTRAL_URL, {
+  const res = await fetch(MISTRAL_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({

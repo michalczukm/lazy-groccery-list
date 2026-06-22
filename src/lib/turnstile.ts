@@ -2,17 +2,20 @@ const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverif
 
 export type TurnstileResult = { success: boolean }
 
+export type VerifyTurnstileInput = {
+  token: string
+  ip: string | null
+  secret: string
+}
+
 export const verifyTurnstile = async (
-  token: string,
-  ip: string | null,
-  secret: string,
-  fetchImpl: typeof fetch = fetch,
+  { token, ip, secret }: VerifyTurnstileInput,
 ): Promise<TurnstileResult> => {
   const body: Record<string, string> = { secret, response: token }
   if (ip) body.remoteip = ip
 
   try {
-    const res = await fetchImpl(SITEVERIFY_URL, {
+    const res = await fetch(SITEVERIFY_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

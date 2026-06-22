@@ -54,7 +54,11 @@ app.post('/api/session', async (c) => {
   }
 
   const ip = c.req.header('CF-Connecting-IP') ?? null
-  const result = await verifyTurnstile(body.turnstileToken, ip, c.env.TURNSTILE_SECRET)
+  const result = await verifyTurnstile({
+    token: body.turnstileToken,
+    ip,
+    secret: c.env.TURNSTILE_SECRET,
+  })
   if (!result.success) {
     return c.json({ code: 'captcha-failed' }, 403)
   }

@@ -9,6 +9,9 @@
   "vars": {
     "TURNSTILE_SITE_KEY": "REPLACE_WITH_PUBLIC_SITE_KEY"
   },
+  // `unsafe.bindings` is the CF-documented config path for the ratelimit binding type.
+  // Still flagged experimental in the wrangler schema; no stable top-level key yet.
+  // See https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/
   "unsafe": {
     "bindings": [
       {
