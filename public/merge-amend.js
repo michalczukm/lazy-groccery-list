@@ -21,7 +21,6 @@ export function mergeAmendInto(list, newCategories) {
     } else {
       existing.push({
         name: nc.name,
-        emoji: nc.emoji,
         collapsed: false,
         manualExpand: false,
         items: nc.items.map(name => ({ name: String(name).trim(), checked: false })),

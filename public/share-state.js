@@ -4,7 +4,6 @@ export async function encodeState(list) {
     date: list.date,
     categories: list.categories.map(c => ({
       name: c.name,
-      emoji: c.emoji,
       items: c.items.map(i => ({ name: i.name, checked: i.checked })),
     })),
   }

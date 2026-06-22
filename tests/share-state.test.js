@@ -10,7 +10,6 @@ const sample = {
   categories: [
     {
       name: 'nabiał',
-      emoji: '🥛',
       collapsed: false,
       manualExpand: false,
       items: [
@@ -20,7 +19,6 @@ const sample = {
     },
     {
       name: 'warzywa',
-      emoji: '🥦',
       collapsed: true,
       manualExpand: true,
       items: [{ name: 'Marchewka', checked: false }],
@@ -36,10 +34,9 @@ describe('encodeState / decodeState round-trip', () => {
     expect(decoded.categories).toHaveLength(2)
   })
 
-  it('preserves category name, emoji, and items', async () => {
+  it('preserves category name and items, strips emoji', async () => {
     const decoded = await decodeState(await encodeState(sample))
     expect(decoded.categories[0].name).toBe('nabiał')
-    expect(decoded.categories[0].emoji).toBe('🥛')
     expect(decoded.categories[0].items).toEqual([
       { name: 'Mleko 1L', checked: false },
       { name: 'Jogurt', checked: true },

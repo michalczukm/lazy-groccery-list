@@ -81,7 +81,6 @@ describe('mergeAmendInto', () => {
     expect(result.added).toBe(2)
     expect(result.categories[result.categories.length - 1]).toMatchObject({
       name: 'owoce',
-      emoji: '🍎',
       collapsed: false,
       manualExpand: false,
     })

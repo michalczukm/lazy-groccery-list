@@ -9,6 +9,22 @@ import { executeTurnstile } from './turnstile.js'
 
 const html = htm.bind(h)
 
+// Emoji per category name. Keep in sync with CATEGORIES in src/lib/mistral.ts.
+const CATEGORY_EMOJI = {
+  'nabiał': '🥛',
+  'mięso i wędliny': '🥩',
+  'warzywa': '🥦',
+  'owoce': '🍎',
+  'pieczywo': '🍞',
+  'napoje': '🥤',
+  'suche produkty': '🌾',
+  'przyprawy i sosy': '🧂',
+  'gotowe dania': '🍱',
+  'chemia i higiena': '🧴',
+  'inne': '🛒',
+}
+const emojiFor = name => CATEGORY_EMOJI[name] ?? '📦'
+
 // ── IndexedDB ──────────────────────────────────────────────────────────────────
 const DB = (() => {
   let db
@@ -151,7 +167,7 @@ async function processWithMistral() {
       categories: categories
         .filter(c => c.items?.length)
         .map(c => ({
-          name: c.name || 'inne', emoji: c.emoji || '📦',
+          name: c.name || 'inne',
           collapsed: false, manualExpand: false,
           items: c.items.map(n => ({ name: n, checked: false })),
         })),
@@ -333,7 +349,7 @@ function ShoppingList({ onSave, onDiscard }) {
             <div class="flex items-center justify-between py-2 px-1 cursor-pointer select-none"
               onClick=${() => toggleCat(ci)}>
               <div class="flex items-center gap-2 text-[11px] tracking-widest uppercase text-white/55">
-                <span>${cat.emoji}</span>
+                <span>${emojiFor(cat.name)}</span>
                 <span>${cat.name}</span>
                 <span class="opacity-60">(${catDone}/${cat.items.length})</span>
                 ${catAllDone && html`<span class="bg-accent/20 text-accent text-[10px] px-2 py-0.5 rounded-full">✓ gotowe</span>`}
@@ -397,7 +413,7 @@ function HistoryList({ lists, onLoad, onDelete, onClear }) {
               <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50">📦 ${items.length} produktów</span>
               <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50">✓ ${done} kupionych</span>
               ${l.categories.map(c => html`
-                <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50">${c.emoji} ${c.name}</span>
+                <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50">${emojiFor(c.name)} ${c.name}</span>
               `)}
             </div>
           </div>`
@@ -496,7 +512,6 @@ async function handleSharedState() {
       model: '',
       categories: payload.categories.map(c => ({
         name: c.name,
-        emoji: c.emoji,
         collapsed: false,
         manualExpand: false,
         items: c.items.map(i => ({ name: i.name, checked: i.checked })),

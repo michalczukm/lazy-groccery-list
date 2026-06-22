@@ -1,26 +1,26 @@
 const MODEL = 'mistral-small-latest'
 const MISTRAL_URL = 'https://api.mistral.ai/v1/chat/completions'
 
-const CATEGORIES: Record<string, { emoji: string; description: string }> = {
-  'nabiał': { emoji: '🥛', description: 'mleko, jogurty, sery, twarogi, jajka, śmietana, masło, skyr, serek, actimel' },
-  'mięso i wędliny': { emoji: '🥩', description: 'mięso surowe, kurczak, wędlina, parówki, kiełbasa, szynka' },
-  'warzywa': { emoji: '🥦', description: 'wszystkie warzywa świeże, włoszczyzna, cukinia, papryka' },
-  'owoce': { emoji: '🍎', description: 'wszystkie owoce świeże' },
-  'pieczywo': { emoji: '🍞', description: 'chleb, bułki, bagietki, tortille' },
-  'napoje': { emoji: '🥤', description: 'sosy, octy, musztarda' },
-  'suche produkty': { emoji: '🌾', description: 'płatki, ryż, makaron, kasza, mąka, orzechy' },
-  'przyprawy i sosy': { emoji: '🧂', description: 'oleje, oliwy, sosy, octy, musztarda' },
-  'gotowe dania': { emoji: '🍱', description: 'gotowe sałatki, dania gotowe, mrożonki' },
-  'chemia i higiena': { emoji: '🧴', description: 'środki czystości, kosmetyki, artykuły higieny' },
-  'inne': { emoji: '🛒', description: 'wszystko co nie pasuje do powyższych' },
-} as const
+const CATEGORIES = {
+  'nabiał': 'mleko, jogurty, sery, twarogi, jajka, śmietana, masło, skyr, serek, actimel',
+  'mięso i wędliny': 'mięso surowe, kurczak, wędlina, parówki, kiełbasa, szynka',
+  'warzywa': 'wszystkie warzywa świeże, włoszczyzna, cukinia, papryka',
+  'owoce': 'wszystkie owoce świeże',
+  'pieczywo': 'chleb, bułki, bagietki, tortille',
+  'napoje': 'sosy, octy, musztarda',
+  'suche produkty': 'płatki, ryż, makaron, kasza, mąka, orzechy',
+  'przyprawy i sosy': 'oleje, oliwy, sosy, octy, musztarda',
+  'gotowe dania': 'gotowe sałatki, dania gotowe, mrożonki',
+  'chemia i higiena': 'środki czystości, kosmetyki, artykuły higieny',
+  'inne': 'wszystko co nie pasuje do powyższych',
+} satisfies Record<string, string>
 
 const SYSTEM = `Jesteś asystentem do kategoryzowania list zakupów po polsku.
 Dostajesz surową listę produktów (mogą być po jednym na linię, mogą być notatki w nawiasach, niektóre mogą być łączone np przez "i" albo "oraz").
 Przypisz każdy produkt do odpowiedniej kategorii. Zachowaj ORYGINALNE nazwy produktów razem z uwagami w nawiasach.
 
 Dostępne kategorie (użyj tylko tych, które mają produkty):
-${JSON.stringify(CATEGORIES, null, 2)}`
+${JSON.stringify(CATEGORIES)}`
 
 const RESPONSE_SCHEMA = {
   type: 'json_schema',
@@ -35,11 +35,10 @@ const RESPONSE_SCHEMA = {
           items: {
             type: 'object',
             properties: {
-              name:  { type: 'string' },
-              emoji: { type: 'string' },
+              name:  { type: 'string', enum: Object.keys(CATEGORIES) },
               items: { type: 'array', items: { type: 'string' } },
             },
-            required: ['name', 'emoji', 'items'],
+            required: ['name', 'items'],
             additionalProperties: false,
           },
         },
@@ -50,7 +49,7 @@ const RESPONSE_SCHEMA = {
   },
 } as const
 
-export type Category = { name: string; emoji: string; items: string[] }
+export type Category = { name: string; items: string[] }
 export type CategorizeResult =
   | { ok: true; categories: Category[] }
   | { ok: false; reason: 'upstream' | 'parse' }
