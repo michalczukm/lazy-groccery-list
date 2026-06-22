@@ -9,6 +9,9 @@
   "vars": {
     "TURNSTILE_SITE_KEY": "1x00000000000000000000BB"
   },
+  // Keep dashboard-managed vars on deploy. Local `vars` (test Turnstile key) is used by
+  // `wrangler dev`; deploy will NOT overwrite the real key set in the Cloudflare dashboard.
+  "keep_vars": true,
   // `unsafe.bindings` is the CF-documented config path for the ratelimit binding type.
   // Still flagged experimental in the wrangler schema; no stable top-level key yet.
   // See https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/
