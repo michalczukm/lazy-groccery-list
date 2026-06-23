@@ -5,8 +5,7 @@ import htm from 'htm'
 import confetti from 'canvas-confetti'
 import { encodeState, decodeState } from './share-state.js'
 import { mergeAmendInto } from './merge-amend.js'
-// eslint-disable-next-line no-unused-vars
-import { listToTemplate, templateToList } from './template-shape.js'
+import { listToTemplate, templateToList } from './template-shape.js' // eslint-disable-line no-unused-vars
 import { executeTurnstile } from './turnstile.js'
 
 const html = htm.bind(h)
@@ -296,6 +295,18 @@ async function delHistory(id) {
   toast('Lista usunięta')
 }
 
+async function makeTemplate(id) {
+  const lists = await DB.getAll()
+  const l = lists.find(l => l.id === id)
+  if (!l) return
+  const name = prompt('Nazwa szablonu', l.title)
+  if (name == null) return
+  const trimmed = name.trim()
+  if (!trimmed) return
+  await DB.saveTemplate(listToTemplate(l, Date.now(), trimmed))
+  toast('Szablon zapisany 📌')
+}
+
 async function clearAllHistory() {
   if (!confirm('Usunąć WSZYSTKIE zapisane listy?')) return
   await DB.clear()
@@ -484,7 +495,7 @@ function ShoppingList() {
 }
 
 // ── HistoryList island ────────────────────────────────────────────────────────
-function HistoryList({ lists, onLoad, onDelete, onClear }) {
+function HistoryList({ lists, onLoad, onDelete, onClear, onMakeTemplate }) {
   const header = html` <div class="flex justify-between items-center mb-4">
     <h2 class="text-white/60 text-[12px] font-semibold tracking-widest uppercase">Historia list</h2>
     <button
@@ -516,6 +527,17 @@ function HistoryList({ lists, onLoad, onDelete, onClear }) {
         onClick=${() => onLoad(l.id)}
         key=${l.id}
       >
+        <button
+          class="absolute top-3 right-10 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-accent transition-colors"
+          onClick=${e => {
+            e.stopPropagation()
+            onMakeTemplate(l.id)
+          }}
+          title="Zapisz jako szablon"
+          aria-label="Zapisz jako szablon"
+        >
+          📌
+        </button>
         <button
           class="absolute top-3 right-3 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
           onClick=${e => {
@@ -564,6 +586,7 @@ async function mountHistoryIsland() {
       onLoad=${loadHistory}
       onDelete=${delHistory}
       onClear=${clearAllHistory}
+      onMakeTemplate=${makeTemplate}
     />`,
     el,
   )
