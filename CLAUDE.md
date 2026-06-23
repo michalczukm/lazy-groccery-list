@@ -9,9 +9,13 @@ pnpm dev        # local dev server via wrangler
 pnpm deploy     # deploy to Cloudflare Workers (minified)
 pnpm test       # run vitest (Cloudflare Workers pool)
 pnpm cf-typegen # regenerate Cloudflare bindings types → worker-configuration.d.ts
+pnpm lint       # oxlint (correctness rules, error)
+pnpm lint:fix   # oxlint --fix
+pnpm fmt        # oxfmt (write)
+pnpm fmt:check  # oxfmt --check
 ```
 
-No lint script exists.
+Linting/formatting via oxc: `oxlint` (`.oxlintrc.json`) + `oxfmt` (`.oxfmtrc.json`, single-quote/no-semi/avoid-arrow-parens). A husky `pre-commit` hook runs `lint-staged`, which applies `oxlint --fix` + `oxfmt` to staged files only.
 
 ## Architecture
 
