@@ -247,6 +247,19 @@ function discardCurrentList() {
   navigateTo('input')
 }
 
+// ── Today's list lookup ───────────────────────────────────────────────────────
+function isSameDay(ts, ref = Date.now()) {
+  const a = new Date(ts), b = new Date(ref)
+  return a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate()
+}
+
+// lists already sorted by date desc (DB.getAll)
+function findTodaysList(lists) {
+  return lists.find(l => l.saved === true && isSameDay(l.date)) ?? null
+}
+
 // ── History actions ───────────────────────────────────────────────────────────
 async function loadHistory(id) {
   const lists = await DB.getAll()
@@ -653,6 +666,14 @@ DB.init().then(async () => {
     document.getElementById('bottom-nav').style.display = ''
     navigateTo('list')
   } else {
-    showMainApp()
+    const todays = findTodaysList(await DB.getAll())
+    if (todays) {
+      todays.categories.forEach(c => { c.collapsed ??= false; c.manualExpand ??= false })
+      currentList.value = todays
+      document.getElementById('bottom-nav').style.display = ''
+      navigateTo('list')
+    } else {
+      showMainApp()
+    }
   }
 })
