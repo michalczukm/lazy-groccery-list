@@ -5,7 +5,7 @@ import htm from 'htm'
 import confetti from 'canvas-confetti'
 import { encodeState, decodeState } from './share-state.js'
 import { mergeAmendInto } from './merge-amend.js'
-import { listToTemplate, templateToList } from './template-shape.js' // eslint-disable-line no-unused-vars
+import { listToTemplate, templateToList } from './template-shape.js'
 import { executeTurnstile } from './turnstile.js'
 
 const html = htm.bind(h)
@@ -569,6 +569,35 @@ function HistoryList({ lists, onLoad, onDelete, onClear, onMakeTemplate }) {
   </div>`
 }
 
+// ── TemplatesChips island ─────────────────────────────────────────────────────
+function TemplatesChips({ templates, onPick, onManage }) {
+  if (!templates.length) return null
+  return html` <div class="flex gap-2 overflow-x-auto mt-3 pb-1 -mx-1 px-1">
+    ${templates.map(
+      t => html`
+        <button
+          key=${t.id}
+          class="shrink-0 bg-navy border border-white/10 text-white/80 text-[13px] px-3 py-2 rounded-full cursor-pointer active:opacity-70 whitespace-nowrap"
+          onClick=${() => onPick(t.id)}
+        >
+          📌 ${t.name}
+          <span class="text-white/40"
+            >(${t.categories.reduce((n, c) => n + c.items.length, 0)})</span
+          >
+        </button>
+      `,
+    )}
+    <button
+      class="shrink-0 bg-transparent border border-white/10 text-white/50 text-[13px] px-3 py-2 rounded-full cursor-pointer active:opacity-70"
+      onClick=${onManage}
+      title="Zarządzaj szablonami"
+      aria-label="Zarządzaj szablonami"
+    >
+      ⚙️
+    </button>
+  </div>`
+}
+
 // ── Island mount lifecycle ────────────────────────────────────────────────────
 function mountListIsland() {
   const el = document.getElementById('categories-container')
@@ -592,8 +621,34 @@ async function mountHistoryIsland() {
   )
 }
 
+async function mountTemplatesChips() {
+  const el = document.getElementById('templates-chips')
+  if (!el) return
+  const templates = await DB.getAllTemplates()
+  render(
+    html`<${TemplatesChips}
+      templates=${templates}
+      onPick=${pickTemplate}
+      onManage=${() => navigateTo('templates')}
+    />`,
+    el,
+  )
+}
+
+async function pickTemplate(id) {
+  const templates = await DB.getAllTemplates()
+  const t = templates.find(t => t.id === id)
+  if (!t) return
+  const now = Date.now()
+  const list = templateToList(t, now, t.name + ' ' + fmtDate(now))
+  await DB.save(list)
+  currentList.value = list
+  navigateTo('list')
+}
+
 document.addEventListener('htmx:afterSwap', async e => {
   if (e.detail.target.id !== 'main-content') return
+  if (currentView === 'input') await mountTemplatesChips()
   if (currentView === 'list') mountListIsland()
   if (currentView === 'history') await mountHistoryIsland()
   hideBootLoader()
@@ -721,6 +776,7 @@ DB.init()
         navigateTo('list')
       } else {
         showMainApp()
+        await mountTemplatesChips()
         hideBootLoader()
       }
     }
