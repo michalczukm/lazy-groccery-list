@@ -6,6 +6,8 @@
   "assets": {
     "directory": "./public",
   },
+  "workers_dev": true,
+  "routes": [{ "pattern": "lazy-shopping.michalczukm.xyz", "custom_domain": true }],
   // TURNSTILE_SITE_KEY is NOT declared here on purpose: the real (public) site key lives in
   // the Cloudflare dashboard, the test key lives in `.dev.vars` for `wrangler dev`.
   // keep_vars stops deploy from deleting the dashboard-only var.
