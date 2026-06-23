@@ -102,6 +102,7 @@ const META = {
   input: { title: '🛒 Lazy List', sub: 'Nowa lista' },
   list: { title: '📋 Lista', sub: '' },
   history: { title: '📚 Historia', sub: 'Poprzednie listy' },
+  templates: { title: '📌 Szablony', sub: 'Zapisane szablony' },
 }
 
 function navigateTo(name) {
@@ -598,6 +599,50 @@ function TemplatesChips({ templates, onPick, onManage }) {
   </div>`
 }
 
+// ── TemplateList island (manage) ──────────────────────────────────────────────
+function TemplateList({ templates, onDelete }) {
+  const header = html` <div class="flex justify-between items-center mb-4">
+    <h2 class="text-white/60 text-[12px] font-semibold tracking-widest uppercase">Szablony</h2>
+  </div>`
+
+  if (!templates.length)
+    return html` <div>
+      ${header}
+      <div class="text-center py-16 px-6 text-white/45">
+        <div class="text-[48px] mb-3">📌</div>
+        <p class="text-[14px] leading-7">
+          Brak szablonów.<br />Zapisz listę jako szablon w zakładce "Historia".
+        </p>
+      </div>
+    </div>`
+
+  // Rename templates: future (issue #9 leaves rename as a seam) — add an edit affordance here.
+  return html` <div>
+    ${header}
+    ${templates.map(
+      t => html` <div class="py-3.5 border-b border-white/[0.07] relative" key=${t.id}>
+        <button
+          class="absolute top-3 right-3 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
+          onClick=${() => onDelete(t.id)}
+          aria-label="Usuń szablon"
+        >
+          🗑
+        </button>
+        <div class="text-[15px] font-semibold text-white/90 mb-2 pr-8">${t.name}</div>
+        <div class="flex flex-wrap gap-1.5">
+          ${t.categories.map(
+            c => html`
+              <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50"
+                >${emojiFor(c.name)} ${c.name} (${c.items.length})</span
+              >
+            `,
+          )}
+        </div>
+      </div>`,
+    )}
+  </div>`
+}
+
 // ── Island mount lifecycle ────────────────────────────────────────────────────
 function mountListIsland() {
   const el = document.getElementById('categories-container')
@@ -619,6 +664,20 @@ async function mountHistoryIsland() {
     />`,
     el,
   )
+}
+
+async function mountTemplatesIsland() {
+  const el = document.getElementById('templates-container')
+  if (!el) return
+  const templates = await DB.getAllTemplates()
+  render(html`<${TemplateList} templates=${templates} onDelete=${removeTemplate} />`, el)
+}
+
+async function removeTemplate(id) {
+  if (!confirm('Usunąć ten szablon?')) return
+  await DB.delTemplate(id)
+  await mountTemplatesIsland()
+  toast('Szablon usunięty')
 }
 
 async function mountTemplatesChips() {
@@ -651,6 +710,7 @@ document.addEventListener('htmx:afterSwap', async e => {
   if (currentView === 'input') await mountTemplatesChips()
   if (currentView === 'list') mountListIsland()
   if (currentView === 'history') await mountHistoryIsland()
+  if (currentView === 'templates') await mountTemplatesIsland()
   hideBootLoader()
 })
 

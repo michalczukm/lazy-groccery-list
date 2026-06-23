@@ -6,6 +6,7 @@ import { Layout } from './layout'
 import { InputView } from './views/input'
 import { ListView } from './views/list'
 import { HistoryView } from './views/history'
+import { TemplatesView } from './views/templates'
 import { PrivacyView } from './views/privacy'
 import { isSameOrigin } from './lib/origin-guard'
 import { signSession, verifySession } from './lib/cookie-session'
@@ -140,6 +141,7 @@ app.get('/', jsxRenderer(), c =>
 app.get('/views/input', c => c.html(<InputView />))
 app.get('/views/list', c => c.html(<ListView />))
 app.get('/views/history', c => c.html(<HistoryView />))
+app.get('/views/templates', c => c.html(<TemplatesView />))
 
 app.get('/privacy', c => c.html(<PrivacyView />))
 
