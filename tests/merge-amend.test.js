@@ -54,9 +54,7 @@ describe('mergeAmendInto', () => {
 
   it('auto-uncollapses a category that gains items', () => {
     const list = baseList()
-    const result = mergeAmendInto(list, [
-      { name: 'warzywa', emoji: '🥦', items: ['Pomidor'] },
-    ])
+    const result = mergeAmendInto(list, [{ name: 'warzywa', emoji: '🥦', items: ['Pomidor'] }])
     const cat = result.categories.find(c => c.name === 'warzywa')
     expect(cat.collapsed).toBe(false)
     expect(cat.manualExpand).toBe(false)
@@ -64,9 +62,7 @@ describe('mergeAmendInto', () => {
 
   it('leaves collapse state untouched when all new items are duplicates', () => {
     const list = baseList()
-    const result = mergeAmendInto(list, [
-      { name: 'warzywa', emoji: '🥦', items: ['marchewka'] },
-    ])
+    const result = mergeAmendInto(list, [{ name: 'warzywa', emoji: '🥦', items: ['marchewka'] }])
     expect(result.added).toBe(0)
     expect(result.skipped).toBe(1)
     const cat = result.categories.find(c => c.name === 'warzywa')
@@ -84,8 +80,10 @@ describe('mergeAmendInto', () => {
       collapsed: false,
       manualExpand: false,
     })
-    expect(result.categories[result.categories.length - 1].items.map(i => i.name))
-      .toEqual(['Jabłko', 'Banan'])
+    expect(result.categories[result.categories.length - 1].items.map(i => i.name)).toEqual([
+      'Jabłko',
+      'Banan',
+    ])
   })
 
   it('returns 0/0 when newCategories is empty', () => {
@@ -108,18 +106,14 @@ describe('mergeAmendInto', () => {
 
   it('matches category names case-insensitively', () => {
     const list = baseList()
-    const result = mergeAmendInto(list, [
-      { name: 'Nabiał', emoji: '🥛', items: ['Masło'] },
-    ])
+    const result = mergeAmendInto(list, [{ name: 'Nabiał', emoji: '🥛', items: ['Masło'] }])
     expect(result.categories.filter(c => c.name.toLowerCase() === 'nabiał')).toHaveLength(1)
     expect(result.added).toBe(1)
   })
 
   it('skips categories returned with no items', () => {
     const list = baseList()
-    const result = mergeAmendInto(list, [
-      { name: 'owoce', emoji: '🍎', items: [] },
-    ])
+    const result = mergeAmendInto(list, [{ name: 'owoce', emoji: '🍎', items: [] }])
     expect(result.added).toBe(0)
     expect(result.categories).toHaveLength(2)
   })

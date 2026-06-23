@@ -20,13 +20,10 @@ const bytesFromB64url = (s: string): Uint8Array => {
 }
 
 const importKey = (secret: string) =>
-  crypto.subtle.importKey(
-    'raw',
-    enc.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign', 'verify'],
-  )
+  crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, [
+    'sign',
+    'verify',
+  ])
 
 export const signSession = async (secret: string, nowSec: number): Promise<string> => {
   const payload = { iat: nowSec }

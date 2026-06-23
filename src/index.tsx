@@ -26,37 +26,47 @@ const MAX_INPUT_CHARS = 10_000
 
 const app = new Hono<{ Bindings: Env }>()
 
-app.use(secureHeaders({
-  contentSecurityPolicy: {
-    defaultSrc:  ["'self'"],
-    scriptSrc:   ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://unpkg.com", "https://esm.sh", "https://challenges.cloudflare.com"],
-    styleSrc:    ["'self'", "'unsafe-inline'"],
-    connectSrc:  ["'self'",
-      "https://esm.sh/preact@10.29.2/",
-      "https://esm.sh/@preact/signals@1.3.4/",
-      "https://esm.sh/@preact/signals-core@1.14.3/",
-      "https://esm.sh/htm@3.1.1/",
-      "https://esm.sh/canvas-confetti@1.6.0/",
-    ],
-    imgSrc:      ["'self'", "data:"],
-    frameSrc:    ["https://challenges.cloudflare.com"],
-    workerSrc:   ["'self'"],
-    manifestSrc: ["'self'"],
-  },
-}))
+app.use(
+  secureHeaders({
+    contentSecurityPolicy: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        'https://cdn.tailwindcss.com',
+        'https://unpkg.com',
+        'https://esm.sh',
+        'https://challenges.cloudflare.com',
+      ],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      connectSrc: [
+        "'self'",
+        'https://esm.sh/preact@10.29.2/',
+        'https://esm.sh/@preact/signals@1.3.4/',
+        'https://esm.sh/@preact/signals-core@1.14.3/',
+        'https://esm.sh/htm@3.1.1/',
+        'https://esm.sh/canvas-confetti@1.6.0/',
+      ],
+      imgSrc: ["'self'", 'data:'],
+      frameSrc: ['https://challenges.cloudflare.com'],
+      workerSrc: ["'self'"],
+      manifestSrc: ["'self'"],
+    },
+  }),
+)
 
 app.use('*', async (c, next) => {
   await next()
   c.header('X-Robots-Tag', 'noindex, nofollow, noarchive')
 })
 
-app.post('/api/session', async (c) => {
+app.post('/api/session', async c => {
   if (!isSameOrigin(c.req.raw)) {
     return c.json({ code: 'forbidden' }, 403)
   }
 
   const body = await c.req.json<{ turnstileToken?: string }>().catch(() => ({}))
-  if (!("turnstileToken" in body && body.turnstileToken)) {
+  if (!('turnstileToken' in body && body.turnstileToken)) {
     return c.json({ code: 'missing-token' }, 400)
   }
 
@@ -81,7 +91,7 @@ app.post('/api/session', async (c) => {
   return c.body(null, 204)
 })
 
-app.post('/api/categorize', async (c) => {
+app.post('/api/categorize', async c => {
   if (!isSameOrigin(c.req.raw)) {
     return c.json({ code: 'forbidden' }, 403)
   }
@@ -119,20 +129,18 @@ app.post('/api/categorize', async (c) => {
   return c.json({ categories: result.categories })
 })
 
-app.get(
-  '/',
-  jsxRenderer(),
-  (c) => c.render(
+app.get('/', jsxRenderer(), c =>
+  c.render(
     <Layout turnstileSiteKey={c.env.TURNSTILE_SITE_KEY}>
       <InputView />
     </Layout>,
   ),
 )
 
-app.get('/views/input',   (c) => c.html(<InputView />))
-app.get('/views/list',    (c) => c.html(<ListView />))
-app.get('/views/history', (c) => c.html(<HistoryView />))
+app.get('/views/input', c => c.html(<InputView />))
+app.get('/views/list', c => c.html(<ListView />))
+app.get('/views/history', c => c.html(<HistoryView />))
 
-app.get('/privacy', (c) => c.html(<PrivacyView />))
+app.get('/privacy', c => c.html(<PrivacyView />))
 
 export default app

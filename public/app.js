@@ -249,10 +249,13 @@ function discardCurrentList() {
 
 // ── Today's list lookup ───────────────────────────────────────────────────────
 function isSameDay(ts, ref = Date.now()) {
-  const a = new Date(ts), b = new Date(ref)
-  return a.getFullYear() === b.getFullYear()
-    && a.getMonth() === b.getMonth()
-    && a.getDate() === b.getDate()
+  const a = new Date(ts),
+    b = new Date(ref)
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
 }
 
 // lists already sorted by date desc (DB.getAll)
@@ -668,7 +671,10 @@ DB.init().then(async () => {
   } else {
     const todays = findTodaysList(await DB.getAll())
     if (todays) {
-      todays.categories.forEach(c => { c.collapsed ??= false; c.manualExpand ??= false })
+      todays.categories.forEach(c => {
+        c.collapsed ??= false
+        c.manualExpand ??= false
+      })
       currentList.value = todays
       document.getElementById('bottom-nav').style.display = ''
       navigateTo('list')

@@ -69,6 +69,7 @@ curl -sI http://localhost:8787/ | grep -i x-robots-tag
 ```
 
 Expected:
+
 - `robots.txt` → `User-agent: *` / `Disallow: /`
 - header → `x-robots-tag: noindex, nofollow, noarchive`
 
