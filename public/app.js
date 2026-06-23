@@ -561,7 +561,12 @@ document.addEventListener('htmx:afterSwap', async e => {
   if (e.detail.target.id !== 'main-content') return
   if (currentView === 'list') mountListIsland()
   if (currentView === 'history') await mountHistoryIsland()
+  hideBootLoader()
 })
+
+function hideBootLoader() {
+  document.getElementById('boot-loader')?.classList.add('hidden')
+}
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
 function setStatus(type, text) {
@@ -663,23 +668,30 @@ window.App = {
 // ── Boot ──────────────────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
 
-DB.init().then(async () => {
-  const wasShared = await handleSharedState()
-  if (wasShared) {
-    document.getElementById('bottom-nav').style.display = ''
-    navigateTo('list')
-  } else {
-    const todays = findTodaysList(await DB.getAll())
-    if (todays) {
-      todays.categories.forEach(c => {
-        c.collapsed ??= false
-        c.manualExpand ??= false
-      })
-      currentList.value = todays
+DB.init()
+  .then(async () => {
+    const wasShared = await handleSharedState()
+    if (wasShared) {
       document.getElementById('bottom-nav').style.display = ''
       navigateTo('list')
     } else {
-      showMainApp()
+      const todays = findTodaysList(await DB.getAll())
+      if (todays) {
+        todays.categories.forEach(c => {
+          c.collapsed ??= false
+          c.manualExpand ??= false
+        })
+        currentList.value = todays
+        document.getElementById('bottom-nav').style.display = ''
+        navigateTo('list')
+      } else {
+        showMainApp()
+        hideBootLoader()
+      }
     }
-  }
-})
+  })
+  .catch(() => {
+    // Never trap the user behind the boot loader if init fails.
+    showMainApp()
+    hideBootLoader()
+  })

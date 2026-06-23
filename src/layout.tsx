@@ -94,6 +94,15 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
     </head>
 
     <body class="font-sans bg-navy-dark text-white flex flex-col max-w-[480px] mx-auto h-full overflow-hidden">
+      {/* Boot loader — covers the first paint until the client picks the right view,
+          preventing the "Nowa lista" → "Lista" flash when today's list is restored. */}
+      <div
+        id="boot-loader"
+        class="fixed inset-0 bg-navy-dark flex items-center justify-center z-50"
+      >
+        <div class="text-[44px] opacity-50 animate-pulse">🛒</div>
+      </div>
+
       {/* Loading overlay */}
       <div
         id="loading-overlay"
