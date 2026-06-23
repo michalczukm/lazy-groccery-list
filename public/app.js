@@ -5,6 +5,8 @@ import htm from 'htm'
 import confetti from 'canvas-confetti'
 import { encodeState, decodeState } from './share-state.js'
 import { mergeAmendInto } from './merge-amend.js'
+// eslint-disable-next-line no-unused-vars
+import { listToTemplate, templateToList } from './template-shape.js'
 import { executeTurnstile } from './turnstile.js'
 
 const html = htm.bind(h)
@@ -30,15 +32,20 @@ const DB = (() => {
   let db
   const open = () =>
     new Promise((res, rej) => {
-      const r = indexedDB.open('LazyGrocceryList', 1)
-      r.onupgradeneeded = e => e.target.result.createObjectStore('lists', { keyPath: 'id' })
+      const r = indexedDB.open('LazyGrocceryList', 2)
+      r.onupgradeneeded = e => {
+        const d = e.target.result
+        if (!d.objectStoreNames.contains('lists')) d.createObjectStore('lists', { keyPath: 'id' })
+        if (!d.objectStoreNames.contains('templates'))
+          d.createObjectStore('templates', { keyPath: 'id' })
+      }
       r.onsuccess = e => {
         db = e.target.result
         res()
       }
       r.onerror = () => rej(r.error)
     })
-  const tx = m => db.transaction('lists', m).objectStore('lists')
+  const tx = (store, m) => db.transaction(store, m).objectStore(store)
   const wrap = r =>
     new Promise((res, rej) => {
       r.onsuccess = () => res(r.result)
@@ -46,10 +53,15 @@ const DB = (() => {
     })
   return {
     init: open,
-    save: l => wrap(tx('readwrite').put(l)),
-    getAll: () => wrap(tx('readonly').getAll()).then(a => a.sort((a, b) => b.date - a.date)),
-    del: id => wrap(tx('readwrite').delete(id)),
-    clear: () => wrap(tx('readwrite').clear()),
+    save: l => wrap(tx('lists', 'readwrite').put(l)),
+    getAll: () =>
+      wrap(tx('lists', 'readonly').getAll()).then(a => a.sort((a, b) => b.date - a.date)),
+    del: id => wrap(tx('lists', 'readwrite').delete(id)),
+    clear: () => wrap(tx('lists', 'readwrite').clear()),
+    saveTemplate: t => wrap(tx('templates', 'readwrite').put(t)),
+    getAllTemplates: () =>
+      wrap(tx('templates', 'readonly').getAll()).then(a => a.sort((a, b) => b.date - a.date)),
+    delTemplate: id => wrap(tx('templates', 'readwrite').delete(id)),
   }
 })()
 
