@@ -5,7 +5,7 @@ describe('POST /api/session', () => {
   it('returns 403 when Origin does not match request URL origin', async () => {
     const res = await SELF.fetch('https://example.com/api/session', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Origin': 'https://evil.com' },
+      headers: { 'Content-Type': 'application/json', Origin: 'https://evil.com' },
       body: JSON.stringify({ turnstileToken: 'dummy' }),
     })
     expect(res.status).toBe(403)
@@ -15,7 +15,7 @@ describe('POST /api/session', () => {
   it('returns 400 when turnstileToken is missing', async () => {
     const res = await SELF.fetch('https://example.com/api/session', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Origin': 'https://example.com' },
+      headers: { 'Content-Type': 'application/json', Origin: 'https://example.com' },
       body: JSON.stringify({}),
     })
     expect(res.status).toBe(400)
@@ -27,7 +27,7 @@ describe('POST /api/categorize', () => {
   it('returns 403 when Origin does not match request URL origin', async () => {
     const res = await SELF.fetch('https://example.com/api/categorize', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Origin': 'https://evil.com' },
+      headers: { 'Content-Type': 'application/json', Origin: 'https://evil.com' },
       body: JSON.stringify({ text: 'mleko, chleb' }),
     })
     expect(res.status).toBe(403)
@@ -37,7 +37,7 @@ describe('POST /api/categorize', () => {
   it('returns 401 when session cookie is missing', async () => {
     const res = await SELF.fetch('https://example.com/api/categorize', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Origin': 'https://example.com' },
+      headers: { 'Content-Type': 'application/json', Origin: 'https://example.com' },
       body: JSON.stringify({ text: 'mleko, chleb' }),
     })
     expect(res.status).toBe(401)
@@ -49,8 +49,8 @@ describe('POST /api/categorize', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Origin': 'https://example.com',
-        'Cookie': 'lazy_list_session=invalid-cookie-value',
+        Origin: 'https://example.com',
+        Cookie: 'lazy_list_session=invalid-cookie-value',
       },
       body: JSON.stringify({ text: 'mleko, chleb' }),
     })

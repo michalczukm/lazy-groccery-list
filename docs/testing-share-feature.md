@@ -31,10 +31,13 @@ Share button (↑ icon, top-right of list view) encodes the current list as a gz
 // 1. Intercept clipboard (remove navigator.share to force clipboard path)
 Object.defineProperty(navigator, 'share', { value: undefined, configurable: true })
 let capturedUrl
-navigator.clipboard.writeText = async (text) => { capturedUrl = text }
+navigator.clipboard.writeText = async text => {
+  capturedUrl = text
+}
 
 // 2. Trigger share button
-document.querySelector('[title="Udostępnij listę"]')
+document
+  .querySelector('[title="Udostępnij listę"]')
   ?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 
 // 3. Wait ~3s then verify
@@ -46,16 +49,19 @@ location.href = capturedUrl
 
 // 5. After page load, verify list renders
 await new Promise(r => setTimeout(r, 2000))
-console.assert(document.getElementById('categories-container')?.children.length > 0, 'List should render')
+console.assert(
+  document.getElementById('categories-container')?.children.length > 0,
+  'List should render',
+)
 ```
 
 ## Known bugs fixed (2026-05-07)
 
-| Bug | Root cause | Fix |
-|-----|-----------|-----|
-| List not rendering | `import { html } from 'htm/preact'` resolved to `undefined` due to esm.sh module cache serving CJS default export | Changed to `import htm from 'htm'` + `const html = htm.bind(h)` with separate `"htm"` import map entry |
-| `encodeState` deadlocks | `writer.close()` awaited before readable consumed; `CompressionStream` bacpressure causes hang in Chrome 147 | Start `new Response(stream.readable).arrayBuffer()` before writing, await after close |
-| `btoa` fails on emoji in list | `new TextDecoder('latin1')` maps bytes 0x80–0x9F to Windows-1252 chars (code points > 255) | Replace with `Array.from(new Uint8Array(buf), b => String.fromCharCode(b)).join('')` |
+| Bug                           | Root cause                                                                                                        | Fix                                                                                                    |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| List not rendering            | `import { html } from 'htm/preact'` resolved to `undefined` due to esm.sh module cache serving CJS default export | Changed to `import htm from 'htm'` + `const html = htm.bind(h)` with separate `"htm"` import map entry |
+| `encodeState` deadlocks       | `writer.close()` awaited before readable consumed; `CompressionStream` bacpressure causes hang in Chrome 147      | Start `new Response(stream.readable).arrayBuffer()` before writing, await after close                  |
+| `btoa` fails on emoji in list | `new TextDecoder('latin1')` maps bytes 0x80–0x9F to Windows-1252 chars (code points > 255)                        | Replace with `Array.from(new Uint8Array(buf), b => String.fromCharCode(b)).join('')`                   |
 
 ## Edge cases to verify
 

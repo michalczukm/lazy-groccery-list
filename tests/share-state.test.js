@@ -89,7 +89,10 @@ describe('decodeState error handling', () => {
     for (let i = 0; i < raw.length; i += 8192) {
       chunks.push(String.fromCharCode(...raw.subarray(i, i + 8192)))
     }
-    const oversized = btoa(chunks.join('')).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+    const oversized = btoa(chunks.join(''))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '')
     await expect(decodeState(oversized)).rejects.toThrow('input too large')
   })
 

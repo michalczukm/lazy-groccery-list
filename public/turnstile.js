@@ -1,8 +1,11 @@
 function waitForTurnstile() {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     if (window.turnstile) return resolve()
     const id = setInterval(() => {
-      if (window.turnstile) { clearInterval(id); resolve() }
+      if (window.turnstile) {
+        clearInterval(id)
+        resolve()
+      }
     }, 50)
   })
 }
@@ -14,8 +17,14 @@ export async function executeTurnstile(siteKey, containerSelector = '#turnstile-
       sitekey: siteKey,
       size: 'invisible',
       'response-field': false,
-      callback: (token) => { window.turnstile.remove(id); resolve(token) },
-      'error-callback': () => { window.turnstile.remove(id); reject(new Error('Turnstile error')) },
+      callback: token => {
+        window.turnstile.remove(id)
+        resolve(token)
+      },
+      'error-callback': () => {
+        window.turnstile.remove(id)
+        reject(new Error('Turnstile error'))
+      },
     })
     window.turnstile.execute(id)
   })

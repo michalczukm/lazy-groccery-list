@@ -8,9 +8,11 @@ export type VerifyTurnstileInput = {
   secret: string
 }
 
-export const verifyTurnstile = async (
-  { token, ip, secret }: VerifyTurnstileInput,
-): Promise<TurnstileResult> => {
+export const verifyTurnstile = async ({
+  token,
+  ip,
+  secret,
+}: VerifyTurnstileInput): Promise<TurnstileResult> => {
   const body: Record<string, string> = { secret, response: token }
   if (ip) body.remoteip = ip
 
@@ -21,7 +23,7 @@ export const verifyTurnstile = async (
       body: JSON.stringify(body),
     })
     if (!res.ok) return { success: false }
-    const data = await res.json() as { success?: boolean }
+    const data = (await res.json()) as { success?: boolean }
     return { success: data.success === true }
   } catch {
     return { success: false }
