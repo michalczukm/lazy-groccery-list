@@ -11,40 +11,45 @@ const html = htm.bind(h)
 
 // Emoji per category name. Keep in sync with CATEGORIES in src/lib/mistral.ts.
 const CATEGORY_EMOJI = {
-  'nabiał': '🥛',
+  nabiał: '🥛',
   'mięso i wędliny': '🥩',
-  'warzywa': '🥦',
-  'owoce': '🍎',
-  'pieczywo': '🍞',
-  'napoje': '🥤',
+  warzywa: '🥦',
+  owoce: '🍎',
+  pieczywo: '🍞',
+  napoje: '🥤',
   'suche produkty': '🌾',
   'przyprawy i sosy': '🧂',
   'gotowe dania': '🍱',
   'chemia i higiena': '🧴',
-  'inne': '🛒',
+  inne: '🛒',
 }
 const emojiFor = name => CATEGORY_EMOJI[name] ?? '📦'
 
 // ── IndexedDB ──────────────────────────────────────────────────────────────────
 const DB = (() => {
   let db
-  const open = () => new Promise((res, rej) => {
-    const r = indexedDB.open('LazyGrocceryList', 1)
-    r.onupgradeneeded = e => e.target.result.createObjectStore('lists', { keyPath: 'id' })
-    r.onsuccess = e => { db = e.target.result; res() }
-    r.onerror   = () => rej(r.error)
-  })
-  const tx   = m => db.transaction('lists', m).objectStore('lists')
-  const wrap = r => new Promise((res, rej) => {
-    r.onsuccess = () => res(r.result)
-    r.onerror   = () => rej(r.error)
-  })
+  const open = () =>
+    new Promise((res, rej) => {
+      const r = indexedDB.open('LazyGrocceryList', 1)
+      r.onupgradeneeded = e => e.target.result.createObjectStore('lists', { keyPath: 'id' })
+      r.onsuccess = e => {
+        db = e.target.result
+        res()
+      }
+      r.onerror = () => rej(r.error)
+    })
+  const tx = m => db.transaction('lists', m).objectStore('lists')
+  const wrap = r =>
+    new Promise((res, rej) => {
+      r.onsuccess = () => res(r.result)
+      r.onerror = () => rej(r.error)
+    })
   return {
-    init:   open,
-    save:   l  => wrap(tx('readwrite').put(l)),
+    init: open,
+    save: l => wrap(tx('readwrite').put(l)),
     getAll: () => wrap(tx('readonly').getAll()).then(a => a.sort((a, b) => b.date - a.date)),
-    del:    id => wrap(tx('readwrite').delete(id)),
-    clear:  () => wrap(tx('readwrite').clear()),
+    del: id => wrap(tx('readwrite').delete(id)),
+    clear: () => wrap(tx('readwrite').clear()),
   }
 })()
 
@@ -54,7 +59,10 @@ let currentView = 'input'
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 function openAmendModal() {
-  if (!currentList.value) { toast('Brak aktywnej listy'); return }
+  if (!currentList.value) {
+    toast('Brak aktywnej listy')
+    return
+  }
   const amendElement = document.getElementById('amend-input')
   if (amendElement) amendElement.value = ''
   document.getElementById('amend-modal-overlay').classList.remove('hidden')
@@ -80,9 +88,9 @@ function showMainApp() {
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 const META = {
-  input:   { title: '🛒 Lazy List', sub: 'Nowa lista' },
-  list:    { title: '📋 Lista',     sub: '' },
-  history: { title: '📚 Historia',  sub: 'Poprzednie listy' },
+  input: { title: '🛒 Lazy List', sub: 'Nowa lista' },
+  list: { title: '📋 Lista', sub: '' },
+  history: { title: '📚 Historia', sub: 'Poprzednie listy' },
 }
 
 function navigateTo(name) {
@@ -109,9 +117,10 @@ function updateHeader(name) {
   const m = META[name]
   if (!m) return
   const titleEl = document.getElementById('header-title')
-  const subEl   = document.getElementById('header-sub')
+  const subEl = document.getElementById('header-sub')
   if (titleEl) titleEl.textContent = m.title
-  if (subEl)   subEl.textContent   = (name === 'list' && currentList.value) ? currentList.value.title : m.sub
+  if (subEl)
+    subEl.textContent = name === 'list' && currentList.value ? currentList.value.title : m.sub
 }
 
 // ── Server-side AI proxy ─────────────────────────────────────────────────────
@@ -153,7 +162,10 @@ async function callCategorize(rawText, allowRetry = true) {
 
 async function processWithMistral() {
   const raw = document.getElementById('shopping-input').value.trim()
-  if (!raw) { toast('Wpisz listę zakupów 📝'); return }
+  if (!raw) {
+    toast('Wpisz listę zakupów 📝')
+    return
+  }
 
   setStatus('idle', 'Wysyłam…')
   showLoading('Kategoryzuję listę…')
@@ -162,13 +174,16 @@ async function processWithMistral() {
     const categories = await callCategorize(raw)
 
     currentList.value = {
-      id: Date.now(), title: 'Zakupy ' + fmtDate(Date.now()),
-      date: Date.now(), saved: true,
+      id: Date.now(),
+      title: 'Zakupy ' + fmtDate(Date.now()),
+      date: Date.now(),
+      saved: true,
       categories: categories
         .filter(c => c.items?.length)
         .map(c => ({
           name: c.name || 'inne',
-          collapsed: false, manualExpand: false,
+          collapsed: false,
+          manualExpand: false,
           items: c.items.map(n => ({ name: n, checked: false })),
         })),
     }
@@ -180,14 +195,20 @@ async function processWithMistral() {
   } catch (e) {
     hideLoading()
     setStatus('error', e.message)
-    toast(e.message, 4000)
+    toast(e.message, 4000, true)
   }
 }
 
 async function amendCurrentList() {
-  if (!currentList.value) { toast('Brak aktywnej listy'); return }
+  if (!currentList.value) {
+    toast('Brak aktywnej listy')
+    return
+  }
   const raw = document.getElementById('amend-input').value.trim()
-  if (!raw) { toast('Wpisz listę zakupów 📝'); return }
+  if (!raw) {
+    toast('Wpisz listę zakupów 📝')
+    return
+  }
 
   showLoading('Dodaję do listy…')
 
@@ -203,12 +224,12 @@ async function amendCurrentList() {
     closeAmendModal()
 
     if (added === 0 && skipped === 0) toast('Nic nie dodano')
-    else if (added === 0)             toast(`Wszystko już na liście (${skipped} duplikatów)`)
-    else if (skipped === 0)           toast(`Dodano ${added} ✓`)
-    else                              toast(`Dodano ${added} (${skipped} duplikatów)`)
+    else if (added === 0) toast(`Wszystko już na liście (${skipped} duplikatów)`)
+    else if (skipped === 0) toast(`Dodano ${added} ✓`)
+    else toast(`Dodano ${added} (${skipped} duplikatów)`)
   } catch (e) {
     hideLoading()
-    toast(e.message, 4000)
+    toast(e.message, 4000, true)
   }
 }
 
@@ -231,7 +252,10 @@ async function loadHistory(id) {
   const lists = await DB.getAll()
   const l = lists.find(l => l.id === id)
   if (!l) return
-  l.categories.forEach(c => { c.collapsed ??= false; c.manualExpand ??= false })
+  l.categories.forEach(c => {
+    c.collapsed ??= false
+    c.manualExpand ??= false
+  })
   currentList.value = l
   navigateTo('list')
 }
@@ -253,7 +277,7 @@ async function clearAllHistory() {
 }
 
 // ── ShoppingList island ───────────────────────────────────────────────────────
-function ShoppingList({ onSave, onDiscard }) {
+function ShoppingList() {
   const list = currentList.value
   const collapseRef = useRef(null)
   const prevAllDone = useRef(false)
@@ -264,14 +288,15 @@ function ShoppingList({ onSave, onDiscard }) {
   const allDone = allItems.length > 0 && allItems.every(i => i.checked)
 
   useEffect(() => {
-    if (allDone && !prevAllDone.current) confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } })
+    if (allDone && !prevAllDone.current)
+      confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } })
     prevAllDone.current = allDone
   }, [allDone])
 
-  if (!list) return html`
-    <div class="text-center py-16 px-6 text-white/45">
+  if (!list)
+    return html` <div class="text-center py-16 px-6 text-white/45">
       <div class="text-[48px] mb-3">📝</div>
-      <p class="text-[14px] leading-7">Brak aktywnej listy.<br>Stwórz nową w zakładce "Nowa".</p>
+      <p class="text-[14px] leading-7">Brak aktywnej listy.<br />Stwórz nową w zakładce "Nowa".</p>
     </div>`
 
   function toggleItem(ci, ii) {
@@ -279,7 +304,7 @@ function ShoppingList({ onSave, onDiscard }) {
     const next = categories.map((c, catIdx) => {
       if (catIdx !== ci) return c
       const newItems = c.items.map((item, itemIdx) =>
-        itemIdx !== ii ? item : { ...item, checked: !item.checked }
+        itemIdx !== ii ? item : { ...item, checked: !item.checked },
       )
       const nowChecked = newItems[ii].checked
       if (!nowChecked) return { ...c, items: newItems, collapsed: false, manualExpand: false }
@@ -290,7 +315,12 @@ function ShoppingList({ onSave, onDiscard }) {
     if (willCollapse) {
       clearTimeout(collapseRef.current)
       collapseRef.current = setTimeout(() => {
-        currentList.value = { ...currentList.value, categories: currentList.value.categories.map((c, i) => i === ci ? { ...c, collapsed: true } : c) }
+        currentList.value = {
+          ...currentList.value,
+          categories: currentList.value.categories.map((c, i) =>
+            i === ci ? { ...c, collapsed: true } : c,
+          ),
+        }
       }, 450)
     }
     if (list.saved) {
@@ -299,135 +329,201 @@ function ShoppingList({ onSave, onDiscard }) {
   }
 
   function toggleCat(ci) {
-    currentList.value = { ...list, categories: list.categories.map((c, i) =>
-      i !== ci ? c : { ...c, collapsed: !c.collapsed, manualExpand: c.collapsed }
-    )}
+    currentList.value = {
+      ...list,
+      categories: list.categories.map((c, i) =>
+        i !== ci ? c : { ...c, collapsed: !c.collapsed, manualExpand: c.collapsed },
+      ),
+    }
   }
 
-  return html`
-    <div>
-      <div class="mb-5 pt-1">
-        <div class="flex items-center justify-between mb-2">
-          <div class="text-[17px] font-semibold text-white/90 truncate pr-3">${list.title}</div>
-          <div class="flex items-center gap-3 shrink-0">
-            <div class="text-[12px] text-white/50">${done} / ${allItems.length}</div>
-            <button
-              class="text-white/40 bg-transparent border-none cursor-pointer p-1 active:text-accent transition-colors"
-              onClick=${() => window.App.openAmendModal()}
-              title="Dodaj do listy"
-              aria-label="Dodaj do listy"
+  return html` <div>
+    <div class="mb-5 pt-1">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-[17px] font-semibold text-white/90 truncate pr-3">${list.title}</div>
+        <div class="flex items-center gap-3 shrink-0">
+          <div class="text-[12px] text-white/50">${done} / ${allItems.length}</div>
+          <button
+            class="text-white/40 bg-transparent border-none cursor-pointer p-1 active:text-accent transition-colors"
+            onClick=${() => window.App.openAmendModal()}
+            title="Dodaj do listy"
+            aria-label="Dodaj do listy"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-            </button>
-            <button
-              class="text-white/40 bg-transparent border-none cursor-pointer p-1 active:text-accent transition-colors"
-              onClick=${() => shareList(currentList.value)}
-              title="Udostępnij listę"
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+          <button
+            class="text-white/40 bg-transparent border-none cursor-pointer p-1 active:text-accent transition-colors"
+            onClick=${() => shareList(currentList.value)}
+            title="Udostępnij listę"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                <polyline points="16 6 12 2 8 6"/>
-                <line x1="12" y1="2" x2="12" y2="15"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-        <div class="h-[2px] bg-white/[0.07] rounded-full overflow-hidden">
-          <div class="progress-fill h-full rounded-full"
-            style=${{ width: allItems.length ? `${done / allItems.length * 100}%` : '0%' }} />
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+              <polyline points="16 6 12 2 8 6" />
+              <line x1="12" y1="2" x2="12" y2="15" />
+            </svg>
+          </button>
         </div>
       </div>
+      <div class="h-[2px] bg-white/[0.07] rounded-full overflow-hidden">
+        <div
+          class="progress-fill h-full rounded-full"
+          style=${{ width: allItems.length ? `${(done / allItems.length) * 100}%` : '0%' }}
+        />
+      </div>
+    </div>
 
-      ${categories.map((cat, ci) => {
-        const catDone = cat.items.filter(i => i.checked).length
-        const catAllDone = catDone === cat.items.length && cat.items.length > 0
-        return html`
-          <div class="border-t border-white/[0.07] pt-1 mb-1" key=${cat.name + ci}>
-            <div class="flex items-center justify-between py-2 px-1 cursor-pointer select-none"
-              onClick=${() => toggleCat(ci)}>
-              <div class="flex items-center gap-2 text-[11px] tracking-widest uppercase text-white/55">
-                <span>${emojiFor(cat.name)}</span>
-                <span>${cat.name}</span>
-                <span class="opacity-60">(${catDone}/${cat.items.length})</span>
-                ${catAllDone && html`<span class="bg-accent/20 text-accent text-[10px] px-2 py-0.5 rounded-full">✓ gotowe</span>`}
-              </div>
-              <span class="cat-chevron text-white/45 text-[11px] ${cat.collapsed ? 'up' : ''}">▼</span>
-            </div>
-            <div class="cat-grid ${cat.collapsed ? 'collapsed' : ''}">
-              <div class="cat-grid-inner">
-                <div>
-                  ${cat.items.map((item, ii) => html`
-                    <div class="flex items-center px-1 py-[13px] border-b border-white/[0.07] last:border-0 cursor-pointer active:opacity-70"
-                      onClick=${() => toggleItem(ci, ii)} key=${ii}>
-                      <div class="w-5 h-5 rounded-[6px] border shrink-0 mr-3 flex items-center justify-center transition-all ${item.checked ? 'bg-accent border-accent' : 'border-white/30'}">
-                        ${item.checked && html`<svg width="11" height="8" viewBox="0 0 13 10" fill="none">
-                          <path d="M1 5L5 9L12 1" stroke="#0f0f1a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>`}
-                      </div>
-                      <span class="text-[15px] ${item.checked ? 'text-white/40 line-through' : 'text-white/90'}">${item.name}</span>
+    ${categories.map((cat, ci) => {
+      const catDone = cat.items.filter(i => i.checked).length
+      const catAllDone = catDone === cat.items.length && cat.items.length > 0
+      return html` <div class="border-t border-white/[0.07] pt-1 mb-1" key=${cat.name + ci}>
+        <div
+          class="flex items-center justify-between py-2 px-1 cursor-pointer select-none"
+          onClick=${() => toggleCat(ci)}
+        >
+          <div class="flex items-center gap-2 text-[11px] tracking-widest uppercase text-white/55">
+            <span>${emojiFor(cat.name)}</span>
+            <span>${cat.name}</span>
+            <span class="opacity-60">(${catDone}/${cat.items.length})</span>
+            ${catAllDone &&
+            html`<span class="bg-accent/20 text-accent text-[10px] px-2 py-0.5 rounded-full"
+              >✓ gotowe</span
+            >`}
+          </div>
+          <span class="cat-chevron text-white/45 text-[11px] ${cat.collapsed ? 'up' : ''}">▼</span>
+        </div>
+        <div class="cat-grid ${cat.collapsed ? 'collapsed' : ''}">
+          <div class="cat-grid-inner">
+            <div>
+              ${cat.items.map(
+                (item, ii) => html`
+                  <div
+                    class="flex items-center px-1 py-[13px] border-b border-white/[0.07] last:border-0 cursor-pointer active:opacity-70"
+                    onClick=${() => toggleItem(ci, ii)}
+                    key=${ii}
+                  >
+                    <div
+                      class="w-5 h-5 rounded-[6px] border shrink-0 mr-3 flex items-center justify-center transition-all ${item.checked
+                        ? 'bg-accent border-accent'
+                        : 'border-white/30'}"
+                    >
+                      ${item.checked &&
+                      html`<svg width="11" height="8" viewBox="0 0 13 10" fill="none">
+                        <path
+                          d="M1 5L5 9L12 1"
+                          stroke="#0f0f1a"
+                          stroke-width="2.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>`}
                     </div>
-                  `)}
-                </div>
-              </div>
+                    <span
+                      class="text-[15px] ${item.checked
+                        ? 'text-white/40 line-through'
+                        : 'text-white/90'}"
+                      >${item.name}</span
+                    >
+                  </div>
+                `,
+              )}
             </div>
-          </div>`
-      })}
-    </div>`
+          </div>
+        </div>
+      </div>`
+    })}
+  </div>`
 }
 
 // ── HistoryList island ────────────────────────────────────────────────────────
 function HistoryList({ lists, onLoad, onDelete, onClear }) {
-  const header = html`
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-white/60 text-[12px] font-semibold tracking-widest uppercase">Historia list</h2>
-      <button class="text-red-400/60 text-[12px] cursor-pointer border-none bg-transparent py-1 px-2 active:text-red-400"
-        onClick=${onClear}>Wyczyść</button>
-    </div>`
+  const header = html` <div class="flex justify-between items-center mb-4">
+    <h2 class="text-white/60 text-[12px] font-semibold tracking-widest uppercase">Historia list</h2>
+    <button
+      class="text-red-400/60 text-[12px] cursor-pointer border-none bg-transparent py-1 px-2 active:text-red-400"
+      onClick=${onClear}
+    >
+      Wyczyść
+    </button>
+  </div>`
 
-  if (!lists.length) return html`
-    <div>
+  if (!lists.length)
+    return html` <div>
       ${header}
       <div class="text-center py-16 px-6 text-white/45">
         <div class="text-[48px] mb-3">📭</div>
-        <p class="text-[14px] leading-7">Brak zapisanych list.<br>Stwórz pierwszą w zakładce "Nowa".</p>
+        <p class="text-[14px] leading-7">
+          Brak zapisanych list.<br />Stwórz pierwszą w zakładce "Nowa".
+        </p>
       </div>
     </div>`
 
-  return html`
-    <div>
-      ${header}
-      ${lists.map(l => {
-        const items = l.categories.flatMap(c => c.items)
-        const done  = items.filter(i => i.checked).length
-        return html`
-          <div class="py-3.5 border-b border-white/[0.07] cursor-pointer relative active:opacity-60 transition-opacity"
-            onClick=${() => onLoad(l.id)} key=${l.id}>
-            <button class="absolute top-3 right-3 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
-              onClick=${e => { e.stopPropagation(); onDelete(l.id) }}>🗑</button>
-            <div class="text-[11px] text-white/45 mb-0.5">${fmtDateFull(l.date)}</div>
-            <div class="text-[15px] font-semibold text-white/90 mb-2">${l.title}</div>
-            <div class="flex flex-wrap gap-1.5">
-              <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50">📦 ${items.length} produktów</span>
-              <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50">✓ ${done} kupionych</span>
-              ${l.categories.map(c => html`
-                <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50">${emojiFor(c.name)} ${c.name}</span>
-              `)}
-            </div>
-          </div>`
-      })}
-    </div>`
+  return html` <div>
+    ${header}
+    ${lists.map(l => {
+      const items = l.categories.flatMap(c => c.items)
+      const done = items.filter(i => i.checked).length
+      return html` <div
+        class="py-3.5 border-b border-white/[0.07] cursor-pointer relative active:opacity-60 transition-opacity"
+        onClick=${() => onLoad(l.id)}
+        key=${l.id}
+      >
+        <button
+          class="absolute top-3 right-3 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
+          onClick=${e => {
+            e.stopPropagation()
+            onDelete(l.id)
+          }}
+        >
+          🗑
+        </button>
+        <div class="text-[11px] text-white/45 mb-0.5">${fmtDateFull(l.date)}</div>
+        <div class="text-[15px] font-semibold text-white/90 mb-2">${l.title}</div>
+        <div class="flex flex-wrap gap-1.5">
+          <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50"
+            >📦 ${items.length} produktów</span
+          >
+          <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50"
+            >✓ ${done} kupionych</span
+          >
+          ${l.categories.map(
+            c => html`
+              <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50"
+                >${emojiFor(c.name)} ${c.name}</span
+              >
+            `,
+          )}
+        </div>
+      </div>`
+    })}
+  </div>`
 }
 
 // ── Island mount lifecycle ────────────────────────────────────────────────────
 function mountListIsland() {
   const el = document.getElementById('categories-container')
-  if (el) render(
-    html`<${ShoppingList} onSave=${saveCurrentList} onDiscard=${discardCurrentList} />`,
-    el
-  )
+  if (el)
+    render(html`<${ShoppingList} onSave=${saveCurrentList} onDiscard=${discardCurrentList} />`, el)
 }
 
 async function mountHistoryIsland() {
@@ -435,14 +531,19 @@ async function mountHistoryIsland() {
   if (!el) return
   const lists = await DB.getAll()
   render(
-    html`<${HistoryList} lists=${lists} onLoad=${loadHistory} onDelete=${delHistory} onClear=${clearAllHistory} />`,
-    el
+    html`<${HistoryList}
+      lists=${lists}
+      onLoad=${loadHistory}
+      onDelete=${delHistory}
+      onClear=${clearAllHistory}
+    />`,
+    el,
   )
 }
 
-document.addEventListener('htmx:afterSwap', async (e) => {
+document.addEventListener('htmx:afterSwap', async e => {
   if (e.detail.target.id !== 'main-content') return
-  if (currentView === 'list')    mountListIsland()
+  if (currentView === 'list') mountListIsland()
   if (currentView === 'history') await mountHistoryIsland()
 })
 
@@ -465,9 +566,10 @@ function hideLoading() {
 }
 
 let _toastTimer
-function toast(msg, dur = 2500) {
+function toast(msg, dur = 2500, isError = false) {
   const el = document.getElementById('toast')
   el.textContent = msg
+  el.classList.toggle('error', isError)
   el.classList.add('show')
   clearTimeout(_toastTimer)
   _toastTimer = setTimeout(() => el.classList.remove('show'), dur)
@@ -477,7 +579,11 @@ function fmtDate(ts) {
 }
 function fmtDateFull(ts) {
   return new Date(ts).toLocaleString('pl-PL', {
-    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   })
 }
 
@@ -495,7 +601,7 @@ async function shareList(list) {
       toast('Link: ' + url, 6000)
     }
   } catch (e) {
-    if (e.name !== 'AbortError') toast('Nie udało się udostępnić')
+    if (e.name !== 'AbortError') toast('Nie udało się udostępnić', 4000, true)
   }
 }
 
@@ -520,16 +626,22 @@ async function handleSharedState() {
     history.replaceState(null, '', '/')
     return true
   } catch {
-    toast('Nieprawidłowy link')
+    toast('Nieprawidłowy link', 4000, true)
     return false
   }
 }
 
 // ── window.App namespace ──────────────────────────────────────────────────────
 window.App = {
-  processWithMistral, handleNavClick,
-  saveCurrentList, discardCurrentList, clearAllHistory,
-  openAmendModal, closeAmendModal, handleAmendOverlayClick, amendCurrentList,
+  processWithMistral,
+  handleNavClick,
+  saveCurrentList,
+  discardCurrentList,
+  clearAllHistory,
+  openAmendModal,
+  closeAmendModal,
+  handleAmendOverlayClick,
+  amendCurrentList,
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
