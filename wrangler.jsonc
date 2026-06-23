@@ -4,7 +4,7 @@
   "main": "src/index.tsx",
   "compatibility_date": "2026-05-04",
   "assets": {
-    "directory": "./public"
+    "directory": "./public",
   },
   // TURNSTILE_SITE_KEY is NOT declared here on purpose: the real (public) site key lives in
   // the Cloudflare dashboard, the test key lives in `.dev.vars` for `wrangler dev`.
@@ -19,8 +19,23 @@
         "name": "AI_RATE_LIMIT",
         "type": "ratelimit",
         "namespace_id": "1001",
-        "simple": { "limit": 20, "period": 60 }
-      }
-    ]
-  }
+        "simple": { "limit": 20, "period": 60 },
+      },
+    ],
+  },
+  "observability": {
+    "enabled": false,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true,
+    },
+    "traces": {
+      "enabled": false,
+      "persist": true,
+      "head_sampling_rate": 1,
+    },
+  },
 }
