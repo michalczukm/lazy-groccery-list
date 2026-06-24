@@ -698,6 +698,7 @@ async function pickTemplate(id) {
   const templates = await DB.getAllTemplates()
   const t = templates.find(t => t.id === id)
   if (!t) return
+  if (!confirm(`Utworzyć listę z szablonu „${t.name}”?`)) return
   const now = Date.now()
   const list = templateToList(t, now, t.name + ' ' + fmtDate(now))
   await DB.save(list)
