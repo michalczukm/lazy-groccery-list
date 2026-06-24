@@ -51,8 +51,9 @@ export const PrivacyView: FC = () => (
 
         <Section title="Dane przechowywane lokalnie">
           <p>
-            Twoje listy zakupów zapisujemy w pamięci przeglądarki (IndexedDB) na Twoim urządzeniu.
-            Nie trafiają na nasz serwer i zostają u Ciebie, dopóki ich nie usuniesz.
+            Twoje listy zakupów oraz zapisane szablony zapisujemy w pamięci przeglądarki (IndexedDB)
+            na Twoim urządzeniu. Nie trafiają na nasz serwer i zostają u Ciebie, dopóki ich nie
+            usuniesz.
           </p>
         </Section>
 

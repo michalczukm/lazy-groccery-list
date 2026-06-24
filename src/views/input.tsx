@@ -18,6 +18,8 @@ export const InputView: FC = () => (
       ✨ Generuj listę
     </button>
 
+    <div id="templates-chips" />
+
     <a
       href="/privacy"
       class="block text-center text-[12px] text-white/35 mt-3 hover:text-white/60 active:text-white/60"

@@ -5,6 +5,7 @@ import htm from 'htm'
 import confetti from 'canvas-confetti'
 import { encodeState, decodeState } from './share-state.js'
 import { mergeAmendInto } from './merge-amend.js'
+import { listToTemplate, templateToList } from './template-shape.js'
 import { executeTurnstile } from './turnstile.js'
 
 const html = htm.bind(h)
@@ -30,15 +31,20 @@ const DB = (() => {
   let db
   const open = () =>
     new Promise((res, rej) => {
-      const r = indexedDB.open('LazyGrocceryList', 1)
-      r.onupgradeneeded = e => e.target.result.createObjectStore('lists', { keyPath: 'id' })
+      const r = indexedDB.open('LazyGrocceryList', 2)
+      r.onupgradeneeded = e => {
+        const d = e.target.result
+        if (!d.objectStoreNames.contains('lists')) d.createObjectStore('lists', { keyPath: 'id' })
+        if (!d.objectStoreNames.contains('templates'))
+          d.createObjectStore('templates', { keyPath: 'id' })
+      }
       r.onsuccess = e => {
         db = e.target.result
         res()
       }
       r.onerror = () => rej(r.error)
     })
-  const tx = m => db.transaction('lists', m).objectStore('lists')
+  const tx = (store, m) => db.transaction(store, m).objectStore(store)
   const wrap = r =>
     new Promise((res, rej) => {
       r.onsuccess = () => res(r.result)
@@ -46,10 +52,15 @@ const DB = (() => {
     })
   return {
     init: open,
-    save: l => wrap(tx('readwrite').put(l)),
-    getAll: () => wrap(tx('readonly').getAll()).then(a => a.sort((a, b) => b.date - a.date)),
-    del: id => wrap(tx('readwrite').delete(id)),
-    clear: () => wrap(tx('readwrite').clear()),
+    save: l => wrap(tx('lists', 'readwrite').put(l)),
+    getAll: () =>
+      wrap(tx('lists', 'readonly').getAll()).then(a => a.sort((a, b) => b.date - a.date)),
+    del: id => wrap(tx('lists', 'readwrite').delete(id)),
+    clear: () => wrap(tx('lists', 'readwrite').clear()),
+    saveTemplate: t => wrap(tx('templates', 'readwrite').put(t)),
+    getAllTemplates: () =>
+      wrap(tx('templates', 'readonly').getAll()).then(a => a.sort((a, b) => b.date - a.date)),
+    delTemplate: id => wrap(tx('templates', 'readwrite').delete(id)),
   }
 })()
 
@@ -91,6 +102,7 @@ const META = {
   input: { title: '🛒 Lazy List', sub: 'Nowa lista' },
   list: { title: '📋 Lista', sub: '' },
   history: { title: '📚 Historia', sub: 'Poprzednie listy' },
+  templates: { title: '📌 Szablony', sub: 'Zapisane szablony' },
 }
 
 function navigateTo(name) {
@@ -284,6 +296,18 @@ async function delHistory(id) {
   toast('Lista usunięta')
 }
 
+async function makeTemplate(id) {
+  const lists = await DB.getAll()
+  const l = lists.find(l => l.id === id)
+  if (!l) return
+  const name = prompt('Nazwa szablonu', l.title)
+  if (name == null) return
+  const trimmed = name.trim()
+  if (!trimmed) return
+  await DB.saveTemplate(listToTemplate(l, Date.now(), trimmed))
+  toast('Szablon zapisany 📌')
+}
+
 async function clearAllHistory() {
   if (!confirm('Usunąć WSZYSTKIE zapisane listy?')) return
   await DB.clear()
@@ -472,7 +496,7 @@ function ShoppingList() {
 }
 
 // ── HistoryList island ────────────────────────────────────────────────────────
-function HistoryList({ lists, onLoad, onDelete, onClear }) {
+function HistoryList({ lists, onLoad, onDelete, onClear, onMakeTemplate }) {
   const header = html` <div class="flex justify-between items-center mb-4">
     <h2 class="text-white/60 text-[12px] font-semibold tracking-widest uppercase">Historia list</h2>
     <button
@@ -505,6 +529,17 @@ function HistoryList({ lists, onLoad, onDelete, onClear }) {
         key=${l.id}
       >
         <button
+          class="absolute top-3 right-10 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-accent transition-colors"
+          onClick=${e => {
+            e.stopPropagation()
+            onMakeTemplate(l.id)
+          }}
+          title="Zapisz jako szablon"
+          aria-label="Zapisz jako szablon"
+        >
+          📌
+        </button>
+        <button
           class="absolute top-3 right-3 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
           onClick=${e => {
             e.stopPropagation()
@@ -535,6 +570,79 @@ function HistoryList({ lists, onLoad, onDelete, onClear }) {
   </div>`
 }
 
+// ── TemplatesChips island ─────────────────────────────────────────────────────
+function TemplatesChips({ templates, onPick, onManage }) {
+  if (!templates.length) return null
+  return html` <div class="flex gap-2 overflow-x-auto mt-3 pb-1 -mx-1 px-1">
+    ${templates.map(
+      t => html`
+        <button
+          key=${t.id}
+          class="shrink-0 bg-navy border border-white/10 text-white/80 text-[13px] px-3 py-2 rounded-full cursor-pointer active:opacity-70 whitespace-nowrap"
+          onClick=${() => onPick(t.id)}
+        >
+          📌 ${t.name}
+          <span class="text-white/40"
+            >(${t.categories.reduce((n, c) => n + c.items.length, 0)})</span
+          >
+        </button>
+      `,
+    )}
+    <button
+      class="shrink-0 bg-transparent border border-white/10 text-white/50 text-[13px] px-3 py-2 rounded-full cursor-pointer active:opacity-70"
+      onClick=${onManage}
+      title="Zarządzaj szablonami"
+      aria-label="Zarządzaj szablonami"
+    >
+      ⚙️
+    </button>
+  </div>`
+}
+
+// ── TemplateList island (manage) ──────────────────────────────────────────────
+function TemplateList({ templates, onDelete }) {
+  const header = html` <div class="flex justify-between items-center mb-4">
+    <h2 class="text-white/60 text-[12px] font-semibold tracking-widest uppercase">Szablony</h2>
+  </div>`
+
+  if (!templates.length)
+    return html` <div>
+      ${header}
+      <div class="text-center py-16 px-6 text-white/45">
+        <div class="text-[48px] mb-3">📌</div>
+        <p class="text-[14px] leading-7">
+          Brak szablonów.<br />Zapisz listę jako szablon w zakładce "Historia".
+        </p>
+      </div>
+    </div>`
+
+  // Rename templates: future (issue #9 leaves rename as a seam) — add an edit affordance here.
+  return html` <div>
+    ${header}
+    ${templates.map(
+      t => html` <div class="py-3.5 border-b border-white/[0.07] relative" key=${t.id}>
+        <button
+          class="absolute top-3 right-3 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
+          onClick=${() => onDelete(t.id)}
+          aria-label="Usuń szablon"
+        >
+          🗑
+        </button>
+        <div class="text-[15px] font-semibold text-white/90 mb-2 pr-8">${t.name}</div>
+        <div class="flex flex-wrap gap-1.5">
+          ${t.categories.map(
+            c => html`
+              <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50"
+                >${emojiFor(c.name)} ${c.name} (${c.items.length})</span
+              >
+            `,
+          )}
+        </div>
+      </div>`,
+    )}
+  </div>`
+}
+
 // ── Island mount lifecycle ────────────────────────────────────────────────────
 function mountListIsland() {
   const el = document.getElementById('categories-container')
@@ -552,15 +660,58 @@ async function mountHistoryIsland() {
       onLoad=${loadHistory}
       onDelete=${delHistory}
       onClear=${clearAllHistory}
+      onMakeTemplate=${makeTemplate}
     />`,
     el,
   )
 }
 
+async function mountTemplatesIsland() {
+  const el = document.getElementById('templates-container')
+  if (!el) return
+  const templates = await DB.getAllTemplates()
+  render(html`<${TemplateList} templates=${templates} onDelete=${removeTemplate} />`, el)
+}
+
+async function removeTemplate(id) {
+  if (!confirm('Usunąć ten szablon?')) return
+  await DB.delTemplate(id)
+  await mountTemplatesIsland()
+  toast('Szablon usunięty')
+}
+
+async function mountTemplatesChips() {
+  const el = document.getElementById('templates-chips')
+  if (!el) return
+  const templates = await DB.getAllTemplates()
+  render(
+    html`<${TemplatesChips}
+      templates=${templates}
+      onPick=${pickTemplate}
+      onManage=${() => navigateTo('templates')}
+    />`,
+    el,
+  )
+}
+
+async function pickTemplate(id) {
+  const templates = await DB.getAllTemplates()
+  const t = templates.find(t => t.id === id)
+  if (!t) return
+  if (!confirm(`Utworzyć listę z szablonu „${t.name}”?`)) return
+  const now = Date.now()
+  const list = templateToList(t, now, t.name + ' ' + fmtDate(now))
+  await DB.save(list)
+  currentList.value = list
+  navigateTo('list')
+}
+
 document.addEventListener('htmx:afterSwap', async e => {
   if (e.detail.target.id !== 'main-content') return
+  if (currentView === 'input') await mountTemplatesChips()
   if (currentView === 'list') mountListIsland()
   if (currentView === 'history') await mountHistoryIsland()
+  if (currentView === 'templates') await mountTemplatesIsland()
   hideBootLoader()
 })
 
@@ -686,6 +837,7 @@ DB.init()
         navigateTo('list')
       } else {
         showMainApp()
+        await mountTemplatesChips()
         hideBootLoader()
       }
     }
