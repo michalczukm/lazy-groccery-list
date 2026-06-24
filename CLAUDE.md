@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 pnpm dev        # local dev server via wrangler
 pnpm deploy     # deploy to Cloudflare Workers (minified)
 pnpm test       # run vitest (Cloudflare Workers pool)
+pnpm typecheck  # tsc on src (Workers) + public DOM JS + service worker (all checkJs)
 pnpm cf-typegen # regenerate Cloudflare bindings types → worker-configuration.d.ts
 pnpm lint       # oxlint (correctness rules, error)
 pnpm lint:fix   # oxlint --fix
@@ -16,6 +17,8 @@ pnpm fmt:check  # oxfmt --check
 ```
 
 Linting/formatting via oxc: `oxlint` (`.oxlintrc.json`) + `oxfmt` (`.oxfmtrc.json`, single-quote/no-semi/avoid-arrow-parens). A husky `pre-commit` hook runs `lint-staged`, which applies `oxlint --fix` + `oxfmt` to staged files only.
+
+**Client JS docs:** All `public/*.js` carry type-checked JSDoc. `pnpm typecheck` runs three tsconfigs — `tsconfig.test.json` (Workers `src`), `tsconfig.public.json` (browser DOM JS), and `tsconfig.sw.json` (service worker) — all with `checkJs`. New client functions need JSDoc with typed `@param`/`@returns`. The type-only devDeps `preact`, `@preact/signals`, `@types/canvas-confetti` exist solely so `checkJs` can resolve app.js's esm.sh imports (runtime still loads them from the importmap). oxlint enforces JSDoc completeness on `public/**/*.js` (`jsdoc` plugin); note oxlint 1.71 has no `require-jsdoc`, so JSDoc _presence_ is by convention/review while completeness and types are machine-enforced.
 
 ## Architecture
 
