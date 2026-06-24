@@ -8,11 +8,6 @@
     "moduleResolution": "Bundler",
     "types": []
   },
-  "include": [
-    "public/globals.d.ts",
-    "public/merge-amend.js",
-    "public/share-state.js",
-    "public/turnstile.js",
-    "public/app.js"
-  ]
+  "include": ["public/globals.d.ts", "public/**/*.js"],
+  "exclude": ["public/sw.js"]
 }
