@@ -41,6 +41,65 @@ jobs:
       - name: Format check
         run: pnpm fmt:check
 
+  preview:
+    name: Deploy PR preview
+    needs: verify
+    # Only for PRs from the same repo — fork PRs can't access secrets.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Uploads a new *version* of the same worker (does NOT shift prod traffic)
+      # and prints a unique preview URL. Inherits prod secrets + bindings.
+      - name: Upload preview version
+        id: upload
+        run: |
+          set -o pipefail
+          pnpm exec wrangler versions upload --minify 2>&1 | tee upload.log
+          url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' upload.log | head -n1)
+          if [ -z "$url" ]; then
+            echo "::error::Could not find preview URL in wrangler output"
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Comment preview URL on PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pr-preview
+          message: |
+            ### 🚀 PR preview deployed
+
+            A preview version of this PR is live at:
+
+            **${{ steps.upload.outputs.url }}**
+
+            Uses the same secrets and bindings as production, but does not
+            affect production traffic. Updated on every push.
+
+            <sub>commit `${{ github.event.pull_request.head.sha }}`</sub>
+
   deploy:
     name: Deploy to Cloudflare Workers
     needs: verify
