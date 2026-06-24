@@ -1,3 +1,4 @@
+/** @returns {Promise<void>} */
 function waitForTurnstile() {
   return new Promise(resolve => {
     if (window.turnstile) return resolve()
@@ -10,6 +11,11 @@ function waitForTurnstile() {
   })
 }
 
+/**
+ * @param {string} siteKey
+ * @param {string} [containerSelector]
+ * @returns {Promise<string>}
+ */
 export async function executeTurnstile(siteKey, containerSelector = '#turnstile-widget') {
   await waitForTurnstile()
   return new Promise((resolve, reject) => {

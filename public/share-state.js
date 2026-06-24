@@ -1,3 +1,7 @@
+/**
+ * @param {ShoppingListData} list
+ * @returns {Promise<string>}
+ */
 export async function encodeState(list) {
   const payload = {
     title: list.title,
@@ -17,6 +21,10 @@ export async function encodeState(list) {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
 }
 
+/**
+ * @param {string} str
+ * @returns {Promise<{ title: string, date: number, categories: Array<{ name: string, items: Item[] }> }>}
+ */
 export async function decodeState(str) {
   let bytes
   try {

@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 pnpm dev        # local dev server via wrangler
 pnpm deploy     # deploy to Cloudflare Workers (minified)
 pnpm test       # run vitest (Cloudflare Workers pool)
+pnpm typecheck  # tsc on src (Workers) + public DOM JS + service worker (all checkJs)
 pnpm cf-typegen # regenerate Cloudflare bindings types → worker-configuration.d.ts
 pnpm lint       # oxlint (correctness rules, error)
 pnpm lint:fix   # oxlint --fix
@@ -16,6 +17,8 @@ pnpm fmt:check  # oxfmt --check
 ```
 
 Linting/formatting via oxc: `oxlint` (`.oxlintrc.json`) + `oxfmt` (`.oxfmtrc.json`, single-quote/no-semi/avoid-arrow-parens). A husky `pre-commit` hook runs `lint-staged`, which applies `oxlint --fix` + `oxfmt` to staged files only.
+
+**Client JS docs:** `public/*.js` carry type-checked JSDoc that is **TYPES-ONLY** — JSDoc blocks contain only typed tags (`@param {Type} name`, `@returns {Type}`) with **no prose**: no summary line, no `@param`/`@returns` descriptions. A function with no parameters and no meaningful return may **omit the JSDoc block entirely** (an empty block is not required); keep a one-line `@returns {Type}` only where the type is load-bearing for inference (e.g. a `new Promise()` resolve hint). Reference the shared `@typedef`s in `public/globals.d.ts` (`ShoppingListData`, `Category`, `Item`, `Template`, …) by name. Preact components use `@returns {import('preact').VNode}` and a single typed `props` object. `pnpm typecheck` runs three tsconfigs — `tsconfig.test.json` (Workers `src`), `tsconfig.public.json` (browser DOM JS via the glob `public/**/*.js`, with `public/sw.js` excluded), and `tsconfig.sw.json` (service worker) — all with `checkJs`. The type-only devDeps `preact`, `@preact/signals`, `@types/canvas-confetti` exist solely so `checkJs` can resolve app.js's esm.sh imports (runtime still loads them from the importmap). oxlint runs the `jsdoc` plugin on `public/**/*.js` and enforces `@param`/`@returns` _types_ where blocks exist (no `require-*-description` rules are enabled, so dropping descriptions stays lint-clean); note oxlint 1.71 has no `require-jsdoc` and no `jsdoc/check-param-names`, so JSDoc presence and `@param` name matching are by convention/review while types are machine-enforced.
 
 ## Architecture
 

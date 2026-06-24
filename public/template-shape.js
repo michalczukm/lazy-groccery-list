@@ -1,7 +1,12 @@
 // Pure, deterministic transforms between saved lists and templates.
 // No Date.now()/Math.random()/new Date()/fmtDate here — callers pass ids and titles in.
 
-// Strip a saved list down to a reusable template (no checked/ui state, no empty categories).
+/**
+ * @param {ShoppingListData} list
+ * @param {number} id
+ * @param {string} name
+ * @returns {Template}
+ */
 export function listToTemplate(list, id, name) {
   return {
     id,
@@ -16,7 +21,12 @@ export function listToTemplate(list, id, name) {
   }
 }
 
-// Expand a template into a fresh, unchecked saved-list object (same shape as the AI flow output).
+/**
+ * @param {Template} tpl
+ * @param {number} id
+ * @param {string} title
+ * @returns {ShoppingListData}
+ */
 export function templateToList(tpl, id, title) {
   return {
     id,

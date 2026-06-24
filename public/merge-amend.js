@@ -1,3 +1,8 @@
+/**
+ * @param {ShoppingListData} list
+ * @param {Array<{ name: string, items: Array<string> }>} newCategories
+ * @returns {{ categories: Category[], added: number, skipped: number }}
+ */
 export function mergeAmendInto(list, newCategories) {
   const existing = list.categories.map(c => ({ ...c, items: [...c.items] }))
   let added = 0
