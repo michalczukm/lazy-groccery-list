@@ -1,7 +1,7 @@
 // Ambient declarations for browser globals used by public/*.js but not imported,
 // plus shared @typedefs for the app's data shapes (referenced from JSDoc).
 
-export {} // make this a module-free ambient file under Bundler resolution
+export {} // make this a module so `declare global` augments the true global scope under Bundler resolution
 
 declare global {
   /** A single shopping-list item. */
