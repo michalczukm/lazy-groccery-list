@@ -8,5 +8,10 @@
     "moduleResolution": "Bundler",
     "types": []
   },
-  "include": ["public/globals.d.ts", "public/merge-amend.js", "public/share-state.js"]
+  "include": [
+    "public/globals.d.ts",
+    "public/merge-amend.js",
+    "public/share-state.js",
+    "public/turnstile.js"
+  ]
 }

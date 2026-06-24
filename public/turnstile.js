@@ -1,3 +1,7 @@
+/**
+ * Resolve once the Cloudflare Turnstile global script has loaded.
+ * @returns {Promise<void>} Resolves when `window.turnstile` is available.
+ */
 function waitForTurnstile() {
   return new Promise(resolve => {
     if (window.turnstile) return resolve()
@@ -10,6 +14,13 @@ function waitForTurnstile() {
   })
 }
 
+/**
+ * Render and run an invisible Turnstile challenge, resolving with its token.
+ * @param {string} siteKey - Turnstile site key.
+ * @param {string} [containerSelector] - CSS selector for the widget container. Defaults to `'#turnstile-widget'`.
+ * @returns {Promise<string>} The Turnstile response token.
+ * @throws {Error} If the Turnstile challenge errors.
+ */
 export async function executeTurnstile(siteKey, containerSelector = '#turnstile-widget') {
   await waitForTurnstile()
   return new Promise((resolve, reject) => {
