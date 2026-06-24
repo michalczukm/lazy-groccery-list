@@ -80,5 +80,5 @@ pnpm run deploy
 `.github/workflows/ci.yml`:
 
 - **Verify** (every PR + push to `main`) — typecheck, test, lint, fmt check.
-- **PR preview** — same-repo PRs upload a new worker *version* (`wrangler versions upload`, does not shift prod traffic) and post a unique `*.workers.dev` preview URL as a PR comment. Fork PRs skip it (no secret access).
+- **PR preview** — same-repo PRs upload a new worker _version_ (`wrangler versions upload`, does not shift prod traffic) and post a unique `*.workers.dev` preview URL as a PR comment. Fork PRs skip it (no secret access).
 - Push to `main` deploys prod.
