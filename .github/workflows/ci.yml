@@ -89,14 +89,14 @@ jobs:
         with:
           header: pr-preview
           message: |
-            ### 🚀 Podgląd PR (preview)
+            ### 🚀 PR preview deployed
 
-            Wdrożono wersję podglądu tego PR-a:
+            A preview version of this PR is live at:
 
             **${{ steps.upload.outputs.url }}**
 
-            Korzysta z tych samych sekretów i bindingów co produkcja, ale nie
-            wpływa na ruch produkcyjny. Aktualizuje się przy każdym pushu.
+            Uses the same secrets and bindings as production, but does not
+            affect production traffic. Updated on every push.
 
             <sub>commit `${{ github.event.pull_request.head.sha }}`</sub>
 
