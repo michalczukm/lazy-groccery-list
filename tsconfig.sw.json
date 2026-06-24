@@ -8,5 +8,5 @@
     "moduleResolution": "Bundler",
     "types": []
   },
-  "files": []
+  "include": ["public/sw.js"]
 }
