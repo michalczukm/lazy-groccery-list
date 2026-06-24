@@ -59,7 +59,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
         {...({ type: 'text/tailwindcss' } as Record<string, string>)}
         dangerouslySetInnerHTML={{
           __html: `
-          .nav-item { @apply flex-1 flex flex-col items-center gap-0.5 py-2.5 px-2 bg-transparent border-none cursor-pointer text-white/50 text-[10px] tracking-wide; }
+          .nav-item { @apply flex-1 flex flex-col items-center gap-0.5 py-2.5 px-2 bg-transparent border-none cursor-pointer text-white/50 text-[10px] tracking-wide md:flex-none md:flex-row md:items-center md:justify-start md:gap-3 md:py-3 md:px-4 md:mx-2 md:rounded-lg md:text-[14px] md:hover:bg-white/5; }
           .nav-item.active { @apply text-accent; }
           .status-badge { @apply flex items-center gap-2 mb-3 text-[12px]; }
           .status-badge.idle  { @apply text-white/50; }
@@ -77,6 +77,8 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
           __html: `
           * { -webkit-tap-highlight-color: transparent; }
           .hidden { display: none !important; }
+          .sidebar-logo { display:none; }
+          .sidebar-link { display:none; }
           .cat-grid { display:grid; grid-template-rows:1fr; transition:grid-template-rows .3s ease, opacity .25s ease; opacity:1; }
           .cat-grid.collapsed { grid-template-rows:0fr; opacity:0; }
           .cat-grid-inner { overflow:hidden; min-height:0; }
@@ -88,12 +90,39 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
           #toast.error { bottom:auto; top:calc(env(safe-area-inset-top,0px) + 16px); background:#dc2626; box-shadow:0 6px 20px rgba(220,38,38,.45); }
           #toast.error { transform:translateX(-50%) translateY(-8px); }
           #toast.error.show { transform:translateX(-50%) translateY(0); }
+
+          /* Desktop: left sidebar + capped, centered content column.
+             Mobile keeps the default flex-col / max-w-[480px] shell. */
+          @media (min-width: 768px) {
+            body.app-shell {
+              display: grid;
+              grid-template-columns: 200px minmax(0, 1100px);
+              grid-template-rows: auto 1fr;
+              grid-template-areas: "nav header" "nav main";
+              max-width: none;
+              justify-content: center;
+            }
+            body.app-shell > header  { grid-area: header; }
+            body.app-shell > #main-content { grid-area: main; }
+            body.app-shell > #bottom-nav {
+              grid-area: nav;
+              flex-direction: column;
+              align-items: stretch;
+              gap: 4px;
+              border-top: none;
+              border-right: 1px solid rgba(255,255,255,0.07);
+              padding-top: 12px;
+              padding-bottom: 0;
+            }
+            .sidebar-logo { display: flex; }
+            .sidebar-link { display: block; }
+          }
         `,
         }}
       />
     </head>
 
-    <body class="font-sans bg-navy-dark text-white flex flex-col max-w-[480px] mx-auto h-full overflow-hidden">
+    <body class="app-shell font-sans bg-navy-dark text-white flex flex-col max-w-[480px] mx-auto h-full overflow-hidden">
       {/* Boot loader — covers the first paint until the client picks the right view,
           preventing the "Nowa lista" → "Lista" flash when today's list is restored. */}
       <div
@@ -195,6 +224,9 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
         class="flex bg-navy shrink-0 border-t border-white/[0.07]"
         style="padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))"
       >
+        <div class="sidebar-logo flex-col px-4 pb-3 mb-1 border-b border-white/[0.07]">
+          <span class="text-[16px] font-bold tracking-tight">🛒 Lazy List</span>
+        </div>
         <button
           class="nav-item active"
           data-view="input"
@@ -225,6 +257,12 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
         >
           <span class="text-xl">📚</span>Historia
         </button>
+        <a
+          href="/privacy"
+          class="sidebar-link mt-auto mx-4 mb-1 text-[12px] text-white/35 hover:text-white/60"
+        >
+          Polityka prywatności
+        </a>
       </nav>
 
       <div

@@ -433,65 +433,71 @@ function ShoppingList() {
       </div>
     </div>
 
-    ${categories.map((cat, ci) => {
-      const catDone = cat.items.filter(i => i.checked).length
-      const catAllDone = catDone === cat.items.length && cat.items.length > 0
-      return html` <div class="border-t border-white/[0.07] pt-1 mb-1" key=${cat.name + ci}>
-        <div
-          class="flex items-center justify-between py-2 px-1 cursor-pointer select-none"
-          onClick=${() => toggleCat(ci)}
-        >
-          <div class="flex items-center gap-2 text-[11px] tracking-widest uppercase text-white/55">
-            <span>${emojiFor(cat.name)}</span>
-            <span>${cat.name}</span>
-            <span class="opacity-60">(${catDone}/${cat.items.length})</span>
-            ${catAllDone &&
-            html`<span class="bg-accent/20 text-accent text-[10px] px-2 py-0.5 rounded-full"
-              >✓ gotowe</span
-            >`}
+    <div class="md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-x-6 md:items-start">
+      ${categories.map((cat, ci) => {
+        const catDone = cat.items.filter(i => i.checked).length
+        const catAllDone = catDone === cat.items.length && cat.items.length > 0
+        return html` <div class="border-t border-white/[0.07] pt-1 mb-1" key=${cat.name + ci}>
+          <div
+            class="flex items-center justify-between py-2 px-1 cursor-pointer select-none"
+            onClick=${() => toggleCat(ci)}
+          >
+            <div
+              class="flex items-center gap-2 text-[11px] tracking-widest uppercase text-white/55"
+            >
+              <span>${emojiFor(cat.name)}</span>
+              <span>${cat.name}</span>
+              <span class="opacity-60">(${catDone}/${cat.items.length})</span>
+              ${catAllDone &&
+              html`<span class="bg-accent/20 text-accent text-[10px] px-2 py-0.5 rounded-full"
+                >✓ gotowe</span
+              >`}
+            </div>
+            <span class="cat-chevron text-white/45 text-[11px] ${cat.collapsed ? 'up' : ''}"
+              >▼</span
+            >
           </div>
-          <span class="cat-chevron text-white/45 text-[11px] ${cat.collapsed ? 'up' : ''}">▼</span>
-        </div>
-        <div class="cat-grid ${cat.collapsed ? 'collapsed' : ''}">
-          <div class="cat-grid-inner">
-            <div>
-              ${cat.items.map(
-                (item, ii) => html`
-                  <div
-                    class="flex items-center px-1 py-[13px] border-b border-white/[0.07] last:border-0 cursor-pointer active:opacity-70"
-                    onClick=${() => toggleItem(ci, ii)}
-                    key=${ii}
-                  >
+          <div class="cat-grid ${cat.collapsed ? 'collapsed' : ''}">
+            <div class="cat-grid-inner">
+              <div>
+                ${cat.items.map(
+                  (item, ii) => html`
                     <div
-                      class="w-5 h-5 rounded-[6px] border shrink-0 mr-3 flex items-center justify-center transition-all ${item.checked
-                        ? 'bg-accent border-accent'
-                        : 'border-white/30'}"
+                      class="flex items-center px-1 py-[13px] border-b border-white/[0.07] last:border-0 cursor-pointer active:opacity-70"
+                      onClick=${() => toggleItem(ci, ii)}
+                      key=${ii}
                     >
-                      ${item.checked &&
-                      html`<svg width="11" height="8" viewBox="0 0 13 10" fill="none">
-                        <path
-                          d="M1 5L5 9L12 1"
-                          stroke="#0f0f1a"
-                          stroke-width="2.5"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        />
-                      </svg>`}
+                      <div
+                        class="w-5 h-5 rounded-[6px] border shrink-0 mr-3 flex items-center justify-center transition-all ${item.checked
+                          ? 'bg-accent border-accent'
+                          : 'border-white/30'}"
+                      >
+                        ${item.checked &&
+                        html`<svg width="11" height="8" viewBox="0 0 13 10" fill="none">
+                          <path
+                            d="M1 5L5 9L12 1"
+                            stroke="#0f0f1a"
+                            stroke-width="2.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                        </svg>`}
+                      </div>
+                      <span
+                        class="text-[15px] ${item.checked
+                          ? 'text-white/40 line-through'
+                          : 'text-white/90'}"
+                        >${item.name}</span
+                      >
                     </div>
-                    <span
-                      class="text-[15px] ${item.checked
-                        ? 'text-white/40 line-through'
-                        : 'text-white/90'}"
-                      >${item.name}</span
-                    >
-                  </div>
-                `,
-              )}
+                  `,
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </div>`
-    })}
+        </div>`
+      })}
+    </div>
   </div>`
 }
 
@@ -520,53 +526,55 @@ function HistoryList({ lists, onLoad, onDelete, onClear, onMakeTemplate }) {
 
   return html` <div>
     ${header}
-    ${lists.map(l => {
-      const items = l.categories.flatMap(c => c.items)
-      const done = items.filter(i => i.checked).length
-      return html` <div
-        class="py-3.5 border-b border-white/[0.07] cursor-pointer relative active:opacity-60 transition-opacity"
-        onClick=${() => onLoad(l.id)}
-        key=${l.id}
-      >
-        <button
-          class="absolute top-3 right-10 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-accent transition-colors"
-          onClick=${e => {
-            e.stopPropagation()
-            onMakeTemplate(l.id)
-          }}
-          title="Zapisz jako szablon"
-          aria-label="Zapisz jako szablon"
+    <div class="md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:items-start">
+      ${lists.map(l => {
+        const items = l.categories.flatMap(c => c.items)
+        const done = items.filter(i => i.checked).length
+        return html` <div
+          class="py-3.5 border-b border-white/[0.07] md:border md:border-white/10 md:rounded-xl md:p-4 cursor-pointer relative active:opacity-60 transition-opacity"
+          onClick=${() => onLoad(l.id)}
+          key=${l.id}
         >
-          📌
-        </button>
-        <button
-          class="absolute top-3 right-3 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
-          onClick=${e => {
-            e.stopPropagation()
-            onDelete(l.id)
-          }}
-        >
-          🗑
-        </button>
-        <div class="text-[11px] text-white/45 mb-0.5">${fmtDateFull(l.date)}</div>
-        <div class="text-[15px] font-semibold text-white/90 mb-2">${l.title}</div>
-        <div class="flex flex-wrap gap-1.5">
-          <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50"
-            >📦 ${items.length} produktów</span
+          <button
+            class="absolute top-3 right-10 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-accent transition-colors"
+            onClick=${e => {
+              e.stopPropagation()
+              onMakeTemplate(l.id)
+            }}
+            title="Zapisz jako szablon"
+            aria-label="Zapisz jako szablon"
           >
-          <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50"
-            >✓ ${done} kupionych</span
+            📌
+          </button>
+          <button
+            class="absolute top-3 right-3 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
+            onClick=${e => {
+              e.stopPropagation()
+              onDelete(l.id)
+            }}
           >
-          ${l.categories.map(
-            c => html`
-              <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50"
-                >${emojiFor(c.name)} ${c.name}</span
-              >
-            `,
-          )}
-        </div>
-      </div>`
-    })}
+            🗑
+          </button>
+          <div class="text-[11px] text-white/45 mb-0.5">${fmtDateFull(l.date)}</div>
+          <div class="text-[15px] font-semibold text-white/90 mb-2">${l.title}</div>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50"
+              >📦 ${items.length} produktów</span
+            >
+            <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50"
+              >✓ ${done} kupionych</span
+            >
+            ${l.categories.map(
+              c => html`
+                <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50"
+                  >${emojiFor(c.name)} ${c.name}</span
+                >
+              `,
+            )}
+          </div>
+        </div>`
+      })}
+    </div>
   </div>`
 }
 
@@ -619,27 +627,32 @@ function TemplateList({ templates, onDelete }) {
   // Rename templates: future (issue #9 leaves rename as a seam) — add an edit affordance here.
   return html` <div>
     ${header}
-    ${templates.map(
-      t => html` <div class="py-3.5 border-b border-white/[0.07] relative" key=${t.id}>
-        <button
-          class="absolute top-3 right-3 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
-          onClick=${() => onDelete(t.id)}
-          aria-label="Usuń szablon"
+    <div class="md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:items-start">
+      ${templates.map(
+        t => html` <div
+          class="py-3.5 border-b border-white/[0.07] md:border md:border-white/10 md:rounded-xl md:p-4 relative"
+          key=${t.id}
         >
-          🗑
-        </button>
-        <div class="text-[15px] font-semibold text-white/90 mb-2 pr-8">${t.name}</div>
-        <div class="flex flex-wrap gap-1.5">
-          ${t.categories.map(
-            c => html`
-              <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50"
-                >${emojiFor(c.name)} ${c.name} (${c.items.length})</span
-              >
-            `,
-          )}
-        </div>
-      </div>`,
-    )}
+          <button
+            class="absolute top-3 right-3 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
+            onClick=${() => onDelete(t.id)}
+            aria-label="Usuń szablon"
+          >
+            🗑
+          </button>
+          <div class="text-[15px] font-semibold text-white/90 mb-2 pr-8">${t.name}</div>
+          <div class="flex flex-wrap gap-1.5">
+            ${t.categories.map(
+              c => html`
+                <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50"
+                  >${emojiFor(c.name)} ${c.name} (${c.items.length})</span
+                >
+              `,
+            )}
+          </div>
+        </div>`,
+      )}
+    </div>
   </div>`
 }
 
