@@ -1,7 +1,7 @@
 import type { FC } from 'hono/jsx'
 
 export const InputView: FC = () => (
-  <div class="flex flex-col h-full p-4">
+  <div class="flex flex-col h-full p-4 md:max-w-2xl md:mx-auto md:w-full">
     <textarea
       id="shopping-input"
       class="w-full flex-1 min-h-0 resize-none border border-white/10 rounded-xl p-3.5 text-[15px] outline-none bg-navy text-white/90 placeholder:text-white/30 focus:border-accent/40"
