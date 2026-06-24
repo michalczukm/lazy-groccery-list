@@ -1,11 +1,27 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn", "oxc"],
+  "plugins": ["typescript", "unicorn", "oxc", "jsdoc"],
   "categories": {
     "correctness": "error"
   },
   "rules": {},
   "env": {
     "builtin": true
-  }
+  },
+  "overrides": [
+    {
+      "files": ["public/**/*.js"],
+      "rules": {
+        "jsdoc/check-tag-names": "error",
+        "jsdoc/require-param": "error",
+        "jsdoc/require-param-name": "error",
+        "jsdoc/require-param-type": "error",
+        "jsdoc/require-returns": "error",
+        "jsdoc/require-returns-type": "error",
+        "jsdoc/require-property": "error",
+        "jsdoc/require-property-name": "error",
+        "jsdoc/require-property-type": "error"
+      }
+    }
+  ]
 }
