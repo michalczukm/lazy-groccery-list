@@ -1,10 +1,7 @@
 /**
- * Merge freshly categorized items into an existing list, in place of duplicates.
- * Matches categories case-insensitively, skips items already present (by trimmed
- * lowercased name), and appends the rest.
- * @param {ShoppingListData} list - The current list to merge into.
- * @param {Array<{ name: string, items: Array<string> }>} newCategories - Newly categorized groups.
- * @returns {{ categories: Category[], added: number, skipped: number }} Merged categories and counts.
+ * @param {ShoppingListData} list
+ * @param {Array<{ name: string, items: Array<string> }>} newCategories
+ * @returns {{ categories: Category[], added: number, skipped: number }}
  */
 export function mergeAmendInto(list, newCategories) {
   const existing = list.categories.map(c => ({ ...c, items: [...c.items] }))

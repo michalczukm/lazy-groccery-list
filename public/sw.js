@@ -6,11 +6,7 @@ const sw = /** @type {any} */ (self)
 
 sw.addEventListener('install', () => sw.skipWaiting())
 
-/**
- * On activate, delete all existing caches and take control of open clients.
- * @param {ExtendableEvent} e - The activate lifecycle event.
- * @returns {void}
- */
+/** @param {ExtendableEvent} e */
 sw.addEventListener('activate', e =>
   e.waitUntil(
     caches

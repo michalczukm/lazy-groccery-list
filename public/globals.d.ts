@@ -27,6 +27,25 @@ declare global {
     categories: Category[]
   }
 
+  /** A single item inside a template (name only — no checked/UI state). */
+  interface TemplateItem {
+    name: string
+  }
+
+  /** A category inside a template. */
+  interface TemplateCategory {
+    name: string
+    items: TemplateItem[]
+  }
+
+  /** A saved list template (no checked/collapse state). */
+  interface Template {
+    id: number
+    date: number
+    name: string
+    categories: TemplateCategory[]
+  }
+
   /** Minimal htmx surface used by app.js. */
   interface Htmx {
     ajax(method: string, url: string, opts: { target: string; swap: string }): Promise<void>

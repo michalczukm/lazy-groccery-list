@@ -1,7 +1,6 @@
 /**
- * Serialize a list to a URL-safe, gzip-compressed base64url string for sharing.
- * @param {ShoppingListData} list - The list to encode.
- * @returns {Promise<string>} base64url (no padding) of the gzipped JSON payload.
+ * @param {ShoppingListData} list
+ * @returns {Promise<string>}
  */
 export async function encodeState(list) {
   const payload = {
@@ -23,10 +22,8 @@ export async function encodeState(list) {
 }
 
 /**
- * Decode a share string produced by {@link encodeState} back into a payload.
- * @param {string} str - base64url-encoded, gzipped list payload.
- * @returns {Promise<{ title: string, date: number, categories: Array<{ name: string, items: Item[] }> }>} The decoded payload.
- * @throws {Error} If the input is invalid base64url, too large, or malformed.
+ * @param {string} str
+ * @returns {Promise<{ title: string, date: number, categories: Array<{ name: string, items: Item[] }> }>}
  */
 export async function decodeState(str) {
   let bytes
