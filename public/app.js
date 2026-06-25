@@ -1,19 +1,14 @@
-import { render, h } from 'preact'
+import { render } from 'preact'
 import { useEffect, useRef } from 'preact/hooks'
 import { signal } from '@preact/signals'
-import htm from 'htm'
 import confetti from 'canvas-confetti'
+import { html } from './html.js'
+import { PlusIcon, CheckIcon } from './icons.js'
+import { Meatballs } from './meatballs.js'
 import { encodeState, decodeState } from './share-state.js'
 import { mergeAmendInto } from './merge-amend.js'
 import { listToTemplate, templateToList } from './template-shape.js'
 import { executeTurnstile } from './turnstile.js'
-
-// htm.bind(h) types its return as `VNode | VNode[]`; every app template has a single
-// root element, so we narrow to `VNode`. The cast is the standard htm/Preact idiom.
-const html =
-  /** @type {(strings: TemplateStringsArray, ...values: unknown[]) => import('preact').VNode} */ (
-    htm.bind(h)
-  )
 
 // Emoji per category name. Keep in sync with CATEGORIES in src/lib/mistral.ts.
 /** @type {Record<string, string>} */
@@ -367,11 +362,12 @@ async function delHistory(id) {
   toast('Lista usunięta')
 }
 
-/** @param {number} id */
-async function makeTemplate(id) {
-  const lists = await DB.getAll()
-  const l = lists.find(l => l.id === id)
-  if (!l) return
+async function makeTemplateFromCurrent() {
+  const l = currentList.value
+  if (!l) {
+    toast('Brak aktywnej listy')
+    return
+  }
   const name = prompt('Nazwa szablonu', l.title)
   if (name == null) return
   const trimmed = name.trim()
@@ -470,40 +466,18 @@ function ShoppingList() {
             title="Dodaj do listy"
             aria-label="Dodaj do listy"
           >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
+            <${PlusIcon} />
           </button>
-          <button
-            class="text-white/40 bg-transparent border-none cursor-pointer p-1 active:text-accent transition-colors"
-            onClick=${() => shareList(/** @type {ShoppingListData} */ (currentList.value))}
-            title="Udostępnij listę"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-              <polyline points="16 6 12 2 8 6" />
-              <line x1="12" y1="2" x2="12" y2="15" />
-            </svg>
-          </button>
+          <${Meatballs}
+            items=${[
+              { icon: '📌', label: 'Utwórz szablon', onClick: makeTemplateFromCurrent },
+              {
+                icon: '🔗',
+                label: 'Udostępnij',
+                onClick: () => shareList(/** @type {ShoppingListData} */ (currentList.value)),
+              },
+            ]}
+          />
         </div>
       </div>
       <div class="h-[2px] bg-white/[0.07] rounded-full overflow-hidden">
@@ -553,16 +527,7 @@ function ShoppingList() {
                           ? 'bg-accent border-accent'
                           : 'border-white/30'}"
                       >
-                        ${item.checked &&
-                        html`<svg width="11" height="8" viewBox="0 0 13 10" fill="none">
-                          <path
-                            d="M1 5L5 9L12 1"
-                            stroke="#0f0f1a"
-                            stroke-width="2.5"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                        </svg>`}
+                        ${item.checked && html`<${CheckIcon} />`}
                       </div>
                       <span
                         class="text-[15px] ${item.checked
@@ -584,10 +549,10 @@ function ShoppingList() {
 
 // ── HistoryList island ────────────────────────────────────────────────────────
 /**
- * @param {{ lists: ShoppingListData[], onLoad: (id: number) => void, onDelete: (id: number) => void, onClear: () => void, onMakeTemplate: (id: number) => void }} props
+ * @param {{ lists: ShoppingListData[], onLoad: (id: number) => void, onDelete: (id: number) => void, onClear: () => void }} props
  * @returns {import('preact').VNode}
  */
-function HistoryList({ lists, onLoad, onDelete, onClear, onMakeTemplate }) {
+function HistoryList({ lists, onLoad, onDelete, onClear }) {
   const header = html` <div class="flex justify-between items-center mb-4">
     <h2 class="text-white/60 text-[12px] font-semibold tracking-widest uppercase">Historia list</h2>
     <button
@@ -620,17 +585,6 @@ function HistoryList({ lists, onLoad, onDelete, onClear, onMakeTemplate }) {
           onClick=${() => onLoad(l.id)}
           key=${l.id}
         >
-          <button
-            class="absolute top-3 right-10 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-accent transition-colors"
-            onClick=${(/** @type {Event} */ e) => {
-              e.stopPropagation()
-              onMakeTemplate(l.id)
-            }}
-            title="Zapisz jako szablon"
-            aria-label="Zapisz jako szablon"
-          >
-            📌
-          </button>
           <button
             class="absolute top-3 right-3 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
             onClick=${(/** @type {Event} */ e) => {
@@ -712,7 +666,7 @@ function TemplateList({ templates, onDelete }) {
       <div class="text-center py-16 px-6 text-white/45">
         <div class="text-[48px] mb-3">📌</div>
         <p class="text-[14px] leading-7">
-          Brak szablonów.<br />Zapisz listę jako szablon w zakładce "Historia".
+          Brak szablonów.<br />Zapisz listę jako szablon z menu ⋮ w widoku listy.
         </p>
       </div>
     </div>`
@@ -766,7 +720,6 @@ async function mountHistoryIsland() {
       onLoad=${loadHistory}
       onDelete=${delHistory}
       onClear=${clearAllHistory}
-      onMakeTemplate=${makeTemplate}
     />`,
     el,
   )
