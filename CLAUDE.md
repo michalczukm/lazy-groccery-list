@@ -84,6 +84,8 @@ Input is capped at `MAX_INPUT_CHARS` (10 000).
 
 **UI language:** Polish throughout (category names, labels, prompts).
 
+**UI design:** Mobile-first. Design and verify the phone viewport first; desktop (sidebar + multi-column grid via `md:`/`lg:` Tailwind breakpoints) is the progressive enhancement, not the baseline.
+
 **Privacy policy:** the `/privacy` page describes what data is collected, where it is sent (Cloudflare Turnstile, Mistral AI), cookies, and local storage. After ANY change to data handling — new data collected/stored, new third party or sub-processor, cookies, IP usage, retention, or the share mechanism — review `src/views/privacy.tsx` and update it if needed (and bump its "last updated" date).
 
 ## Testing
