@@ -1,5 +1,5 @@
 import { render, h } from 'preact'
-import { useEffect, useRef } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import { signal } from '@preact/signals'
 import htm from 'htm'
 import confetti from 'canvas-confetti'
@@ -367,11 +367,12 @@ async function delHistory(id) {
   toast('Lista usunięta')
 }
 
-/** @param {number} id */
-async function makeTemplate(id) {
-  const lists = await DB.getAll()
-  const l = lists.find(l => l.id === id)
-  if (!l) return
+async function makeTemplateFromCurrent() {
+  const l = currentList.value
+  if (!l) {
+    toast('Brak aktywnej listy')
+    return
+  }
   const name = prompt('Nazwa szablonu', l.title)
   if (name == null) return
   const trimmed = name.trim()
@@ -484,26 +485,16 @@ function ShoppingList() {
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </button>
-          <button
-            class="text-white/40 bg-transparent border-none cursor-pointer p-1 active:text-accent transition-colors"
-            onClick=${() => shareList(/** @type {ShoppingListData} */ (currentList.value))}
-            title="Udostępnij listę"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-              <polyline points="16 6 12 2 8 6" />
-              <line x1="12" y1="2" x2="12" y2="15" />
-            </svg>
-          </button>
+          <${Meatballs}
+            items=${[
+              { icon: '📌', label: 'Utwórz szablon', onClick: makeTemplateFromCurrent },
+              {
+                icon: '🔗',
+                label: 'Udostępnij',
+                onClick: () => shareList(/** @type {ShoppingListData} */ (currentList.value)),
+              },
+            ]}
+          />
         </div>
       </div>
       <div class="h-[2px] bg-white/[0.07] rounded-full overflow-hidden">
@@ -584,10 +575,10 @@ function ShoppingList() {
 
 // ── HistoryList island ────────────────────────────────────────────────────────
 /**
- * @param {{ lists: ShoppingListData[], onLoad: (id: number) => void, onDelete: (id: number) => void, onClear: () => void, onMakeTemplate: (id: number) => void }} props
+ * @param {{ lists: ShoppingListData[], onLoad: (id: number) => void, onDelete: (id: number) => void, onClear: () => void }} props
  * @returns {import('preact').VNode}
  */
-function HistoryList({ lists, onLoad, onDelete, onClear, onMakeTemplate }) {
+function HistoryList({ lists, onLoad, onDelete, onClear }) {
   const header = html` <div class="flex justify-between items-center mb-4">
     <h2 class="text-white/60 text-[12px] font-semibold tracking-widest uppercase">Historia list</h2>
     <button
@@ -620,17 +611,6 @@ function HistoryList({ lists, onLoad, onDelete, onClear, onMakeTemplate }) {
           onClick=${() => onLoad(l.id)}
           key=${l.id}
         >
-          <button
-            class="absolute top-3 right-10 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-accent transition-colors"
-            onClick=${(/** @type {Event} */ e) => {
-              e.stopPropagation()
-              onMakeTemplate(l.id)
-            }}
-            title="Zapisz jako szablon"
-            aria-label="Zapisz jako szablon"
-          >
-            📌
-          </button>
           <button
             class="absolute top-3 right-3 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
             onClick=${(/** @type {Event} */ e) => {
@@ -712,7 +692,7 @@ function TemplateList({ templates, onDelete }) {
       <div class="text-center py-16 px-6 text-white/45">
         <div class="text-[48px] mb-3">📌</div>
         <p class="text-[14px] leading-7">
-          Brak szablonów.<br />Zapisz listę jako szablon w zakładce "Historia".
+          Brak szablonów.<br />Zapisz listę jako szablon z menu ⋮ w widoku listy.
         </p>
       </div>
     </div>`
@@ -749,6 +729,62 @@ function TemplateList({ templates, onDelete }) {
   </div>`
 }
 
+// ── Meatballs menu ────────────────────────────────────────────────────────────
+/**
+ * @param {{ items: Array<{ icon: string, label: string, onClick: () => void }> }} props
+ * @returns {import('preact').VNode}
+ */
+function Meatballs({ items }) {
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (!open) return
+    /** @param {KeyboardEvent} e */
+    const onKey = e => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open])
+  return html` <div class="relative">
+    <button
+      class="text-white/40 bg-transparent border-none cursor-pointer p-1 active:text-accent transition-colors"
+      onClick=${() => setOpen(o => !o)}
+      title="Więcej"
+      aria-label="Więcej opcji"
+      aria-haspopup="menu"
+      aria-expanded=${open}
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <circle cx="12" cy="5" r="2" />
+        <circle cx="12" cy="12" r="2" />
+        <circle cx="12" cy="19" r="2" />
+      </svg>
+    </button>
+    ${open &&
+    html`<div class="fixed inset-0 z-40" onClick=${() => setOpen(false)} />
+      <div
+        class="absolute right-0 top-full mt-1 z-50 min-w-[180px] bg-navy border border-white/10 rounded-xl py-1 shadow-lg"
+        role="menu"
+      >
+        ${items.map(
+          (it, i) => html`
+            <button
+              key=${i}
+              class="flex items-center gap-2.5 w-full text-left px-4 py-2.5 text-[14px] text-white/85 bg-transparent border-none cursor-pointer active:bg-white/5"
+              role="menuitem"
+              onClick=${() => {
+                setOpen(false)
+                it.onClick()
+              }}
+            >
+              <span>${it.icon}</span><span>${it.label}</span>
+            </button>
+          `,
+        )}
+      </div>`}
+  </div>`
+}
+
 // ── Island mount lifecycle ────────────────────────────────────────────────────
 function mountListIsland() {
   const el = document.getElementById('categories-container')
@@ -766,7 +802,6 @@ async function mountHistoryIsland() {
       onLoad=${loadHistory}
       onDelete=${delHistory}
       onClear=${clearAllHistory}
-      onMakeTemplate=${makeTemplate}
     />`,
     el,
   )
