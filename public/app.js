@@ -1,19 +1,14 @@
-import { render, h } from 'preact'
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { render } from 'preact'
+import { useEffect, useRef } from 'preact/hooks'
 import { signal } from '@preact/signals'
-import htm from 'htm'
 import confetti from 'canvas-confetti'
+import { html } from './html.js'
+import { PlusIcon, CheckIcon } from './icons.js'
+import { Meatballs } from './meatballs.js'
 import { encodeState, decodeState } from './share-state.js'
 import { mergeAmendInto } from './merge-amend.js'
 import { listToTemplate, templateToList } from './template-shape.js'
 import { executeTurnstile } from './turnstile.js'
-
-// htm.bind(h) types its return as `VNode | VNode[]`; every app template has a single
-// root element, so we narrow to `VNode`. The cast is the standard htm/Preact idiom.
-const html =
-  /** @type {(strings: TemplateStringsArray, ...values: unknown[]) => import('preact').VNode} */ (
-    htm.bind(h)
-  )
 
 // Emoji per category name. Keep in sync with CATEGORIES in src/lib/mistral.ts.
 /** @type {Record<string, string>} */
@@ -471,19 +466,7 @@ function ShoppingList() {
             title="Dodaj do listy"
             aria-label="Dodaj do listy"
           >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
+            <${PlusIcon} />
           </button>
           <${Meatballs}
             items=${[
@@ -544,16 +527,7 @@ function ShoppingList() {
                           ? 'bg-accent border-accent'
                           : 'border-white/30'}"
                       >
-                        ${item.checked &&
-                        html`<svg width="11" height="8" viewBox="0 0 13 10" fill="none">
-                          <path
-                            d="M1 5L5 9L12 1"
-                            stroke="#0f0f1a"
-                            stroke-width="2.5"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                        </svg>`}
+                        ${item.checked && html`<${CheckIcon} />`}
                       </div>
                       <span
                         class="text-[15px] ${item.checked
@@ -726,62 +700,6 @@ function TemplateList({ templates, onDelete }) {
         </div>`,
       )}
     </div>
-  </div>`
-}
-
-// ── Meatballs menu ────────────────────────────────────────────────────────────
-/**
- * @param {{ items: Array<{ icon: string, label: string, onClick: () => void }> }} props
- * @returns {import('preact').VNode}
- */
-function Meatballs({ items }) {
-  const [open, setOpen] = useState(false)
-  useEffect(() => {
-    if (!open) return
-    /** @param {KeyboardEvent} e */
-    const onKey = e => {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open])
-  return html` <div class="relative">
-    <button
-      class="text-white/40 bg-transparent border-none cursor-pointer p-1 active:text-accent transition-colors"
-      onClick=${() => setOpen(o => !o)}
-      title="Więcej"
-      aria-label="Więcej opcji"
-      aria-haspopup="menu"
-      aria-expanded=${open}
-    >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-        <circle cx="12" cy="5" r="2" />
-        <circle cx="12" cy="12" r="2" />
-        <circle cx="12" cy="19" r="2" />
-      </svg>
-    </button>
-    ${open &&
-    html`<div class="fixed inset-0 z-40" onClick=${() => setOpen(false)} />
-      <div
-        class="absolute right-0 top-full mt-1 z-50 min-w-[180px] bg-navy border border-white/10 rounded-xl py-1 shadow-lg"
-        role="menu"
-      >
-        ${items.map(
-          (it, i) => html`
-            <button
-              key=${i}
-              class="flex items-center gap-2.5 w-full text-left px-4 py-2.5 text-[14px] text-white/85 bg-transparent border-none cursor-pointer active:bg-white/5"
-              role="menuitem"
-              onClick=${() => {
-                setOpen(false)
-                it.onClick()
-              }}
-            >
-              <span>${it.icon}</span><span>${it.label}</span>
-            </button>
-          `,
-        )}
-      </div>`}
   </div>`
 }
 
