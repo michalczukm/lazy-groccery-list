@@ -47,7 +47,11 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
             imports: {
               preact: 'https://esm.sh/preact@10.29.2',
               'preact/hooks': 'https://esm.sh/preact@10.29.2/hooks',
-              '@preact/signals': 'https://esm.sh/@preact/signals@1.3.4',
+              // external=preact forces signals to share the app's preact instance
+              // (importmap'd 10.29.2) instead of esm.sh resolving its own preact@10.x.
+              // Two preact copies => signals patches the wrong `options` and component
+              // auto-subscription never fires (list never re-renders on add/toggle).
+              '@preact/signals': 'https://esm.sh/@preact/signals@1.3.4?external=preact',
               htm: 'https://esm.sh/htm@3.1.1',
               'canvas-confetti': 'https://esm.sh/canvas-confetti@1.6.0',
             },

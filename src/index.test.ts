@@ -95,3 +95,14 @@ describe('GET /privacy', () => {
     expect(html).toContain('Cookies')
   })
 })
+
+describe('GET / importmap', () => {
+  it('pins @preact/signals to the app preact instance via external=preact', async () => {
+    // Regression: esm.sh otherwise resolves its own preact@10.x for signals, giving
+    // a second preact instance whose patched `options` the app never renders through,
+    // so signal-driven components never re-render (list stale after add/toggle).
+    const res = await SELF.fetch('https://example.com/')
+    const html = await res.text()
+    expect(html).toContain('@preact/signals@1.3.4?external=preact')
+  })
+})
