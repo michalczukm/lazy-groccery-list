@@ -130,6 +130,9 @@ function handleAmendOverlayClick(e) {
   if (/** @type {HTMLElement} */ (e.target).id === 'amend-modal-overlay') closeAmendModal()
 }
 // ── Routing ───────────────────────────────────────────────────────────────────
+function showBottomNav() {
+  /** @type {HTMLElement} */ (document.getElementById('bottom-nav')).style.display = ''
+}
 function showMainApp() {
   /** @type {HTMLElement} */ (document.getElementById('bottom-nav')).style.display = ''
   if (currentView !== 'input') {
@@ -150,13 +153,16 @@ const META = {
   templates: { title: '📌 Szablony', sub: 'Zapisane szablony' },
 }
 
-/** @param {string} name */
+/**
+ * @param {string} name
+ * @returns {Promise<void>}
+ */
 function navigateTo(name) {
   currentView = name
   const btn = document.querySelector(`[data-view="${name}"]`)
   setActiveNav(btn)
   updateHeader(name)
-  htmx.ajax('GET', `/views/${name}`, { target: '#main-content', swap: 'innerHTML' })
+  return htmx.ajax('GET', `/views/${name}`, { target: '#main-content', swap: 'innerHTML' })
 }
 
 /** @param {HTMLElement} el */
@@ -773,7 +779,6 @@ document.addEventListener('htmx:afterSwap', async e => {
   if (currentView === 'list') mountListIsland()
   if (currentView === 'history') await mountHistoryIsland()
   if (currentView === 'templates') await mountTemplatesIsland()
-  hideBootLoader()
 })
 
 function hideBootLoader() {
@@ -903,13 +908,21 @@ window.App = {
 // ── Boot ──────────────────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
 
-DB.init()
-  .then(async () => {
+// Safety net: never leave the user staring at the boot loader. If any async boot
+// step wedges (e.g. htmx not yet ready when navigateTo fires, so its swap and
+// afterSwap never happen), force the loader off after a grace period. This is the
+// bug behind "first load stuck, refresh fixes it": hiding was coupled to a single
+// htmx:afterSwap event with no fallback.
+const bootLoaderSafety = setTimeout(hideBootLoader, 4000)
+
+async function boot() {
+  try {
     const wasShared = await handleSharedState()
     if (wasShared) {
-      const bottomNav = /** @type {HTMLElement} */ (document.getElementById('bottom-nav'))
-      bottomNav.style.display = ''
-      navigateTo('list')
+      showBottomNav()
+      // await so the loader hides only after the swap settles (no view flash),
+      // and — crucially — hides even if the swap rejects (finally below).
+      await navigateTo('list')
     } else {
       const todays = findTodaysList(await DB.getAll())
       if (todays) {
@@ -918,18 +931,20 @@ DB.init()
           c.manualExpand ??= false
         })
         currentList.value = todays
-        const bottomNav = /** @type {HTMLElement} */ (document.getElementById('bottom-nav'))
-        bottomNav.style.display = ''
-        navigateTo('list')
+        showBottomNav()
+        await navigateTo('list')
       } else {
         showMainApp()
         await mountTemplatesChips()
-        hideBootLoader()
       }
     }
-  })
-  .catch(() => {
-    // Never trap the user behind the boot loader if init fails.
+  } catch {
+    // Never trap the user behind the boot loader if init/navigation fails.
     showMainApp()
+  } finally {
+    clearTimeout(bootLoaderSafety)
     hideBootLoader()
-  })
+  }
+}
+
+DB.init().then(boot, boot)
