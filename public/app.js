@@ -887,6 +887,20 @@ async function handleSharedState() {
   }
 }
 
+function toggleTheme() {
+  const light = document.documentElement.classList.toggle('light')
+  localStorage.setItem('theme', light ? 'light' : 'dark')
+  const meta = document.querySelector('meta[name=theme-color]')
+  if (meta) meta.setAttribute('content', light ? '#ffffff' : '#1a1a2e')
+  syncThemeButton()
+}
+
+function syncThemeButton() {
+  const btn = document.getElementById('theme-toggle')
+  if (!btn) return
+  btn.textContent = document.documentElement.classList.contains('light') ? '🌙' : '☀️'
+}
+
 // ── window.App namespace ──────────────────────────────────────────────────────
 window.App = {
   processWithMistral,
@@ -898,7 +912,10 @@ window.App = {
   closeAmendModal,
   handleAmendOverlayClick,
   amendCurrentList,
+  toggleTheme,
 }
+
+syncThemeButton()
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})

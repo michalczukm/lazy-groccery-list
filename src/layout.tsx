@@ -228,6 +228,15 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
               Nowa lista
             </div>
           </div>
+          <button
+            id="theme-toggle"
+            type="button"
+            class="text-[20px] leading-none bg-transparent border-none cursor-pointer p-1 -mr-1 text-fg/70 active:opacity-60"
+            aria-label="Przełącz motyw"
+            onclick="App.toggleTheme()"
+          >
+            🌙
+          </button>
         </div>
       </header>
 
