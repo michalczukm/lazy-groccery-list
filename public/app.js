@@ -405,7 +405,7 @@ function ShoppingList() {
 
   useEffect(() => {
     if (allDone && !prevAllDone.current)
-      confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } })
+      confetti({ particleCount: 120, spread: 360, startVelocity: 35, origin: { x: 0.5, y: 0.5 } })
     prevAllDone.current = allDone
   }, [allDone])
 
