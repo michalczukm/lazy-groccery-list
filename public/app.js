@@ -404,7 +404,7 @@ function ShoppingList() {
   }, [allDone])
 
   if (!list)
-    return html` <div class="text-center py-16 px-6 text-white/45">
+    return html` <div class="text-center py-16 px-6 text-fg/45">
       <div class="text-[48px] mb-3">📝</div>
       <p class="text-[14px] leading-7">Brak aktywnej listy.<br />Stwórz nową w zakładce "Nowa".</p>
     </div>`
@@ -457,11 +457,11 @@ function ShoppingList() {
   return html` <div>
     <div class="mb-5 pt-1">
       <div class="flex items-center justify-between mb-2">
-        <div class="text-[17px] font-semibold text-white/90 truncate pr-3">${list.title}</div>
+        <div class="text-[17px] font-semibold text-fg/90 truncate pr-3">${list.title}</div>
         <div class="flex items-center gap-3 shrink-0">
-          <div class="text-[12px] text-white/50">${done} / ${allItems.length}</div>
+          <div class="text-[12px] text-fg/50">${done} / ${allItems.length}</div>
           <button
-            class="text-white/40 bg-transparent border-none cursor-pointer p-1 active:text-accent transition-colors"
+            class="text-fg/40 bg-transparent border-none cursor-pointer p-1 active:text-accent transition-colors"
             onClick=${() => window.App.openAmendModal()}
             title="Dodaj do listy"
             aria-label="Dodaj do listy"
@@ -480,7 +480,7 @@ function ShoppingList() {
           />
         </div>
       </div>
-      <div class="h-[2px] bg-white/[0.07] rounded-full overflow-hidden">
+      <div class="h-[2px] bg-fg/[0.07] rounded-full overflow-hidden">
         <div
           class="progress-fill h-full rounded-full"
           style=${{ width: allItems.length ? `${(done / allItems.length) * 100}%` : '0%' }}
@@ -492,14 +492,12 @@ function ShoppingList() {
       ${categories.map((cat, ci) => {
         const catDone = cat.items.filter(i => i.checked).length
         const catAllDone = catDone === cat.items.length && cat.items.length > 0
-        return html` <div class="border-t border-white/[0.07] pt-1 mb-1" key=${cat.name + ci}>
+        return html` <div class="border-t border-fg/[0.07] pt-1 mb-1" key=${cat.name + ci}>
           <div
             class="flex items-center justify-between py-2 px-1 cursor-pointer select-none"
             onClick=${() => toggleCat(ci)}
           >
-            <div
-              class="flex items-center gap-2 text-[11px] tracking-widest uppercase text-white/55"
-            >
+            <div class="flex items-center gap-2 text-[11px] tracking-widest uppercase text-fg/55">
               <span>${emojiFor(cat.name)}</span>
               <span>${cat.name}</span>
               <span class="opacity-60">(${catDone}/${cat.items.length})</span>
@@ -508,9 +506,7 @@ function ShoppingList() {
                 >✓ gotowe</span
               >`}
             </div>
-            <span class="cat-chevron text-white/45 text-[11px] ${cat.collapsed ? 'up' : ''}"
-              >▼</span
-            >
+            <span class="cat-chevron text-fg/45 text-[11px] ${cat.collapsed ? 'up' : ''}">▼</span>
           </div>
           <div class="cat-grid ${cat.collapsed ? 'collapsed' : ''}">
             <div class="cat-grid-inner">
@@ -518,21 +514,21 @@ function ShoppingList() {
                 ${cat.items.map(
                   (item, ii) => html`
                     <div
-                      class="flex items-center px-1 py-[13px] border-b border-white/[0.07] last:border-0 cursor-pointer active:opacity-70"
+                      class="flex items-center px-1 py-[13px] border-b border-fg/[0.07] last:border-0 cursor-pointer active:opacity-70"
                       onClick=${() => toggleItem(ci, ii)}
                       key=${ii}
                     >
                       <div
                         class="w-5 h-5 rounded-[6px] border shrink-0 mr-3 flex items-center justify-center transition-all ${item.checked
                           ? 'bg-accent border-accent'
-                          : 'border-white/30'}"
+                          : 'border-fg/30'}"
                       >
                         ${item.checked && html`<${CheckIcon} />`}
                       </div>
                       <span
                         class="text-[15px] ${item.checked
-                          ? 'text-white/40 line-through'
-                          : 'text-white/90'}"
+                          ? 'text-fg/40 line-through'
+                          : 'text-fg/90'}"
                         >${item.name}</span
                       >
                     </div>
@@ -554,7 +550,7 @@ function ShoppingList() {
  */
 function HistoryList({ lists, onLoad, onDelete, onClear }) {
   const header = html` <div class="flex justify-between items-center mb-4">
-    <h2 class="text-white/60 text-[12px] font-semibold tracking-widest uppercase">Historia list</h2>
+    <h2 class="text-fg/60 text-[12px] font-semibold tracking-widest uppercase">Historia list</h2>
     <button
       class="text-red-400/60 text-[12px] cursor-pointer border-none bg-transparent py-1 px-2 active:text-red-400"
       onClick=${onClear}
@@ -566,7 +562,7 @@ function HistoryList({ lists, onLoad, onDelete, onClear }) {
   if (!lists.length)
     return html` <div>
       ${header}
-      <div class="text-center py-16 px-6 text-white/45">
+      <div class="text-center py-16 px-6 text-fg/45">
         <div class="text-[48px] mb-3">📭</div>
         <p class="text-[14px] leading-7">
           Brak zapisanych list.<br />Stwórz pierwszą w zakładce "Nowa".
@@ -581,12 +577,12 @@ function HistoryList({ lists, onLoad, onDelete, onClear }) {
         const items = l.categories.flatMap(c => c.items)
         const done = items.filter(i => i.checked).length
         return html` <div
-          class="py-3.5 border-b border-white/[0.07] md:border md:border-white/10 md:rounded-xl md:p-4 cursor-pointer relative active:opacity-60 transition-opacity"
+          class="py-3.5 border-b border-fg/[0.07] md:border md:border-fg/10 md:rounded-xl md:p-4 cursor-pointer relative active:opacity-60 transition-opacity"
           onClick=${() => onLoad(l.id)}
           key=${l.id}
         >
           <button
-            class="absolute top-3 right-3 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
+            class="absolute top-3 right-3 bg-transparent border-none text-fg/35 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
             onClick=${(/** @type {Event} */ e) => {
               e.stopPropagation()
               onDelete(l.id)
@@ -594,18 +590,18 @@ function HistoryList({ lists, onLoad, onDelete, onClear }) {
           >
             🗑
           </button>
-          <div class="text-[11px] text-white/45 mb-0.5">${fmtDateFull(l.date)}</div>
-          <div class="text-[15px] font-semibold text-white/90 mb-2">${l.title}</div>
+          <div class="text-[11px] text-fg/45 mb-0.5">${fmtDateFull(l.date)}</div>
+          <div class="text-[15px] font-semibold text-fg/90 mb-2">${l.title}</div>
           <div class="flex flex-wrap gap-1.5">
-            <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50"
+            <span class="text-[11px] px-2 py-0.5 bg-fg/[0.06] rounded-full text-fg/50"
               >📦 ${items.length} produktów</span
             >
-            <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50"
+            <span class="text-[11px] px-2 py-0.5 bg-fg/[0.06] rounded-full text-fg/50"
               >✓ ${done} kupionych</span
             >
             ${l.categories.map(
               c => html`
-                <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50"
+                <span class="text-[11px] px-2 py-0.5 bg-fg/[0.06] rounded-full text-fg/50"
                   >${emojiFor(c.name)} ${c.name}</span
                 >
               `,
@@ -629,18 +625,16 @@ function TemplatesChips({ templates, onPick, onManage }) {
       t => html`
         <button
           key=${t.id}
-          class="shrink-0 bg-navy border border-white/10 text-white/80 text-[13px] px-3 py-2 rounded-full cursor-pointer active:opacity-70 whitespace-nowrap"
+          class="shrink-0 bg-surface border border-fg/10 text-fg/80 text-[13px] px-3 py-2 rounded-full cursor-pointer active:opacity-70 whitespace-nowrap"
           onClick=${() => onPick(t.id)}
         >
           📌 ${t.name}
-          <span class="text-white/40"
-            >(${t.categories.reduce((n, c) => n + c.items.length, 0)})</span
-          >
+          <span class="text-fg/40">(${t.categories.reduce((n, c) => n + c.items.length, 0)})</span>
         </button>
       `,
     )}
     <button
-      class="shrink-0 bg-transparent border border-white/10 text-white/50 text-[13px] px-3 py-2 rounded-full cursor-pointer active:opacity-70"
+      class="shrink-0 bg-transparent border border-fg/10 text-fg/50 text-[13px] px-3 py-2 rounded-full cursor-pointer active:opacity-70"
       onClick=${onManage}
       title="Zarządzaj szablonami"
       aria-label="Zarządzaj szablonami"
@@ -657,13 +651,13 @@ function TemplatesChips({ templates, onPick, onManage }) {
  */
 function TemplateList({ templates, onDelete }) {
   const header = html` <div class="flex justify-between items-center mb-4">
-    <h2 class="text-white/60 text-[12px] font-semibold tracking-widest uppercase">Szablony</h2>
+    <h2 class="text-fg/60 text-[12px] font-semibold tracking-widest uppercase">Szablony</h2>
   </div>`
 
   if (!templates.length)
     return html` <div>
       ${header}
-      <div class="text-center py-16 px-6 text-white/45">
+      <div class="text-center py-16 px-6 text-fg/45">
         <div class="text-[48px] mb-3">📌</div>
         <p class="text-[14px] leading-7">
           Brak szablonów.<br />Zapisz listę jako szablon z menu ⋮ w widoku listy.
@@ -677,21 +671,21 @@ function TemplateList({ templates, onDelete }) {
     <div class="md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:items-start">
       ${templates.map(
         t => html` <div
-          class="py-3.5 border-b border-white/[0.07] md:border md:border-white/10 md:rounded-xl md:p-4 relative"
+          class="py-3.5 border-b border-fg/[0.07] md:border md:border-fg/10 md:rounded-xl md:p-4 relative"
           key=${t.id}
         >
           <button
-            class="absolute top-3 right-3 bg-transparent border-none text-white/35 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
+            class="absolute top-3 right-3 bg-transparent border-none text-fg/35 text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
             onClick=${() => onDelete(t.id)}
             aria-label="Usuń szablon"
           >
             🗑
           </button>
-          <div class="text-[15px] font-semibold text-white/90 mb-2 pr-8">${t.name}</div>
+          <div class="text-[15px] font-semibold text-fg/90 mb-2 pr-8">${t.name}</div>
           <div class="flex flex-wrap gap-1.5">
             ${t.categories.map(
               c => html`
-                <span class="text-[11px] px-2 py-0.5 bg-white/[0.06] rounded-full text-white/50"
+                <span class="text-[11px] px-2 py-0.5 bg-fg/[0.06] rounded-full text-fg/50"
                   >${emojiFor(c.name)} ${c.name} (${c.items.length})</span
                 >
               `,
