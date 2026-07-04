@@ -1,4 +1,5 @@
 import type { FC, PropsWithChildren } from 'hono/jsx'
+import { THEME_ANTIFLASH, THEME_CONFIG, THEME_VARS } from './theme'
 
 type LayoutProps = PropsWithChildren<{ turnstileSiteKey: string }>
 
@@ -19,26 +20,10 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
       <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       <meta name="apple-mobile-web-app-title" content="Lazy List" />
 
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `(function(){try{var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';if(t==='light')document.documentElement.classList.add('light');var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',t==='light'?'#ffffff':'#1a1a2e')}catch(e){}})()`,
-        }}
-      />
+      <script dangerouslySetInnerHTML={{ __html: THEME_ANTIFLASH }} />
 
       <script src="https://cdn.tailwindcss.com" />
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `tailwind.config = {
-          theme: { extend: { colors: {
-            bg: 'rgb(var(--bg) / <alpha-value>)',
-            surface: 'rgb(var(--surface) / <alpha-value>)',
-            fg: 'rgb(var(--fg) / <alpha-value>)',
-            accent: 'rgb(var(--accent) / <alpha-value>)',
-            'accent-pink': 'rgb(var(--accent-pink) / <alpha-value>)',
-          }}}
-        }`,
-        }}
-      />
+      <script dangerouslySetInnerHTML={{ __html: THEME_CONFIG }} />
       <script src="https://unpkg.com/htmx.org@2.0.10/dist/htmx.min.js" />
       <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
       <script
@@ -85,21 +70,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
       />
       <style
         dangerouslySetInnerHTML={{
-          __html: `
-          :root {
-            --bg: 15 15 26;
-            --surface: 26 26 46;
-            --fg: 255 255 255;
-            --accent: 168 237 234;
-            --accent-pink: 254 214 227;
-          }
-          html.light {
-            --bg: 245 245 247;
-            --surface: 255 255 255;
-            --fg: 17 17 20;
-            --accent: 20 148 140;
-            --accent-pink: 214 92 141;
-          }
+          __html: `${THEME_VARS}
           * { -webkit-tap-highlight-color: transparent; }
           .hidden { display: none !important; }
           .sidebar-logo { display:none; }

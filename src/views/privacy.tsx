@@ -1,4 +1,5 @@
 import type { FC, PropsWithChildren } from 'hono/jsx'
+import { THEME_ANTIFLASH, THEME_CONFIG, THEME_VARS } from '../theme'
 
 const TURNSTILE_PRIVACY_URL = 'https://www.cloudflare.com/en-gb/turnstile-privacy-policy/'
 
@@ -18,18 +19,10 @@ export const PrivacyView: FC = () => (
       <link rel="icon" href="/icon.svg" />
       <meta name="theme-color" content="#1a1a2e" />
       <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+      <script dangerouslySetInnerHTML={{ __html: THEME_ANTIFLASH }} />
       <script src="https://cdn.tailwindcss.com" />
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `tailwind.config = {
-          theme: { extend: { colors: {
-            navy: '#1a1a2e',
-            'navy-dark': '#0f0f1a',
-            accent: '#a8edea',
-          }}}
-        }`,
-        }}
-      />
+      <script dangerouslySetInnerHTML={{ __html: THEME_CONFIG }} />
+      <style dangerouslySetInnerHTML={{ __html: THEME_VARS }} />
     </head>
 
     <body class="font-sans bg-bg text-fg min-h-full">
