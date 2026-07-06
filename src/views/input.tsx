@@ -4,7 +4,7 @@ export const InputView: FC = () => (
   <div class="flex flex-col h-full p-4 md:max-w-2xl md:mx-auto md:w-full">
     <textarea
       id="shopping-input"
-      class="w-full flex-1 min-h-0 resize-none border border-fg/10 rounded-xl p-3.5 text-[15px] outline-none bg-surface text-fg/90 placeholder:text-fg/30 focus:border-accent/40"
+      class="w-full flex-1 min-h-0 resize-none border border-fg/10 rounded-xl p-3.5 text-[15px] outline-none bg-surface text-fg/90 placeholder:text-muted focus:border-accent/40"
       placeholder={
         'Wklej lub wpisz listę zakupów…\n\nNp:\nMleko\nJogurt grecki\nChleb\nFilet z kurczaka\nPomidory 600g'
       }
@@ -22,7 +22,7 @@ export const InputView: FC = () => (
 
     <a
       href="/privacy"
-      class="block text-center text-[12px] text-fg/35 mt-3 hover:text-fg/60 active:text-fg/60"
+      class="block text-center text-[12px] text-muted mt-3 hover:text-fg/60 active:text-fg/60"
     >
       Polityka prywatności
     </a>

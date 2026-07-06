@@ -27,12 +27,12 @@ export const PrivacyView: FC = () => (
 
     <body class="font-sans bg-bg text-fg min-h-full">
       <main class="max-w-[640px] mx-auto px-5 py-8">
-        <a href="/" class="inline-block text-[13px] text-accent/80 hover:text-accent mb-6">
+        <a href="/" class="inline-block text-[13px] text-accent hover:underline mb-6">
           ← Wróć
         </a>
 
         <h1 class="text-[22px] font-bold tracking-tight">🔒 Polityka prywatności</h1>
-        <p class="text-[13px] text-fg/45 mt-1">Lazy List — prosta apka do list zakupów.</p>
+        <p class="text-[13px] text-muted mt-1">Lazy List — prosta apka do list zakupów.</p>
 
         <Section title="W skrócie">
           <p>
@@ -85,7 +85,7 @@ export const PrivacyView: FC = () => (
         <Section title="Cookies">
           <p>
             Używamy jednego niezbędnego ciasteczka{' '}
-            <code class="text-accent/90">lazy_list_session</code> (httpOnly, podpisanego, ważnego 24
+            <code class="text-accent">lazy_list_session</code> (httpOnly, podpisanego, ważnego 24
             godziny), które pozwala korzystać z kategoryzacji bez ponownego rozwiązywania wyzwania.
             Nie zawiera danych osobowych. Nie używamy ciasteczek analitycznych ani śledzących.
           </p>
@@ -123,7 +123,7 @@ export const PrivacyView: FC = () => (
           </p>
         </Section>
 
-        <p class="text-[12px] text-fg/35 mt-10 border-t border-fg/10 pt-4">
+        <p class="text-[12px] text-muted mt-10 border-t border-fg/10 pt-4">
           Ostatnia aktualizacja: 5 lipca 2026
         </p>
       </main>

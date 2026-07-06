@@ -13,6 +13,7 @@ export const THEME_CONFIG = `tailwind.config = {
     bg: 'rgb(var(--bg) / <alpha-value>)',
     surface: 'rgb(var(--surface) / <alpha-value>)',
     fg: 'rgb(var(--fg) / <alpha-value>)',
+    muted: 'rgb(var(--muted) / <alpha-value>)',
     accent: 'rgb(var(--accent) / <alpha-value>)',
     'accent-pink': 'rgb(var(--accent-pink) / <alpha-value>)',
   }}}
@@ -24,6 +25,7 @@ export const THEME_VARS = `
   --bg: 15 15 26;
   --surface: 26 26 46;
   --fg: 255 255 255;
+  --muted: 138 138 152;
   --accent: 168 237 234;
   --accent-pink: 254 214 227;
 }
@@ -31,6 +33,7 @@ html.light {
   --bg: 245 245 247;
   --surface: 255 255 255;
   --fg: 17 17 20;
-  --accent: 20 148 140;
+  --muted: 107 107 114;
+  --accent: 15 118 110;
   --accent-pink: 214 92 141;
 }`

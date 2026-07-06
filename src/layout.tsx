@@ -55,14 +55,14 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
         {...({ type: 'text/tailwindcss' } as Record<string, string>)}
         dangerouslySetInnerHTML={{
           __html: `
-          .nav-item { @apply flex-1 flex flex-col items-center gap-0.5 py-2.5 px-2 bg-transparent border-none cursor-pointer text-fg/50 text-[10px] tracking-wide md:flex-none md:flex-row md:items-center md:justify-start md:gap-3 md:py-3 md:px-4 md:mx-2 md:rounded-lg md:text-[14px] md:hover:bg-fg/5; }
+          .nav-item { @apply flex-1 flex flex-col items-center gap-0.5 py-2.5 px-2 bg-transparent border-none cursor-pointer text-muted text-[10px] tracking-wide md:flex-none md:flex-row md:items-center md:justify-start md:gap-3 md:py-3 md:px-4 md:mx-2 md:rounded-lg md:text-[14px] md:hover:bg-fg/5; }
           .nav-item.active { @apply text-accent; }
           .status-badge { @apply flex items-center gap-2 mb-3 text-[12px]; }
-          .status-badge.idle  { @apply text-fg/50; }
+          .status-badge.idle  { @apply text-muted; }
           .status-badge.ready { @apply text-accent; }
           .status-badge.error { @apply text-red-400; }
           .sdot { @apply w-1.5 h-1.5 rounded-full shrink-0; }
-          .status-badge.idle  .sdot { @apply bg-fg/35; }
+          .status-badge.idle  .sdot { @apply bg-muted; }
           .status-badge.ready .sdot { @apply bg-accent; }
           .status-badge.error .sdot { @apply bg-red-400; }
         `,
@@ -152,7 +152,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-fg/90 text-[16px] font-semibold">Dodaj do listy</h2>
             <button
-              class="text-fg/45 bg-transparent border-none cursor-pointer text-[18px] p-1 active:text-fg/80"
+              class="text-muted bg-transparent border-none cursor-pointer text-[18px] p-1 active:text-fg/80"
               onclick="App.closeAmendModal()"
               aria-label="Zamknij"
             >
@@ -162,7 +162,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
 
           <textarea
             id="amend-input"
-            class="w-full h-40 resize-none border border-fg/10 rounded-xl p-3 text-[15px] outline-none bg-black/30 text-fg/90 placeholder:text-fg/30 focus:border-accent/40"
+            class="w-full h-40 resize-none border border-fg/10 rounded-xl p-3 text-[15px] outline-none bg-black/30 text-fg/90 placeholder:text-muted focus:border-accent/40"
             placeholder={
               'Wklej dodatkowe produkty…\n\nNp:\nMasło\nPapryka czerwona\nMakaron spaghetti'
             }
@@ -195,7 +195,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
             <div id="header-title" class="text-[19px] font-bold tracking-tight">
               🛒 Lazy List
             </div>
-            <div id="header-sub" class="text-[12px] opacity-55 mt-0.5 min-h-[1rem]">
+            <div id="header-sub" class="text-[12px] text-muted mt-0.5 min-h-[1rem]">
               Nowa lista
             </div>
           </div>
@@ -261,7 +261,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
         </button>
         <a
           href="/privacy"
-          class="sidebar-link mt-auto mx-4 mb-1 text-[12px] text-fg/35 hover:text-fg/60"
+          class="sidebar-link mt-auto mx-4 mb-1 text-[12px] text-muted hover:text-fg/60"
         >
           Polityka prywatności
         </a>
