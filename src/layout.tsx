@@ -1,4 +1,5 @@
 import type { FC, PropsWithChildren } from 'hono/jsx'
+import { THEME_ANTIFLASH, THEME_CONFIG, THEME_VARS } from './theme'
 
 type LayoutProps = PropsWithChildren<{ turnstileSiteKey: string }>
 
@@ -19,19 +20,10 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
       <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       <meta name="apple-mobile-web-app-title" content="Lazy List" />
 
+      <script dangerouslySetInnerHTML={{ __html: THEME_ANTIFLASH }} />
+
       <script src="https://cdn.tailwindcss.com" />
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `tailwind.config = {
-          theme: { extend: { colors: {
-            navy: '#1a1a2e',
-            'navy-dark': '#0f0f1a',
-            accent: '#a8edea',
-            'accent-pink': '#fed6e3',
-          }}}
-        }`,
-        }}
-      />
+      <script dangerouslySetInnerHTML={{ __html: THEME_CONFIG }} />
       <script src="https://unpkg.com/htmx.org@2.0.10/dist/htmx.min.js" />
       <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
       <script
@@ -63,14 +55,14 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
         {...({ type: 'text/tailwindcss' } as Record<string, string>)}
         dangerouslySetInnerHTML={{
           __html: `
-          .nav-item { @apply flex-1 flex flex-col items-center gap-0.5 py-2.5 px-2 bg-transparent border-none cursor-pointer text-white/50 text-[10px] tracking-wide md:flex-none md:flex-row md:items-center md:justify-start md:gap-3 md:py-3 md:px-4 md:mx-2 md:rounded-lg md:text-[14px] md:hover:bg-white/5; }
+          .nav-item { @apply flex-1 flex flex-col items-center gap-0.5 py-2.5 px-2 bg-transparent border-none cursor-pointer text-muted text-[10px] tracking-wide md:flex-none md:flex-row md:items-center md:justify-start md:gap-3 md:py-3 md:px-4 md:mx-2 md:rounded-lg md:text-[14px] md:hover:bg-fg/5; }
           .nav-item.active { @apply text-accent; }
           .status-badge { @apply flex items-center gap-2 mb-3 text-[12px]; }
-          .status-badge.idle  { @apply text-white/50; }
+          .status-badge.idle  { @apply text-muted; }
           .status-badge.ready { @apply text-accent; }
           .status-badge.error { @apply text-red-400; }
           .sdot { @apply w-1.5 h-1.5 rounded-full shrink-0; }
-          .status-badge.idle  .sdot { @apply bg-white/35; }
+          .status-badge.idle  .sdot { @apply bg-muted; }
           .status-badge.ready .sdot { @apply bg-accent; }
           .status-badge.error .sdot { @apply bg-red-400; }
         `,
@@ -78,7 +70,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
       />
       <style
         dangerouslySetInnerHTML={{
-          __html: `
+          __html: `${THEME_VARS}
           * { -webkit-tap-highlight-color: transparent; }
           .hidden { display: none !important; }
           .sidebar-logo { display:none; }
@@ -88,7 +80,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
           .cat-grid-inner { overflow:hidden; min-height:0; }
           .cat-chevron { transition:transform .3s ease; }
           .cat-chevron.up { transform:rotate(-90deg); }
-          .progress-fill { background:linear-gradient(90deg,#a8edea,#fed6e3); transition:width .4s ease; }
+          .progress-fill { background:linear-gradient(90deg, rgb(var(--accent)), rgb(var(--accent-pink))); transition:width .4s ease; }
           #toast { opacity:0; bottom:calc(74px + env(safe-area-inset-bottom,0px) + 10px); transform:translateX(-50%) translateY(8px); }
           #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
           #toast.error { bottom:auto; top:calc(env(safe-area-inset-top,0px) + 16px); background:#dc2626; box-shadow:0 6px 20px rgba(220,38,38,.45); }
@@ -114,7 +106,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
               align-items: stretch;
               gap: 4px;
               border-top: none;
-              border-right: 1px solid rgba(255,255,255,0.07);
+              border-right: 1px solid rgb(var(--fg) / 0.07);
               padding-top: 12px;
               padding-bottom: 0;
             }
@@ -126,13 +118,10 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
       />
     </head>
 
-    <body class="app-shell font-sans bg-navy-dark text-white flex flex-col max-w-[480px] mx-auto h-full overflow-hidden">
+    <body class="app-shell font-sans bg-bg text-fg flex flex-col max-w-[480px] mx-auto h-full overflow-hidden">
       {/* Boot loader — covers the first paint until the client picks the right view,
           preventing the "Nowa lista" → "Lista" flash when today's list is restored. */}
-      <div
-        id="boot-loader"
-        class="fixed inset-0 bg-navy-dark flex items-center justify-center z-50"
-      >
+      <div id="boot-loader" class="fixed inset-0 bg-bg flex items-center justify-center z-50">
         <div class="text-[44px] opacity-50 animate-pulse">🛒</div>
       </div>
 
@@ -141,8 +130,8 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
         id="loading-overlay"
         class="hidden fixed inset-0 bg-black/75 flex flex-col items-center justify-center z-[70]"
       >
-        <div class="w-10 h-10 rounded-full border-[3px] border-white/15 border-t-accent animate-spin" />
-        <div id="loading-text" class="text-white/70 mt-4 text-sm">
+        <div class="w-10 h-10 rounded-full border-[3px] border-fg/15 border-t-accent animate-spin" />
+        <div id="loading-text" class="text-fg/70 mt-4 text-sm">
           Przetwarzam…
         </div>
       </div>
@@ -150,7 +139,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
       {/* Toast */}
       <div
         id="toast"
-        class="fixed left-1/2 bg-navy text-white px-5 py-3 rounded-full text-[13px] whitespace-nowrap transition-all duration-300 z-40 pointer-events-none"
+        class="fixed left-1/2 bg-surface text-fg px-5 py-3 rounded-full text-[13px] whitespace-nowrap transition-all duration-300 z-40 pointer-events-none"
       />
 
       {/* Amend list modal */}
@@ -159,11 +148,11 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
         class="hidden fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
         onclick="App.handleAmendOverlayClick(event)"
       >
-        <div class="w-full max-w-md bg-navy border border-white/10 rounded-2xl p-5 shadow-2xl">
+        <div class="w-full max-w-md bg-surface border border-fg/10 rounded-2xl p-5 shadow-2xl">
           <div class="flex items-center justify-between mb-3">
-            <h2 class="text-white/90 text-[16px] font-semibold">Dodaj do listy</h2>
+            <h2 class="text-fg/90 text-[16px] font-semibold">Dodaj do listy</h2>
             <button
-              class="text-white/45 bg-transparent border-none cursor-pointer text-[18px] p-1 active:text-white/80"
+              class="text-muted bg-transparent border-none cursor-pointer text-[18px] p-1 active:text-fg/80"
               onclick="App.closeAmendModal()"
               aria-label="Zamknij"
             >
@@ -173,7 +162,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
 
           <textarea
             id="amend-input"
-            class="w-full h-40 resize-none border border-white/10 rounded-xl p-3 text-[15px] outline-none bg-black/30 text-white/90 placeholder:text-white/30 focus:border-accent/40"
+            class="w-full h-40 resize-none border border-fg/10 rounded-xl p-3 text-[15px] outline-none bg-black/30 text-fg/90 placeholder:text-muted focus:border-accent/40"
             placeholder={
               'Wklej dodatkowe produkty…\n\nNp:\nMasło\nPapryka czerwona\nMakaron spaghetti'
             }
@@ -181,13 +170,13 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
 
           <div class="flex gap-2 mt-3">
             <button
-              class="flex-1 bg-transparent text-white/60 py-3 rounded-xl text-[14px] font-medium cursor-pointer border border-white/10 active:opacity-70"
+              class="flex-1 bg-transparent text-fg/60 py-3 rounded-xl text-[14px] font-medium cursor-pointer border border-fg/10 active:opacity-70"
               onclick="App.closeAmendModal()"
             >
               Anuluj
             </button>
             <button
-              class="flex-1 bg-navy text-accent py-3 rounded-xl text-[14px] font-semibold cursor-pointer border border-accent/20 active:scale-[0.98] active:opacity-85"
+              class="flex-1 bg-surface text-accent py-3 rounded-xl text-[14px] font-semibold cursor-pointer border border-accent/20 active:scale-[0.98] active:opacity-85"
               onclick="App.amendCurrentList()"
             >
               ✨ Dodaj
@@ -198,7 +187,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
 
       {/* Header */}
       <header
-        class="bg-navy shrink-0 px-5 text-white"
+        class="bg-surface shrink-0 px-5 text-fg"
         style="padding-top:calc(14px + env(safe-area-inset-top,0px));padding-bottom:14px"
       >
         <div class="flex items-center justify-between">
@@ -206,10 +195,19 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
             <div id="header-title" class="text-[19px] font-bold tracking-tight">
               🛒 Lazy List
             </div>
-            <div id="header-sub" class="text-[12px] opacity-55 mt-0.5 min-h-[1rem]">
+            <div id="header-sub" class="text-[12px] text-muted mt-0.5 min-h-[1rem]">
               Nowa lista
             </div>
           </div>
+          <button
+            id="theme-toggle"
+            type="button"
+            class="text-[20px] leading-none bg-transparent border-none cursor-pointer p-1 -mr-1 text-fg/70 active:opacity-60"
+            aria-label="Przełącz motyw"
+            onclick="App.toggleTheme()"
+          >
+            🌙
+          </button>
         </div>
       </header>
 
@@ -225,10 +223,10 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
       {/* Bottom nav */}
       <nav
         id="bottom-nav"
-        class="flex bg-navy shrink-0 border-t border-white/[0.07]"
+        class="flex bg-surface shrink-0 border-t border-fg/[0.07]"
         style="padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))"
       >
-        <div class="sidebar-logo flex-col px-4 pb-3 mb-1 border-b border-white/[0.07]">
+        <div class="sidebar-logo flex-col px-4 pb-3 mb-1 border-b border-fg/[0.07]">
           <span class="text-[16px] font-bold tracking-tight">🛒 Lazy List</span>
         </div>
         <button
@@ -263,7 +261,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
         </button>
         <a
           href="/privacy"
-          class="sidebar-link mt-auto mx-4 mb-1 text-[12px] text-white/35 hover:text-white/60"
+          class="sidebar-link mt-auto mx-4 mb-1 text-[12px] text-muted hover:text-fg/60"
         >
           Polityka prywatności
         </a>

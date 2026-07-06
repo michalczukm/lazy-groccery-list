@@ -1,11 +1,12 @@
 import type { FC, PropsWithChildren } from 'hono/jsx'
+import { THEME_ANTIFLASH, THEME_CONFIG, THEME_VARS } from '../theme'
 
 const TURNSTILE_PRIVACY_URL = 'https://www.cloudflare.com/en-gb/turnstile-privacy-policy/'
 
 const Section: FC<{ title: string } & PropsWithChildren> = ({ title, children }) => (
   <section class="mt-6">
     <h2 class="text-[16px] font-semibold text-accent mb-1.5">{title}</h2>
-    <div class="text-[14px] leading-relaxed text-white/70 space-y-2">{children}</div>
+    <div class="text-[14px] leading-relaxed text-fg/70 space-y-2">{children}</div>
   </section>
 )
 
@@ -18,28 +19,20 @@ export const PrivacyView: FC = () => (
       <link rel="icon" href="/icon.svg" />
       <meta name="theme-color" content="#1a1a2e" />
       <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+      <script dangerouslySetInnerHTML={{ __html: THEME_ANTIFLASH }} />
       <script src="https://cdn.tailwindcss.com" />
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `tailwind.config = {
-          theme: { extend: { colors: {
-            navy: '#1a1a2e',
-            'navy-dark': '#0f0f1a',
-            accent: '#a8edea',
-          }}}
-        }`,
-        }}
-      />
+      <script dangerouslySetInnerHTML={{ __html: THEME_CONFIG }} />
+      <style dangerouslySetInnerHTML={{ __html: THEME_VARS }} />
     </head>
 
-    <body class="font-sans bg-navy-dark text-white min-h-full">
+    <body class="font-sans bg-bg text-fg min-h-full">
       <main class="max-w-[640px] mx-auto px-5 py-8">
-        <a href="/" class="inline-block text-[13px] text-accent/80 hover:text-accent mb-6">
+        <a href="/" class="inline-block text-[13px] text-accent hover:underline mb-6">
           ← Wróć
         </a>
 
         <h1 class="text-[22px] font-bold tracking-tight">🔒 Polityka prywatności</h1>
-        <p class="text-[13px] text-white/45 mt-1">Lazy List — prosta apka do list zakupów.</p>
+        <p class="text-[13px] text-muted mt-1">Lazy List — prosta apka do list zakupów.</p>
 
         <Section title="W skrócie">
           <p>
@@ -53,7 +46,8 @@ export const PrivacyView: FC = () => (
           <p>
             Twoje listy zakupów oraz zapisane szablony zapisujemy w pamięci przeglądarki (IndexedDB)
             na Twoim urządzeniu. Nie trafiają na nasz serwer i zostają u Ciebie, dopóki ich nie
-            usuniesz.
+            usuniesz. W pamięci przeglądarki zapisujemy też Twoją preferencję motywu (jasny lub
+            ciemny) — wyłącznie lokalnie, nigdy nie wysyłamy jej na serwer.
           </p>
         </Section>
 
@@ -91,7 +85,7 @@ export const PrivacyView: FC = () => (
         <Section title="Cookies">
           <p>
             Używamy jednego niezbędnego ciasteczka{' '}
-            <code class="text-accent/90">lazy_list_session</code> (httpOnly, podpisanego, ważnego 24
+            <code class="text-accent">lazy_list_session</code> (httpOnly, podpisanego, ważnego 24
             godziny), które pozwala korzystać z kategoryzacji bez ponownego rozwiązywania wyzwania.
             Nie zawiera danych osobowych. Nie używamy ciasteczek analitycznych ani śledzących.
           </p>
@@ -129,8 +123,8 @@ export const PrivacyView: FC = () => (
           </p>
         </Section>
 
-        <p class="text-[12px] text-white/35 mt-10 border-t border-white/10 pt-4">
-          Ostatnia aktualizacja: 23 czerwca 2026
+        <p class="text-[12px] text-muted mt-10 border-t border-fg/10 pt-4">
+          Ostatnia aktualizacja: 5 lipca 2026
         </p>
       </main>
     </body>
