@@ -6,6 +6,10 @@
 // Reads localStorage first, falls back to prefers-color-scheme on first visit.
 export const THEME_ANTIFLASH = `(function(){try{var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';if(t==='light')document.documentElement.classList.add('light');var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',t==='light'?'#ffffff':'#1a1a2e')}catch(e){}})()`
 
+// Blocking script: set html.large before first paint if the saved font size is
+// large (no FOUC). Mirrors THEME_ANTIFLASH; app shell only.
+export const FONT_SIZE_ANTIFLASH = `(function(){try{if(localStorage.getItem('fontSize')==='large')document.documentElement.classList.add('large')}catch(e){}})()`
+
 // Tailwind CDN colour tokens backed by CSS vars (space-separated RGB channels so
 // the `<alpha-value>` opacity syntax keeps working, e.g. text-fg/50).
 export const THEME_CONFIG = `tailwind.config = {

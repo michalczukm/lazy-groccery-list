@@ -93,6 +93,7 @@ describe('GET /privacy', () => {
     expect(html).toContain('Turnstile')
     expect(html).toContain('Mistral')
     expect(html).toContain('Cookies')
+    expect(html).toContain('rozmiar')
   })
 })
 
@@ -104,5 +105,29 @@ describe('GET / importmap', () => {
     const res = await SELF.fetch('https://example.com/')
     const html = await res.text()
     expect(html).toContain('@preact/signals@1.3.4?external=preact')
+  })
+})
+
+describe('GET / font size toggle', () => {
+  it('renders the font-size toggle button in the header', async () => {
+    const res = await SELF.fetch('https://example.com/')
+    const html = await res.text()
+    expect(html).toContain('id="font-size-toggle"')
+    expect(html).toContain('App.toggleFontSize()')
+  })
+
+  it('ships the font-size antiflash script (no FOUC)', async () => {
+    const res = await SELF.fetch('https://example.com/')
+    const html = await res.text()
+    // antiflash reads localStorage.fontSize and adds html.large before paint
+    expect(html).toContain("localStorage.getItem('fontSize')")
+    expect(html).toContain("classList.add('large')")
+  })
+
+  it('defines the html.large zoom rule', async () => {
+    const res = await SELF.fetch('https://example.com/')
+    const html = await res.text()
+    expect(html).toContain('html.large')
+    expect(html).toContain('zoom: 1.15')
   })
 })

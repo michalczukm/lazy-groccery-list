@@ -47,7 +47,8 @@ export const PrivacyView: FC = () => (
             Twoje listy zakupów oraz zapisane szablony zapisujemy w pamięci przeglądarki (IndexedDB)
             na Twoim urządzeniu. Nie trafiają na nasz serwer i zostają u Ciebie, dopóki ich nie
             usuniesz. W pamięci przeglądarki zapisujemy też Twoją preferencję motywu (jasny lub
-            ciemny) — wyłącznie lokalnie, nigdy nie wysyłamy jej na serwer.
+            ciemny) oraz rozmiar tekstu (zwykły lub duży) — wyłącznie lokalnie, nigdy nie wysyłamy
+            ich na serwer.
           </p>
         </Section>
 
@@ -124,7 +125,7 @@ export const PrivacyView: FC = () => (
         </Section>
 
         <p class="text-[12px] text-muted mt-10 border-t border-fg/10 pt-4">
-          Ostatnia aktualizacja: 5 lipca 2026
+          Ostatnia aktualizacja: 8 lipca 2026
         </p>
       </main>
     </body>
