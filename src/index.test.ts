@@ -93,6 +93,7 @@ describe('GET /privacy', () => {
     expect(html).toContain('Turnstile')
     expect(html).toContain('Mistral')
     expect(html).toContain('Cookies')
+    expect(html).toContain('rozmiar')
   })
 })
 
