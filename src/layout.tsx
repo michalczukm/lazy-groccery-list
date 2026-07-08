@@ -1,5 +1,5 @@
 import type { FC, PropsWithChildren } from 'hono/jsx'
-import { THEME_ANTIFLASH, THEME_CONFIG, THEME_VARS } from './theme'
+import { FONT_SIZE_ANTIFLASH, THEME_ANTIFLASH, THEME_CONFIG, THEME_VARS } from './theme'
 
 type LayoutProps = PropsWithChildren<{ turnstileSiteKey: string }>
 
@@ -21,6 +21,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
       <meta name="apple-mobile-web-app-title" content="Lazy List" />
 
       <script dangerouslySetInnerHTML={{ __html: THEME_ANTIFLASH }} />
+      <script dangerouslySetInnerHTML={{ __html: FONT_SIZE_ANTIFLASH }} />
 
       <script src="https://cdn.tailwindcss.com" />
       <script dangerouslySetInnerHTML={{ __html: THEME_CONFIG }} />
@@ -72,6 +73,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
         dangerouslySetInnerHTML={{
           __html: `${THEME_VARS}
           * { -webkit-tap-highlight-color: transparent; }
+          html.large { zoom: 1.15; }
           .hidden { display: none !important; }
           .sidebar-logo { display:none; }
           .sidebar-link { display:none; }
@@ -199,15 +201,26 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
               Nowa lista
             </div>
           </div>
-          <button
-            id="theme-toggle"
-            type="button"
-            class="text-[20px] leading-none bg-transparent border-none cursor-pointer p-1 -mr-1 text-fg/70 active:opacity-60"
-            aria-label="Przełącz motyw"
-            onclick="App.toggleTheme()"
-          >
-            🌙
-          </button>
+          <div class="flex items-center gap-1 -mr-1">
+            <button
+              id="font-size-toggle"
+              type="button"
+              class="text-[20px] leading-none bg-transparent border-none cursor-pointer p-1 text-fg/70 active:opacity-60"
+              aria-label="Przełącz rozmiar tekstu"
+              onclick="App.toggleFontSize()"
+            >
+              A⁺
+            </button>
+            <button
+              id="theme-toggle"
+              type="button"
+              class="text-[20px] leading-none bg-transparent border-none cursor-pointer p-1 text-fg/70 active:opacity-60"
+              aria-label="Przełącz motyw"
+              onclick="App.toggleTheme()"
+            >
+              🌙
+            </button>
+          </div>
         </div>
       </header>
 
