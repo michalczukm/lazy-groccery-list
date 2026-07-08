@@ -900,6 +900,18 @@ function syncThemeButton() {
   btn.textContent = document.documentElement.classList.contains('light') ? '🌙' : '☀️'
 }
 
+function toggleFontSize() {
+  const large = document.documentElement.classList.toggle('large')
+  localStorage.setItem('fontSize', large ? 'large' : 'regular')
+  syncFontSizeButton()
+}
+
+function syncFontSizeButton() {
+  const btn = document.getElementById('font-size-toggle')
+  if (!btn) return
+  btn.textContent = document.documentElement.classList.contains('large') ? 'A⁻' : 'A⁺'
+}
+
 // ── window.App namespace ──────────────────────────────────────────────────────
 window.App = {
   processWithMistral,
@@ -912,9 +924,11 @@ window.App = {
   handleAmendOverlayClick,
   amendCurrentList,
   toggleTheme,
+  toggleFontSize,
 }
 
 syncThemeButton()
+syncFontSizeButton()
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
