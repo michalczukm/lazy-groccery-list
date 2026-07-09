@@ -23,7 +23,8 @@ Share button (↑ icon, top-right of list view) encodes the current list as a gz
 5. Open the URL (`http://<host>/?state=<encoded>`) in a new tab or incognito window.
 6. The list should render immediately — same title, categories, and items.
 7. The URL bar should revert to `/` after load (`history.replaceState`).
-8. The list is marked `saved: false` (unsaved banner visible).
+8. The list is persisted to IndexedDB (`saved: true`) on import, so it survives a
+   reload and item toggles auto-save — it does not flush after sharing (issue #31).
 
 ## Automated testing (Chrome DevTools MCP)
 

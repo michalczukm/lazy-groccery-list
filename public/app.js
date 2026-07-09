@@ -869,7 +869,7 @@ async function handleSharedState() {
       id: Date.now(),
       title: payload.title,
       date: payload.date,
-      saved: false,
+      saved: true,
       model: '',
       categories: payload.categories.map(c => ({
         name: c.name,
@@ -878,6 +878,7 @@ async function handleSharedState() {
         items: c.items.map(i => ({ name: i.name, checked: i.checked })),
       })),
     })
+    await DB.save(/** @type {ShoppingListData} */ (currentList.value))
     history.replaceState(null, '', '/')
     return true
   } catch {

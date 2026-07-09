@@ -95,7 +95,9 @@ export const PrivacyView: FC = () => (
         <Section title="Udostępnianie list">
           <p>
             Gdy tworzysz link do udostępnienia listy, jej zawartość jest zakodowana bezpośrednio w
-            adresie URL. Udostępniasz ją dobrowolnie i to Ty decydujesz, komu wyślesz link.
+            adresie URL. Udostępniasz ją dobrowolnie i to Ty decydujesz, komu wyślesz link. Gdy
+            otworzysz otrzymany link, lista zapisuje się w pamięci Twojej przeglądarki (IndexedDB) —
+            tak samo jak Twoje własne listy — i zostaje u Ciebie, dopóki jej nie usuniesz.
           </p>
         </Section>
 
@@ -125,7 +127,7 @@ export const PrivacyView: FC = () => (
         </Section>
 
         <p class="text-[12px] text-muted mt-10 border-t border-fg/10 pt-4">
-          Ostatnia aktualizacja: 8 lipca 2026
+          Ostatnia aktualizacja: 9 lipca 2026
         </p>
       </main>
     </body>
