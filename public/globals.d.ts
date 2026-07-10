@@ -51,18 +51,22 @@ declare global {
     ajax(method: string, url: string, opts: { target: string; swap: string }): Promise<void>
   }
 
+  /** Options accepted by turnstile.render(). */
+  interface TurnstileRenderOptions {
+    sitekey: string
+    size?: 'normal' | 'flexible' | 'compact'
+    appearance?: 'always' | 'execute' | 'interaction-only'
+    execution?: 'render' | 'execute'
+    'response-field'?: boolean
+    callback?: (token: string) => void
+    'error-callback'?: (code?: string) => void
+    'timeout-callback'?: () => void
+    'unsupported-callback'?: () => void
+  }
+
   /** Cloudflare Turnstile global surface used by turnstile.js. */
   interface Turnstile {
-    render(
-      container: string,
-      opts: {
-        sitekey: string
-        size: string
-        'response-field': boolean
-        callback: (token: string) => void
-        'error-callback': () => void
-      },
-    ): string
+    render(container: string, opts: TurnstileRenderOptions): string
     remove(id: string): void
     execute(id: string): void
   }
