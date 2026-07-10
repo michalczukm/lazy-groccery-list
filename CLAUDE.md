@@ -42,7 +42,7 @@ Linting/formatting via oxc: `oxlint` (`.oxlintrc.json`) + `oxfmt` (`.oxfmtrc.jso
 - **Same-origin guard** (`src/lib/origin-guard.ts`) — rejects cross-origin with 403.
 - **Rate limit** — `AI_RATE_LIMIT` binding (20 req / 60s per IP), 429 on exceed.
 - **Session cookie** — signed HMAC cookie (`src/lib/cookie-session.ts`), 24h max age. Missing/invalid → 401 `captcha-required`.
-- **Turnstile** — to obtain a session the client solves an invisible Cloudflare Turnstile challenge (`public/turnstile.js`) and POSTs the token to `/api/session`, which verifies it server-side (`src/lib/turnstile.ts`) and sets the cookie. Client auto-retries `callCategorize` once after `ensureSession()`.
+- **Turnstile** — to obtain a session the client solves a Cloudflare Turnstile challenge (`public/turnstile.js`) and POSTs the token to `/api/session`, which verifies it server-side (`src/lib/turnstile.ts`) and sets the cookie. `executeTurnstile()` is two-stage: a silent `interaction-only`/`execute` attempt, then — on any failure callback or an 8s watchdog — a visible challenge rendered once into the `#turnstile-challenge-overlay` modal. Client auto-retries `callCategorize` once after `ensureSession()`.
 
 Input is capped at `MAX_INPUT_CHARS` (10 000).
 
