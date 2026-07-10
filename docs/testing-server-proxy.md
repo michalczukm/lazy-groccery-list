@@ -76,3 +76,39 @@ Expected:
 ## 8. CSP sanity
 
 DevTools → Console after page load. No CSP violation warnings. Network shows `challenges.cloudflare.com/turnstile/v0/api.js` loaded. No request to `api.mistral.ai` from browser.
+
+## 9. Visible challenge fallback (issue #30)
+
+When the silent Turnstile attempt cannot produce a token (as reported on some
+Android devices), `executeTurnstile()` renders a visible challenge into the
+`#turnstile-challenge-overlay` modal so the user can solve it.
+
+Force the fallback in the browser without a real failing device. After the page
+loads, stub the silent widget to fire its error callback (needs the CF test keys
+from `.dev.vars.example`):
+
+```js
+const realRender = window.turnstile.render.bind(window.turnstile)
+const realExecute = window.turnstile.execute.bind(window.turnstile)
+const realRemove = window.turnstile.remove.bind(window.turnstile)
+window.turnstile.render = (container, opts) => {
+  if (container === '#turnstile-widget') {
+    setTimeout(() => opts['error-callback']('600010'), 0)
+    return 'fake-silent'
+  }
+  return realRender(container, opts) // real visible widget; test key auto-solves
+}
+window.turnstile.execute = id => (id === 'fake-silent' ? undefined : realExecute(id))
+window.turnstile.remove = id => (id === 'fake-silent' ? true : realRemove(id))
+```
+
+Then paste a list and press generate. Confirm:
+
+- the modal appears above the loading overlay (`z-[90]` vs `z-[70]`),
+- a Turnstile checkbox renders inside `#turnstile-challenge-widget`,
+- solving it fires `POST /api/session` → `204`, then retries `POST /api/categorize`,
+- pressing **Anuluj** hides the modal and toasts
+  "Weryfikacja nie powiodła się. Spróbuj ponownie."
+
+The visible stage runs **at most once** per `ensureSession()` call — a second
+silent failure or the 8s watchdog after the modal is already up does nothing.

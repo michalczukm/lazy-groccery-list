@@ -284,6 +284,26 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
         id="turnstile-widget"
         style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:80"
       />
+
+      {/* Shown only when the silent Turnstile attempt cannot produce a token. */}
+      <div
+        id="turnstile-challenge-overlay"
+        class="hidden fixed inset-0 z-[90] bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+      >
+        <div class="w-full max-w-md bg-surface border border-fg/10 rounded-2xl p-5 shadow-2xl">
+          <h2 class="text-fg/90 text-[16px] font-semibold">Potwierdź, że nie jesteś robotem</h2>
+          <p class="text-muted text-[13px] mt-1">Zweryfikuj się, aby wygenerować listę.</p>
+
+          <div id="turnstile-challenge-widget" class="flex justify-center min-h-[65px] my-4" />
+
+          <button
+            id="turnstile-challenge-cancel"
+            class="w-full bg-transparent text-fg/60 py-3 rounded-xl text-[14px] font-medium cursor-pointer border border-fg/10 active:opacity-70"
+          >
+            Anuluj
+          </button>
+        </div>
+      </div>
       <script type="module" src="/app.js" />
     </body>
   </html>
