@@ -191,15 +191,48 @@ function updateHeader(name) {
 }
 
 // ── Server-side AI proxy ─────────────────────────────────────────────────────
+/** @returns {import('./turnstile.js').TurnstileHooks} */
+function challengeModalHooks() {
+  const overlay = /** @type {HTMLElement} */ (
+    document.getElementById('turnstile-challenge-overlay')
+  )
+  const cancelBtn = /** @type {HTMLButtonElement} */ (
+    document.getElementById('turnstile-challenge-cancel')
+  )
+  /** @type {(() => void) | null} */
+  let cancel = null
+  const onCancelClick = () => cancel?.()
+
+  return {
+    onChallengeVisible: () => {
+      overlay.classList.remove('hidden')
+      cancelBtn.addEventListener('click', onCancelClick)
+    },
+    onChallengeHidden: () => {
+      overlay.classList.add('hidden')
+      cancelBtn.removeEventListener('click', onCancelClick)
+    },
+    onCancel: fn => {
+      cancel = fn
+    },
+  }
+}
+
 async function ensureSession() {
-  const token = await executeTurnstile(window.__TURNSTILE_SITE_KEY__)
+  /** @type {string} */
+  let token
+  try {
+    token = await executeTurnstile(window.__TURNSTILE_SITE_KEY__, challengeModalHooks())
+  } catch {
+    throw new Error('Weryfikacja nie powiodła się. Spróbuj ponownie.')
+  }
   const res = await fetch('/api/session', {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ turnstileToken: token }),
   })
-  if (res.status !== 204) throw new Error('Captcha failed')
+  if (res.status !== 204) throw new Error('Weryfikacja nie powiodła się. Spróbuj ponownie.')
 }
 
 /**
