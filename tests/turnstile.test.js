@@ -211,6 +211,46 @@ describe('executeTurnstile', () => {
     expect(onChallengeHidden).toHaveBeenCalledTimes(1)
   })
 
+  it('removes the previous widget when retry is called again before it settles', async () => {
+    const onChallengeError = vi.fn()
+    const p = executeTurnstile('site-key', { onChallengeError })
+    await vi.advanceTimersByTimeAsync(0)
+
+    last(t).opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+    last(t).opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+
+    const retry = onChallengeError.mock.calls[0][0]
+    retry()
+    await vi.advanceTimersByTimeAsync(0)
+    const firstRetried = last(t)
+
+    /** @type {string[]} */
+    const order = []
+    const originalRemove = t.api.remove.bind(t.api)
+    const originalRender = t.api.render.bind(t.api)
+    t.api.remove = id => {
+      order.push(`remove:${id}`)
+      return originalRemove(id)
+    }
+    t.api.render = (container, opts) => {
+      order.push('render')
+      return originalRender(container, opts)
+    }
+
+    retry()
+    await vi.advanceTimersByTimeAsync(0)
+    const secondRetried = last(t)
+
+    expect(secondRetried.id).not.toBe(firstRetried.id)
+    expect(order).toEqual([`remove:${firstRetried.id}`, 'render'])
+    expect(t.removed).toContain(firstRetried.id)
+
+    secondRetried.opts.callback('tok-second-retry')
+    await expect(p).resolves.toBe('tok-second-retry')
+  })
+
   it('offers a retry when the visible render returns undefined', async () => {
     const onChallengeError = vi.fn()
     const onChallengeHidden = vi.fn()

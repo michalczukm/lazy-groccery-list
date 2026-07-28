@@ -189,6 +189,7 @@ export async function executeTurnstile(siteKey, hooks = {}) {
 
     const renderChallenge = () => {
       if (settled) return
+      remove(visibleId)
       visibleId = safeRender('challenge', challengeContainer, {
         sitekey: siteKey,
         size: 'flexible',
