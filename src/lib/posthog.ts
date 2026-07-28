@@ -46,6 +46,7 @@ export const proxyPosthog = async (
 
 const CAPTURE_PATH = '/i/v0/e'
 const ANONYMOUS_SERVER_ID = 'anonymous-server'
+const DISTINCT_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
 
 export type ServerEvent = {
   event: string
@@ -53,8 +54,10 @@ export type ServerEvent = {
   properties?: Record<string, string | number | boolean>
 }
 
-export const distinctIdFrom = (request: Request): string =>
-  request.headers.get('X-POSTHOG-DISTINCT-ID') ?? ANONYMOUS_SERVER_ID
+export const distinctIdFrom = (request: Request): string => {
+  const header = request.headers.get('X-POSTHOG-DISTINCT-ID')
+  return header && DISTINCT_ID_PATTERN.test(header) ? header : ANONYMOUS_SERVER_ID
+}
 
 export const captureServer = async (
   env: PosthogEnv,

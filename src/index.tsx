@@ -100,7 +100,7 @@ const fireAndForget = (c: { executionCtx: ExecutionContext }, work: Promise<unkn
   try {
     c.executionCtx.waitUntil(work)
   } catch {
-    void work
+    work.catch(() => {})
   }
 }
 

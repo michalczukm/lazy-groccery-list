@@ -98,6 +98,45 @@ describe('distinctIdFrom', () => {
   it('falls back to an anonymous id when the header is absent', () => {
     expect(distinctIdFrom(new Request('https://app.test/api/categorize'))).toBe('anonymous-server')
   })
+
+  it('passes through a valid UUID-shaped id unchanged', () => {
+    const id = '018f4c2e-6b7a-7c3d-9e1a-0123456789ab'
+    const req = new Request('https://app.test/api/categorize', {
+      headers: { 'X-POSTHOG-DISTINCT-ID': id },
+    })
+    expect(distinctIdFrom(req)).toBe(id)
+  })
+
+  it('falls back to an anonymous id when the header is 65 characters', () => {
+    const req = new Request('https://app.test/api/categorize', {
+      headers: { 'X-POSTHOG-DISTINCT-ID': 'a'.repeat(65) },
+    })
+    expect(distinctIdFrom(req)).toBe('anonymous-server')
+  })
+
+  it('accepts a 64 character header', () => {
+    const id = 'a'.repeat(64)
+    const req = new Request('https://app.test/api/categorize', {
+      headers: { 'X-POSTHOG-DISTINCT-ID': id },
+    })
+    expect(distinctIdFrom(req)).toBe(id)
+  })
+
+  it('falls back to an anonymous id when the header contains disallowed characters', () => {
+    for (const value of ['abc def', '<script>']) {
+      const req = new Request('https://app.test/api/categorize', {
+        headers: { 'X-POSTHOG-DISTINCT-ID': value },
+      })
+      expect(distinctIdFrom(req)).toBe('anonymous-server')
+    }
+  })
+
+  it('falls back to an anonymous id when the header is empty', () => {
+    const req = new Request('https://app.test/api/categorize', {
+      headers: { 'X-POSTHOG-DISTINCT-ID': '' },
+    })
+    expect(distinctIdFrom(req)).toBe('anonymous-server')
+  })
 })
 
 describe('captureServer', () => {
