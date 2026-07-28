@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import type { ExecutionContext } from 'hono'
 import { jsxRenderer } from 'hono/jsx-renderer'
 import { secureHeaders } from 'hono/secure-headers'
 import { setCookie, getCookie } from 'hono/cookie'
@@ -12,7 +13,7 @@ import { isSameOrigin } from './lib/origin-guard'
 import { signSession, verifySession } from './lib/cookie-session'
 import { verifyTurnstile } from './lib/turnstile'
 import { categorize } from './lib/mistral'
-import { proxyPosthog } from './lib/posthog'
+import { proxyPosthog, captureServer, distinctIdFrom } from './lib/posthog'
 
 interface Env {
   MISTRAL_API_KEY: string
@@ -95,6 +96,14 @@ app.post('/api/session', async c => {
   return c.body(null, 204)
 })
 
+const fireAndForget = (c: { executionCtx: ExecutionContext }, work: Promise<unknown>): void => {
+  try {
+    c.executionCtx.waitUntil(work)
+  } catch {
+    void work
+  }
+}
+
 app.post('/api/categorize', async c => {
   if (!isSameOrigin(c.req.raw)) {
     return c.json({ code: 'forbidden' }, 403)
@@ -103,6 +112,19 @@ app.post('/api/categorize', async c => {
   const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
   const limit = await c.env.AI_RATE_LIMIT.limit({ key: ip })
   if (!limit.success) {
+    fireAndForget(
+      c,
+      captureServer(c.env, {
+        event: 'worker_request_error',
+        distinctId: distinctIdFrom(c.req.raw),
+        properties: {
+          route: '/api/categorize',
+          status: 429,
+          code: 'rate-limited',
+          reason: 'rate_limit',
+        },
+      }),
+    )
     return c.json({ code: 'rate-limited' }, 429)
   }
 
@@ -128,6 +150,19 @@ app.post('/api/categorize', async c => {
 
   const result = await categorize(text, c.env.MISTRAL_API_KEY)
   if (!result.ok) {
+    fireAndForget(
+      c,
+      captureServer(c.env, {
+        event: 'worker_request_error',
+        distinctId: distinctIdFrom(c.req.raw),
+        properties: {
+          route: '/api/categorize',
+          status: 502,
+          code: 'upstream-error',
+          reason: result.reason,
+        },
+      }),
+    )
     return c.json({ code: 'upstream-error' }, 502)
   }
   return c.json({ categories: result.categories })

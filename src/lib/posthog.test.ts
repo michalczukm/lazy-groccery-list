@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { resolveUpstream, proxyPosthog, POSTHOG_ASSET_HOST, POSTHOG_INGEST_HOST } from './posthog'
+import {
+  resolveUpstream,
+  proxyPosthog,
+  captureServer,
+  distinctIdFrom,
+  POSTHOG_ASSET_HOST,
+  POSTHOG_INGEST_HOST,
+} from './posthog'
 
 describe('resolveUpstream', () => {
   it('routes /static/ paths to the asset host', () => {
@@ -77,5 +84,80 @@ describe('proxyPosthog', () => {
     )
 
     expect(seen?.headers.get('cookie')).toBeNull()
+  })
+})
+
+describe('distinctIdFrom', () => {
+  it('reads the posthog distinct id header set by tracing_headers', () => {
+    const req = new Request('https://app.test/api/categorize', {
+      headers: { 'X-POSTHOG-DISTINCT-ID': 'abc-123' },
+    })
+    expect(distinctIdFrom(req)).toBe('abc-123')
+  })
+
+  it('falls back to an anonymous id when the header is absent', () => {
+    expect(distinctIdFrom(new Request('https://app.test/api/categorize'))).toBe('anonymous-server')
+  })
+})
+
+describe('captureServer', () => {
+  it('posts the documented event body to /i/v0/e', async () => {
+    let url: string | undefined
+    let body: Record<string, unknown> | undefined
+    const fetchImpl = (async (input: string, init?: RequestInit) => {
+      url = input
+      body = JSON.parse(init?.body as string)
+      return new Response(null, { status: 200 })
+    }) as unknown as typeof fetch
+
+    await captureServer(
+      { POSTHOG_KEY: 'phc_test' },
+      { event: 'worker_request_error', distinctId: 'abc', properties: { status: 502 } },
+      fetchImpl,
+    )
+
+    expect(url).toBe(`${POSTHOG_INGEST_HOST}/i/v0/e`)
+    expect(body?.api_key).toBe('phc_test')
+    expect(body?.event).toBe('worker_request_error')
+    expect(body?.distinct_id).toBe('abc')
+    expect(body?.properties).toMatchObject({ status: 502, $process_person_profile: false })
+    expect(typeof body?.timestamp).toBe('string')
+  })
+
+  it('uses a custom host when configured', async () => {
+    let url: string | undefined
+    const fetchImpl = (async (input: string) => {
+      url = input
+      return new Response(null, { status: 200 })
+    }) as unknown as typeof fetch
+
+    await captureServer(
+      { POSTHOG_KEY: 'phc_test', POSTHOG_HOST: 'https://ph.example.com' },
+      { event: 'e', distinctId: 'abc' },
+      fetchImpl,
+    )
+
+    expect(url).toBe('https://ph.example.com/i/v0/e')
+  })
+
+  it('no-ops when no key is configured', async () => {
+    let called = false
+    const fetchImpl = (async () => {
+      called = true
+      return new Response(null)
+    }) as unknown as typeof fetch
+
+    await captureServer({}, { event: 'e', distinctId: 'abc' }, fetchImpl)
+    expect(called).toBe(false)
+  })
+
+  it('swallows upstream failure and never throws', async () => {
+    const fetchImpl = (async () => {
+      throw new Error('network down')
+    }) as unknown as typeof fetch
+
+    await expect(
+      captureServer({ POSTHOG_KEY: 'phc_test' }, { event: 'e', distinctId: 'abc' }, fetchImpl),
+    ).resolves.toBeUndefined()
   })
 })

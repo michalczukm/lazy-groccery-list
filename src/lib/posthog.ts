@@ -43,3 +43,40 @@ export const proxyPosthog = async (
     ? fetchImpl(upstream, { cf: { cacheEverything: true, cacheTtl: ASSET_CACHE_TTL_SEC } })
     : fetchImpl(upstream)
 }
+
+const CAPTURE_PATH = '/i/v0/e'
+const ANONYMOUS_SERVER_ID = 'anonymous-server'
+
+export type ServerEvent = {
+  event: string
+  distinctId: string
+  properties?: Record<string, string | number | boolean>
+}
+
+export const distinctIdFrom = (request: Request): string =>
+  request.headers.get('X-POSTHOG-DISTINCT-ID') ?? ANONYMOUS_SERVER_ID
+
+export const captureServer = async (
+  env: PosthogEnv,
+  ev: ServerEvent,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> => {
+  if (!env.POSTHOG_KEY) return
+
+  const host = env.POSTHOG_HOST ?? POSTHOG_INGEST_HOST
+  try {
+    await fetchImpl(`${host}${CAPTURE_PATH}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: env.POSTHOG_KEY,
+        event: ev.event,
+        distinct_id: ev.distinctId,
+        properties: { ...ev.properties, $process_person_profile: false },
+        timestamp: new Date().toISOString(),
+      }),
+    })
+  } catch {
+    // Analytics must never turn a working request into a failed one.
+  }
+}
