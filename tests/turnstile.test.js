@@ -438,4 +438,48 @@ describe('executeTurnstile', () => {
     last(t).opts.callback('tok-remove')
     await expect(p).resolves.toBe('tok-remove')
   })
+
+  it('resets the visible widget when the token expires', async () => {
+    const onChallengeError = vi.fn()
+    const log = vi.fn()
+    const p = executeTurnstile('site-key', { onChallengeError, log })
+    await vi.advanceTimersByTimeAsync(0)
+
+    last(t).opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+    const visible = last(t)
+
+    visible.opts['expired-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(t.reset).toEqual([visible.id])
+    expect(onChallengeError).not.toHaveBeenCalled()
+    expect(log.mock.calls.map(c => c[0])).toEqual(
+      expect.arrayContaining(['challenge-expired', 'challenge-reset']),
+    )
+
+    visible.opts.callback('tok-after-expiry')
+    await expect(p).resolves.toBe('tok-after-expiry')
+  })
+
+  it('falls into the error state when reset throws', async () => {
+    const onChallengeError = vi.fn()
+    const p = executeTurnstile('site-key', { onChallengeError })
+    await vi.advanceTimersByTimeAsync(0)
+
+    last(t).opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+    const visible = last(t)
+
+    t.setResetThrows()
+    visible.opts['expired-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(onChallengeError).toHaveBeenCalledTimes(1)
+
+    onChallengeError.mock.calls[0][0]()
+    await vi.advanceTimersByTimeAsync(0)
+    last(t).opts.callback('tok-after-reset-fail')
+    await expect(p).resolves.toBe('tok-after-reset-fail')
+  })
 })

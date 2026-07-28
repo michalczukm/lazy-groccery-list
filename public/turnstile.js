@@ -187,6 +187,23 @@ export async function executeTurnstile(siteKey, hooks = {}) {
       enterErrorState()
     }
 
+    const onExpired = () => {
+      if (settled) return
+      emit('challenge-expired')
+      if (visibleId === null) {
+        enterErrorState()
+        return
+      }
+      try {
+        window.turnstile.reset(visibleId)
+        emit('challenge-reset')
+      } catch (err) {
+        challengeFailed('reset-failed', {
+          message: err instanceof Error ? err.message : String(err),
+        })
+      }
+    }
+
     const renderChallenge = () => {
       if (settled) return
       remove(visibleId)
@@ -199,6 +216,7 @@ export async function executeTurnstile(siteKey, hooks = {}) {
         'error-callback': code => challengeFailed('error', { code }),
         'timeout-callback': () => challengeFailed('timeout'),
         'unsupported-callback': () => challengeFailed('unsupported'),
+        'expired-callback': onExpired,
       })
       if (visibleId === null) enterErrorState()
     }
