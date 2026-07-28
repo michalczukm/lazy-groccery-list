@@ -184,4 +184,32 @@ describe('executeTurnstile', () => {
     expect(onChallengeVisible).not.toHaveBeenCalled()
     expect(t.renders).toHaveLength(1)
   })
+
+  it('rejects when the Turnstile script never loads', async () => {
+    // @ts-expect-error simulating a blocked challenges.cloudflare.com script
+    delete globalThis.window
+    const log = vi.fn()
+    const p = executeTurnstile('site-key', { scriptTimeoutMs: 10000, log })
+    const assertion = expect(p).rejects.toThrow('captcha-unavailable')
+
+    await vi.advanceTimersByTimeAsync(10000)
+    await assertion
+    expect(log).toHaveBeenCalledWith(
+      'script-timeout',
+      expect.objectContaining({ scriptTimeoutMs: 10000 }),
+    )
+  })
+
+  it('logs script-ready and silent-success on the happy path', async () => {
+    const log = vi.fn()
+    const p = executeTurnstile('site-key', { log })
+    await vi.advanceTimersByTimeAsync(0)
+
+    last(t).opts.callback('tok-log')
+    await expect(p).resolves.toBe('tok-log')
+
+    const events = log.mock.calls.map(c => c[0])
+    expect(events).toEqual(['script-ready', 'silent-render', 'silent-success'])
+    expect(log.mock.calls[0][1]).toHaveProperty('elapsedMs')
+  })
 })

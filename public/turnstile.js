@@ -1,11 +1,36 @@
-/** @returns {Promise<void>} */
-function waitForTurnstile() {
+const WARN_EVENTS = new Set([
+  'script-timeout',
+  'silent-render-failed',
+  'challenge-render-failed',
+  'challenge-error',
+  'challenge-expired',
+])
+
+/**
+ * @param {string} event
+ * @param {Record<string, unknown>} [detail]
+ */
+const defaultLog = (event, detail) => {
+  const line = `[turnstile] ${event}`
+  if (WARN_EVENTS.has(event)) console.warn(line, detail)
+  else console.info(line, detail)
+}
+
+/**
+ * @param {number} timeoutMs
+ * @returns {Promise<boolean>}
+ */
+function waitForTurnstile(timeoutMs) {
   return new Promise(resolve => {
-    if (window.turnstile) return resolve()
+    if (globalThis.window?.turnstile) return resolve(true)
+    const startedAt = Date.now()
     const id = setInterval(() => {
-      if (window.turnstile) {
+      if (globalThis.window?.turnstile) {
         clearInterval(id)
-        resolve()
+        resolve(true)
+      } else if (Date.now() - startedAt >= timeoutMs) {
+        clearInterval(id)
+        resolve(false)
       }
     }, 50)
   })
@@ -19,6 +44,8 @@ function waitForTurnstile() {
  *   silentContainer?: string
  *   challengeContainer?: string
  *   timeoutMs?: number
+ *   scriptTimeoutMs?: number
+ *   log?: (event: string, detail?: Record<string, unknown>) => void
  * }} TurnstileHooks
  */
 
@@ -35,9 +62,23 @@ export async function executeTurnstile(siteKey, hooks = {}) {
     silentContainer = '#turnstile-widget',
     challengeContainer = '#turnstile-challenge-widget',
     timeoutMs = 8000,
+    scriptTimeoutMs = 10000,
+    log = defaultLog,
   } = hooks
 
-  await waitForTurnstile()
+  const startedAt = Date.now()
+  /**
+   * @param {string} event
+   * @param {Record<string, unknown>} [detail]
+   * @returns {void}
+   */
+  const emit = (event, detail = {}) => log(event, { ...detail, elapsedMs: Date.now() - startedAt })
+
+  if (!(await waitForTurnstile(scriptTimeoutMs))) {
+    emit('script-timeout', { scriptTimeoutMs })
+    throw new Error('captcha-unavailable')
+  }
+  emit('script-ready')
 
   return new Promise((resolve, reject) => {
     /** @type {string | null} */
@@ -74,6 +115,7 @@ export async function executeTurnstile(siteKey, hooks = {}) {
     const succeed = token => {
       if (settled) return
       settled = true
+      emit(challengeShown ? 'challenge-success' : 'silent-success')
       cleanup()
       resolve(token)
     }
@@ -117,6 +159,7 @@ export async function executeTurnstile(siteKey, hooks = {}) {
       'timeout-callback': showChallenge,
       'unsupported-callback': showChallenge,
     })
+    emit('silent-render')
     window.turnstile.execute(silentId)
     watchdog = setTimeout(showChallenge, timeoutMs)
   })
