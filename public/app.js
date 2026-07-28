@@ -104,6 +104,15 @@ const DB = (() => {
 // ── State ─────────────────────────────────────────────────────────────────────
 /** @type {import('@preact/signals').Signal<ShoppingListData|null>} */
 const currentList = signal(/** @type {ShoppingListData|null} */ (null))
+
+/**
+ * @param {ShoppingListData | null} list
+ * @returns {number}
+ */
+const itemCount = list => (list ? list.categories.reduce((n, c) => n + c.items.length, 0) : 0)
+
+currentList.subscribe(list => window.Analytics?.setListSize(itemCount(list)))
+
 let currentView = 'input'
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
@@ -241,12 +250,22 @@ async function ensureSession() {
  * @returns {Promise<Array<{ name: string, items: string[] }>>}
  */
 async function callCategorize(rawText, allowRetry = true) {
-  const res = await fetch('/api/categorize', {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text: rawText }),
-  })
+  /** @type {Response} */
+  let res
+  try {
+    res = await fetch('/api/categorize', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: rawText }),
+    })
+  } catch (err) {
+    window.posthog?.capture('network_request_failed', {
+      route: '/api/categorize',
+      action_source: 'ai',
+    })
+    throw err
+  }
 
   if (res.ok) {
     const data = await res.json()
