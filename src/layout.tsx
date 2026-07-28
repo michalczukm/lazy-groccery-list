@@ -1,9 +1,9 @@
 import type { FC, PropsWithChildren } from 'hono/jsx'
 import { FONT_SIZE_ANTIFLASH, THEME_ANTIFLASH, THEME_CONFIG, THEME_VARS } from './theme'
 
-type LayoutProps = PropsWithChildren<{ turnstileSiteKey: string }>
+type LayoutProps = PropsWithChildren<{ turnstileSiteKey: string; posthogKey?: string }>
 
-export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
+export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey }) => (
   <html lang="pl" class="h-full">
     <head>
       <meta charset="UTF-8" />
@@ -32,6 +32,17 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
           __html: `window.__TURNSTILE_SITE_KEY__ = ${JSON.stringify(turnstileSiteKey)};`,
         }}
       />
+
+      {posthogKey ? (
+        <>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `window.__POSTHOG_KEY__ = ${JSON.stringify(posthogKey)};`,
+            }}
+          />
+          <script type="module" src="/analytics.js" />
+        </>
+      ) : null}
 
       <script
         type="importmap"

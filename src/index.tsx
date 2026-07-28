@@ -172,7 +172,7 @@ app.all('/basket/*', c => proxyPosthog(c.req.raw, c.env))
 
 app.get('/', jsxRenderer(), c =>
   c.render(
-    <Layout turnstileSiteKey={c.env.TURNSTILE_SITE_KEY}>
+    <Layout turnstileSiteKey={c.env.TURNSTILE_SITE_KEY} posthogKey={c.env.POSTHOG_KEY}>
       <InputView />
     </Layout>,
   ),

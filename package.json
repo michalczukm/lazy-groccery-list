@@ -27,6 +27,7 @@
     "lint-staged": "17.0.8",
     "oxfmt": "0.56.0",
     "oxlint": "1.71.0",
+    "posthog-js": "^1.407.3",
     "preact": "10.29.2",
     "typed-htmx": "0.3.1",
     "typescript": "6.0.3",

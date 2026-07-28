@@ -76,5 +76,8 @@ declare global {
     App: Record<string, (...args: any[]) => unknown>
     turnstile: Turnstile
     __TURNSTILE_SITE_KEY__: string
+    __POSTHOG_KEY__?: string
+    posthog?: import('posthog-js').PostHog
+    Analytics?: { setListSize(count: number): void }
   }
 }

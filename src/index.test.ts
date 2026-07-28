@@ -131,3 +131,18 @@ describe('GET / font size toggle', () => {
     expect(html).toContain('zoom: 1.15')
   })
 })
+
+describe('GET / analytics injection', () => {
+  it('injects the posthog key and analytics module when configured', async () => {
+    const res = await SELF.fetch('https://example.com/')
+    const html = await res.text()
+    expect(html).toContain('window.__POSTHOG_KEY__ = "phc_test"')
+    expect(html).toContain('src="/analytics.js"')
+  })
+
+  it('keeps the CSP free of third-party analytics hosts', async () => {
+    const res = await SELF.fetch('https://example.com/')
+    const csp = res.headers.get('content-security-policy') ?? ''
+    expect(csp).not.toContain('posthog')
+  })
+})
