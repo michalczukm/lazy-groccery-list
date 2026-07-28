@@ -77,11 +77,15 @@ Expected:
 
 DevTools → Console after page load. No CSP violation warnings. Network shows `challenges.cloudflare.com/turnstile/v0/api.js` loaded. No request to `api.mistral.ai` from browser.
 
-## 9. Visible challenge fallback (issue #30)
+## 9. Visible challenge fallback and recovery (issues #30, #36)
 
 When the silent Turnstile attempt cannot produce a token (as reported on some
 Android devices), `executeTurnstile()` renders a visible challenge into the
-`#turnstile-challenge-overlay` modal so the user can solve it.
+`#turnstile-challenge-overlay` modal so the user can solve it. If that render is
+refused or the challenge itself fails, the modal shows an error line and a
+**Spróbuj ponownie** button instead of hanging.
+
+### 9a. Silent failure → visible challenge
 
 Force the fallback in the browser without a real failing device. After the page
 loads, stub the silent widget to fire its error callback (needs the CF test keys
@@ -106,9 +110,58 @@ Then paste a list and press generate. Confirm:
 
 - the modal appears above the loading overlay (`z-[90]` vs `z-[70]`),
 - a Turnstile checkbox renders inside `#turnstile-challenge-widget`,
+- the console logs `[turnstile] silent-fallback` then `[turnstile] challenge-render`,
 - solving it fires `POST /api/session` → `204`, then retries `POST /api/categorize`,
 - pressing **Anuluj** hides the modal and toasts
   "Weryfikacja nie powiodła się. Spróbuj ponownie."
 
-The visible stage runs **at most once** per `ensureSession()` call — a second
-silent failure or the 8s watchdog after the modal is already up does nothing.
+The silent → visible promotion happens **at most once** per `ensureSession()`
+call — a second silent failure or the 8s watchdog after the modal is already up
+does nothing. Retries within the visible stage are unlimited.
+
+### 9b. Empty modal recovery (issue #36)
+
+Simulate Cloudflare refusing the visible render — the original bug, where the
+modal opened with nothing inside it and only a reload helped:
+
+```js
+const realRender = window.turnstile.render.bind(window.turnstile)
+let refuse = true
+window.turnstile.render = (container, opts) => {
+  if (container === '#turnstile-widget') {
+    setTimeout(() => opts['error-callback']('600010'), 0)
+    return 'fake-silent'
+  }
+  if (refuse) {
+    refuse = false
+    return undefined // what CF does when it will not render
+  }
+  return realRender(container, opts)
+}
+window.turnstile.execute = () => {}
+window.turnstile.remove = () => {}
+```
+
+Paste a list and press generate. Confirm:
+
+- the modal opens with the error line "Nie udało się załadować weryfikacji."
+  and a **Spróbuj ponownie** button — **not** an empty box,
+- the console logs `[turnstile] challenge-render-failed` with `reason: 'empty'`,
+- pressing **Spróbuj ponownie** logs `challenge-retry` and renders a working
+  checkbox in the same modal, with no page reload,
+- solving it completes the original categorize request and the pasted text is
+  still in the input (app state survived).
+
+### 9c. Script never loads
+
+In DevTools → Network, block `challenges.cloudflare.com/*`, reload, paste a list
+and press generate. After ~10s confirm the console logs
+`[turnstile] script-timeout` and the app toasts
+"Weryfikacja nie powiodła się. Spróbuj ponownie." instead of spinning forever.
+
+### 9d. Token expiry
+
+With the visible challenge open, run `window.turnstile.reset` interception or
+wait out the token lifetime. Confirm the console logs `[turnstile]
+challenge-expired` followed by `challenge-reset`, and the widget becomes
+solvable again without the error line appearing.
