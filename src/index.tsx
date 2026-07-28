@@ -12,6 +12,7 @@ import { isSameOrigin } from './lib/origin-guard'
 import { signSession, verifySession } from './lib/cookie-session'
 import { verifyTurnstile } from './lib/turnstile'
 import { categorize } from './lib/mistral'
+import { proxyPosthog } from './lib/posthog'
 
 interface Env {
   MISTRAL_API_KEY: string
@@ -19,6 +20,8 @@ interface Env {
   SESSION_HMAC_SECRET: string
   TURNSTILE_SITE_KEY: string
   AI_RATE_LIMIT: RateLimit
+  POSTHOG_KEY?: string
+  POSTHOG_HOST?: string
 }
 
 const SESSION_COOKIE = 'lazy_list_session'
@@ -129,6 +132,8 @@ app.post('/api/categorize', async c => {
   }
   return c.json({ categories: result.categories })
 })
+
+app.all('/basket/*', c => proxyPosthog(c.req.raw, c.env))
 
 app.get('/', jsxRenderer(), c =>
   c.render(
