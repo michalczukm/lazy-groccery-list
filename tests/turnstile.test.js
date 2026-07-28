@@ -176,20 +176,86 @@ describe('executeTurnstile', () => {
     await expect(p).resolves.toBe('tok-3')
   })
 
-  it('rejects when the visible challenge errors', async () => {
+  it('offers a retry instead of rejecting when the visible challenge errors', async () => {
     const onChallengeHidden = vi.fn()
-    const p = executeTurnstile('site-key', { onChallengeHidden })
+    const onChallengeError = vi.fn()
+    const log = vi.fn()
+    const p = executeTurnstile('site-key', { onChallengeHidden, onChallengeError, log })
     await vi.advanceTimersByTimeAsync(0)
 
-    const silent = last(t)
-    silent.opts['error-callback']('600010')
+    last(t).opts['error-callback']('600010')
     await vi.advanceTimersByTimeAsync(0)
 
     const visible = last(t)
     visible.opts['error-callback']('600010')
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(onChallengeError).toHaveBeenCalledTimes(1)
+    expect(onChallengeHidden).not.toHaveBeenCalled()
+    expect(t.removed).toContain(visible.id)
+    expect(log).toHaveBeenCalledWith(
+      'challenge-error',
+      expect.objectContaining({ reason: 'error', code: '600010' }),
+    )
+
+    const retry = onChallengeError.mock.calls[0][0]
+    retry()
+    await vi.advanceTimersByTimeAsync(0)
+
+    const retried = last(t)
+    expect(retried.container).toBe('#turnstile-challenge-widget')
+    expect(retried.id).not.toBe(visible.id)
+
+    retried.opts.callback('tok-retry')
+    await expect(p).resolves.toBe('tok-retry')
+    expect(onChallengeHidden).toHaveBeenCalledTimes(1)
+  })
+
+  it('offers a retry when the visible render returns undefined', async () => {
+    const onChallengeError = vi.fn()
+    const onChallengeHidden = vi.fn()
+    const settledSpy = vi.fn()
+    const p = executeTurnstile('site-key', { onChallengeError, onChallengeHidden })
+    p.then(settledSpy, settledSpy)
+    await vi.advanceTimersByTimeAsync(0)
+
+    t.failNextRender('empty', '#turnstile-challenge-widget')
+    last(t).opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(onChallengeError).toHaveBeenCalledTimes(1)
+    expect(onChallengeHidden).not.toHaveBeenCalled()
+    expect(settledSpy).not.toHaveBeenCalled()
+
+    onChallengeError.mock.calls[0][0]()
+    await vi.advanceTimersByTimeAsync(0)
+    last(t).opts.callback('tok-recovered')
+    await expect(p).resolves.toBe('tok-recovered')
+  })
+
+  it('cancels out of the error state', async () => {
+    const onChallengeHidden = vi.fn()
+    const onChallengeError = vi.fn()
+    /** @type {() => void} */
+    let cancel = () => {}
+    const p = executeTurnstile('site-key', {
+      onChallengeHidden,
+      onChallengeError,
+      onCancel: fn => {
+        cancel = fn
+      },
+    })
+    await vi.advanceTimersByTimeAsync(0)
+
+    last(t).opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+    last(t).opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(onChallengeError).toHaveBeenCalledTimes(1)
+
+    cancel()
     await expect(p).rejects.toThrow('captcha-failed')
     expect(onChallengeHidden).toHaveBeenCalledTimes(1)
-    expect(t.removed).toEqual(expect.arrayContaining([silent.id, visible.id]))
   })
 
   it('rejects when the user cancels the visible challenge', async () => {

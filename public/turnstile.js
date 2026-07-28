@@ -40,6 +40,7 @@ function waitForTurnstile(timeoutMs) {
  * @typedef {{
  *   onChallengeVisible?: () => void
  *   onChallengeHidden?: () => void
+ *   onChallengeError?: (retry: () => void) => void
  *   onCancel?: (cancel: () => void) => void
  *   silentContainer?: string
  *   challengeContainer?: string
@@ -58,6 +59,7 @@ export async function executeTurnstile(siteKey, hooks = {}) {
   const {
     onChallengeVisible = () => {},
     onChallengeHidden = () => {},
+    onChallengeError = () => {},
     onCancel = () => {},
     silentContainer = '#turnstile-widget',
     challengeContainer = '#turnstile-challenge-widget',
@@ -159,11 +161,51 @@ export async function executeTurnstile(siteKey, hooks = {}) {
       resolve(token)
     }
 
-    const fail = () => {
+    const cancel = () => {
       if (settled) return
       settled = true
+      emit('cancelled')
       cleanup()
       reject(new Error('captcha-failed'))
+    }
+
+    const enterErrorState = () => {
+      if (settled) return
+      remove(visibleId)
+      visibleId = null
+      wipe(challengeContainer)
+      onChallengeError(retry)
+    }
+
+    /**
+     * @param {string} reason
+     * @param {Record<string, unknown>} [detail]
+     */
+    const challengeFailed = (reason, detail = {}) => {
+      if (settled) return
+      emit('challenge-error', { reason, ...detail })
+      enterErrorState()
+    }
+
+    const renderChallenge = () => {
+      if (settled) return
+      visibleId = safeRender('challenge', challengeContainer, {
+        sitekey: siteKey,
+        size: 'flexible',
+        appearance: 'always',
+        'response-field': false,
+        callback: succeed,
+        'error-callback': code => challengeFailed('error', { code }),
+        'timeout-callback': () => challengeFailed('timeout'),
+        'unsupported-callback': () => challengeFailed('unsupported'),
+      })
+      if (visibleId === null) enterErrorState()
+    }
+
+    const retry = () => {
+      if (settled) return
+      emit('challenge-retry')
+      renderChallenge()
     }
 
     /** @param {string} reason */
@@ -176,19 +218,10 @@ export async function executeTurnstile(siteKey, hooks = {}) {
       wipe(silentContainer)
       emit('silent-fallback', { reason })
       onChallengeVisible()
-      visibleId = safeRender('challenge', challengeContainer, {
-        sitekey: siteKey,
-        size: 'flexible',
-        appearance: 'always',
-        'response-field': false,
-        callback: succeed,
-        'error-callback': fail,
-        'timeout-callback': fail,
-        'unsupported-callback': fail,
-      })
+      renderChallenge()
     }
 
-    onCancel(fail)
+    onCancel(cancel)
 
     silentId = safeRender('silent', silentContainer, {
       sitekey: siteKey,
