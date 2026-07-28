@@ -462,6 +462,36 @@ describe('executeTurnstile', () => {
     await expect(p).resolves.toBe('tok-after-expiry')
   })
 
+  it('fences stale widget callbacks by generation after a retry', async () => {
+    const onChallengeError = vi.fn()
+    const p = executeTurnstile('site-key', { onChallengeError })
+    await vi.advanceTimersByTimeAsync(0)
+
+    last(t).opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+    const widgetA = last(t)
+    widgetA.opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(onChallengeError).toHaveBeenCalledTimes(1)
+
+    const retry = onChallengeError.mock.calls[0][0]
+    retry()
+    await vi.advanceTimersByTimeAsync(0)
+    const widgetB = last(t)
+    expect(widgetB.id).not.toBe(widgetA.id)
+
+    // Widget A is still alive despite being removed; it fires late.
+    widgetA.opts['timeout-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(t.removed).not.toContain(widgetB.id)
+    expect(t.reset).not.toContain(widgetB.id)
+    expect(onChallengeError).toHaveBeenCalledTimes(1)
+
+    widgetB.opts.callback('tok-fenced')
+    await expect(p).resolves.toBe('tok-fenced')
+  })
+
   it('falls into the error state when reset throws', async () => {
     const onChallengeError = vi.fn()
     const p = executeTurnstile('site-key', { onChallengeError })

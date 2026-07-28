@@ -298,6 +298,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
 
           <p
             id="turnstile-challenge-error"
+            role="alert"
             class="hidden text-red-400 text-[13px] text-center mb-3"
           >
             Nie udało się załadować weryfikacji.

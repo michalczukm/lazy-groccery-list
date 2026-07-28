@@ -161,7 +161,22 @@ and press generate. After ~10s confirm the console logs
 
 ### 9d. Token expiry
 
-With the visible challenge open, run `window.turnstile.reset` interception or
-wait out the token lifetime. Confirm the console logs `[turnstile]
-challenge-expired` followed by `challenge-reset`, and the widget becomes
-solvable again without the error line appearing.
+Waiting out a real token's lifetime is impractical to test live, and
+intercepting `window.turnstile.reset` never triggers `expired-callback` — that
+callback only fires from inside Cloudflare's widget. Instead, capture the
+callback at render time and fire it yourself from the console:
+
+```js
+const realRender = window.turnstile.render.bind(window.turnstile)
+/** @type {(() => void) | undefined} */
+let expire
+window.turnstile.render = (container, opts) => {
+  if (container === '#turnstile-challenge-widget') expire = opts['expired-callback']
+  return realRender(container, opts)
+}
+```
+
+Trigger the fallback per 9a to get the visible challenge open (which captures
+`expire`), then run `expire()` in the console. Confirm the console logs
+`[turnstile] challenge-expired` followed by `challenge-reset`, and the widget
+becomes solvable again without the error line appearing.

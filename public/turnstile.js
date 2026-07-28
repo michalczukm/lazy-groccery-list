@@ -4,6 +4,7 @@ const WARN_EVENTS = new Set([
   'challenge-render-failed',
   'challenge-error',
   'challenge-expired',
+  'hook-failed',
 ])
 
 /**
@@ -91,11 +92,27 @@ export async function executeTurnstile(siteKey, hooks = {}) {
     let watchdog = null
     let challengeShown = false
     let settled = false
+    let gen = 0
 
     const clearWatchdog = () => {
       if (watchdog !== null) {
         clearTimeout(watchdog)
         watchdog = null
+      }
+    }
+
+    /**
+     * @param {string} name
+     * @param {() => void} fn
+     */
+    const safeHook = (name, fn) => {
+      try {
+        fn()
+      } catch (err) {
+        emit('hook-failed', {
+          hook: name,
+          message: err instanceof Error ? err.message : String(err),
+        })
       }
     }
 
@@ -149,7 +166,7 @@ export async function executeTurnstile(siteKey, hooks = {}) {
       visibleId = null
       wipe(silentContainer)
       wipe(challengeContainer)
-      if (challengeShown) onChallengeHidden()
+      if (challengeShown) safeHook('onChallengeHidden', onChallengeHidden)
     }
 
     /** @param {string} token */
@@ -174,7 +191,7 @@ export async function executeTurnstile(siteKey, hooks = {}) {
       remove(visibleId)
       visibleId = null
       wipe(challengeContainer)
-      onChallengeError(retry)
+      safeHook('onChallengeError', () => onChallengeError(retry))
     }
 
     /**
@@ -207,16 +224,30 @@ export async function executeTurnstile(siteKey, hooks = {}) {
     const renderChallenge = () => {
       if (settled) return
       remove(visibleId)
+      const mine = ++gen
+      const current = () => mine === gen && !settled
       visibleId = safeRender('challenge', challengeContainer, {
         sitekey: siteKey,
         size: 'flexible',
         appearance: 'always',
         'response-field': false,
         callback: succeed,
-        'error-callback': code => challengeFailed('error', { code }),
-        'timeout-callback': () => challengeFailed('timeout'),
-        'unsupported-callback': () => challengeFailed('unsupported'),
-        'expired-callback': onExpired,
+        'error-callback': code => {
+          if (!current()) return
+          challengeFailed('error', { code })
+        },
+        'timeout-callback': () => {
+          if (!current()) return
+          challengeFailed('timeout')
+        },
+        'unsupported-callback': () => {
+          if (!current()) return
+          challengeFailed('unsupported')
+        },
+        'expired-callback': () => {
+          if (!current()) return
+          onExpired()
+        },
       })
       if (visibleId === null) enterErrorState()
     }
@@ -236,7 +267,7 @@ export async function executeTurnstile(siteKey, hooks = {}) {
       silentId = null
       wipe(silentContainer)
       emit('silent-fallback', { reason })
-      onChallengeVisible()
+      safeHook('onChallengeVisible', onChallengeVisible)
       renderChallenge()
     }
 
