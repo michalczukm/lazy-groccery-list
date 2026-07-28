@@ -99,7 +99,44 @@ export async function executeTurnstile(siteKey, hooks = {}) {
 
     /** @param {string | null} id */
     const remove = id => {
-      if (id !== null) window.turnstile.remove(id)
+      if (id === null) return
+      try {
+        window.turnstile.remove(id)
+      } catch {
+        // widget already torn down by Turnstile itself
+      }
+    }
+
+    /** @param {string} container */
+    const wipe = container => {
+      globalThis.document?.querySelector(container)?.replaceChildren()
+    }
+
+    /**
+     * @param {'silent' | 'challenge'} stage
+     * @param {string} container
+     * @param {TurnstileRenderOptions} opts
+     * @returns {string | null}
+     */
+    const safeRender = (stage, container, opts) => {
+      wipe(container)
+      /** @type {string | undefined} */
+      let id
+      try {
+        id = window.turnstile.render(container, opts)
+      } catch (err) {
+        emit(`${stage}-render-failed`, {
+          reason: 'threw',
+          message: err instanceof Error ? err.message : String(err),
+        })
+        return null
+      }
+      if (!id) {
+        emit(`${stage}-render-failed`, { reason: 'empty' })
+        return null
+      }
+      emit(`${stage}-render`)
+      return id
     }
 
     const cleanup = () => {
@@ -108,6 +145,8 @@ export async function executeTurnstile(siteKey, hooks = {}) {
       silentId = null
       remove(visibleId)
       visibleId = null
+      wipe(silentContainer)
+      wipe(challengeContainer)
       if (challengeShown) onChallengeHidden()
     }
 
@@ -127,14 +166,17 @@ export async function executeTurnstile(siteKey, hooks = {}) {
       reject(new Error('captcha-failed'))
     }
 
-    const showChallenge = () => {
+    /** @param {string} reason */
+    const showChallenge = reason => {
       if (settled || challengeShown) return
       challengeShown = true
       clearWatchdog()
       remove(silentId)
       silentId = null
+      wipe(silentContainer)
+      emit('silent-fallback', { reason })
       onChallengeVisible()
-      visibleId = window.turnstile.render(challengeContainer, {
+      visibleId = safeRender('challenge', challengeContainer, {
         sitekey: siteKey,
         size: 'flexible',
         appearance: 'always',
@@ -148,19 +190,22 @@ export async function executeTurnstile(siteKey, hooks = {}) {
 
     onCancel(fail)
 
-    silentId = window.turnstile.render(silentContainer, {
+    silentId = safeRender('silent', silentContainer, {
       sitekey: siteKey,
       size: 'flexible',
       appearance: 'interaction-only',
       execution: 'execute',
       'response-field': false,
       callback: succeed,
-      'error-callback': showChallenge,
-      'timeout-callback': showChallenge,
-      'unsupported-callback': showChallenge,
+      'error-callback': code => showChallenge(`error:${code ?? ''}`),
+      'timeout-callback': () => showChallenge('timeout'),
+      'unsupported-callback': () => showChallenge('unsupported'),
     })
-    emit('silent-render')
-    window.turnstile.execute(silentId)
-    watchdog = setTimeout(showChallenge, timeoutMs)
+    if (silentId === null) {
+      showChallenge('render-failed')
+    } else {
+      window.turnstile.execute(silentId)
+      watchdog = setTimeout(() => showChallenge('watchdog'), timeoutMs)
+    }
   })
 }

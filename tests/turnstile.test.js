@@ -12,13 +12,27 @@ function fakeTurnstile() {
   const removed = []
   /** @type {string[]} */
   const executed = []
+  /** @type {string[]} */
+  const reset = []
   let n = 0
+  /** @type {null | 'throw' | 'empty'} */
+  let renderFailure = null
+  /** @type {string | null} */
+  let failFor = null
+  let resetThrows = false
   const api = {
     /**
      * @param {string} container
      * @param {any} opts
      */
     render(container, opts) {
+      if (renderFailure && (failFor === null || failFor === container)) {
+        const mode = renderFailure
+        renderFailure = null
+        failFor = null
+        if (mode === 'throw') throw new Error('render blew up')
+        return undefined
+      }
       const id = `w${++n}`
       renders.push({ container, opts, id })
       return id
@@ -31,8 +45,48 @@ function fakeTurnstile() {
     execute(id) {
       executed.push(id)
     },
+    /** @param {string} id */
+    reset(id) {
+      if (resetThrows) throw new Error('reset blew up')
+      reset.push(id)
+    },
   }
-  return { api, renders, removed, executed }
+  return {
+    api,
+    renders,
+    removed,
+    executed,
+    reset,
+    /**
+     * @param {'throw' | 'empty'} mode
+     * @param {string | null} [container]
+     */
+    failNextRender(mode, container = null) {
+      renderFailure = mode
+      failFor = container
+    },
+    setResetThrows() {
+      resetThrows = true
+    },
+  }
+}
+
+function fakeDocument() {
+  /** @type {string[]} */
+  const wiped = []
+  return {
+    api: {
+      /** @param {string} selector */
+      querySelector(selector) {
+        return {
+          replaceChildren() {
+            wiped.push(selector)
+          },
+        }
+      },
+    },
+    wiped,
+  }
 }
 
 /** @param {ReturnType<typeof fakeTurnstile>} t */
@@ -42,17 +96,23 @@ function last(t) {
 
 /** @type {ReturnType<typeof fakeTurnstile>} */
 let t
+/** @type {ReturnType<typeof fakeDocument>} */
+let d
 
 beforeEach(() => {
   vi.useFakeTimers()
   t = fakeTurnstile()
+  d = fakeDocument()
   globalThis.window = /** @type {any} */ ({ turnstile: t.api })
+  globalThis.document = /** @type {any} */ (d.api)
 })
 
 afterEach(() => {
   vi.useRealTimers()
   // @ts-expect-error test teardown
   delete globalThis.window
+  // @ts-expect-error test teardown
+  delete globalThis.document
 })
 
 describe('executeTurnstile', () => {
@@ -211,5 +271,65 @@ describe('executeTurnstile', () => {
     const events = log.mock.calls.map(c => c[0])
     expect(events).toEqual(['script-ready', 'silent-render', 'silent-success'])
     expect(log.mock.calls[0][1]).toHaveProperty('elapsedMs')
+  })
+
+  it('falls back to the visible challenge when the silent render returns undefined', async () => {
+    const onChallengeVisible = vi.fn()
+    const log = vi.fn()
+    t.failNextRender('empty', '#turnstile-widget')
+    const p = executeTurnstile('site-key', { onChallengeVisible, log })
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(onChallengeVisible).toHaveBeenCalledTimes(1)
+    expect(last(t).container).toBe('#turnstile-challenge-widget')
+    expect(log).toHaveBeenCalledWith(
+      'silent-render-failed',
+      expect.objectContaining({ reason: 'empty' }),
+    )
+
+    last(t).opts.callback('tok-empty')
+    await expect(p).resolves.toBe('tok-empty')
+  })
+
+  it('falls back to the visible challenge when the silent render throws', async () => {
+    const onChallengeVisible = vi.fn()
+    const log = vi.fn()
+    t.failNextRender('throw', '#turnstile-widget')
+    const p = executeTurnstile('site-key', { onChallengeVisible, log })
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(onChallengeVisible).toHaveBeenCalledTimes(1)
+    expect(last(t).container).toBe('#turnstile-challenge-widget')
+    expect(log).toHaveBeenCalledWith(
+      'silent-render-failed',
+      expect.objectContaining({ reason: 'threw' }),
+    )
+
+    last(t).opts.callback('tok-throw')
+    await expect(p).resolves.toBe('tok-throw')
+  })
+
+  it('wipes a container before rendering into it', async () => {
+    const p = executeTurnstile('site-key')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(d.wiped).toContain('#turnstile-widget')
+
+    last(t).opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(d.wiped).toContain('#turnstile-challenge-widget')
+
+    last(t).opts.callback('tok-wipe')
+    await expect(p).resolves.toBe('tok-wipe')
+  })
+
+  it('survives remove() throwing during cleanup', async () => {
+    t.api.remove = () => {
+      throw new Error('already gone')
+    }
+    const p = executeTurnstile('site-key')
+    await vi.advanceTimersByTimeAsync(0)
+
+    last(t).opts.callback('tok-remove')
+    await expect(p).resolves.toBe('tok-remove')
   })
 })

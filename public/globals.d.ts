@@ -62,13 +62,15 @@ declare global {
     'error-callback'?: (code?: string) => void
     'timeout-callback'?: () => void
     'unsupported-callback'?: () => void
+    'expired-callback'?: () => void
   }
 
   /** Cloudflare Turnstile global surface used by turnstile.js. */
   interface Turnstile {
-    render(container: string, opts: TurnstileRenderOptions): string
+    render(container: string, opts: TurnstileRenderOptions): string | undefined
     remove(id: string): void
     execute(id: string): void
+    reset(id: string): void
   }
 
   const htmx: Htmx
