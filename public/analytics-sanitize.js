@@ -1,4 +1,4 @@
-const MIN_SECRET_LEN = 24
+const MIN_SECRET_LEN = 8
 const PROBE_LEN = 24
 const URL_LIKE = /^https?:\/\//i
 
@@ -17,18 +17,21 @@ const stripUrl = value => {
 
 /**
  * @param {unknown} value
+ * @param {WeakSet<object>} seen
  * @returns {unknown}
  */
-const sanitizeValue = value => {
+const sanitizeValue = (value, seen) => {
   if (typeof value === 'string') return URL_LIKE.test(value) ? stripUrl(value) : value
-  if (Array.isArray(value)) return value.map(sanitizeValue)
-  if (value !== null && typeof value === 'object') {
-    /** @type {Record<string, unknown>} */
-    const out = {}
-    for (const [key, item] of Object.entries(value)) out[key] = sanitizeValue(item)
-    return out
-  }
-  return value
+  if (value === null || typeof value !== 'object') return value
+  if (seen.has(value)) throw new Error('cyclic value')
+  seen.add(value)
+  const toJSON = /** @type {{ toJSON?: unknown }} */ (value).toJSON
+  if (typeof toJSON === 'function') return sanitizeValue(toJSON.call(value), seen)
+  if (Array.isArray(value)) return value.map(item => sanitizeValue(item, seen))
+  /** @type {Record<string, unknown>} */
+  const out = {}
+  for (const [key, item] of Object.entries(value)) out[key] = sanitizeValue(item, seen)
+  return out
 }
 
 /**
@@ -46,9 +49,18 @@ export const shareSecretFrom = search => {
  * @returns {Record<string, unknown> | null}
  */
 export const sanitizeProperties = (properties, secret) => {
-  const cleaned = /** @type {Record<string, unknown>} */ (sanitizeValue(properties))
-  if (secret !== null && JSON.stringify(cleaned).includes(secret.slice(0, PROBE_LEN))) return null
-  return cleaned
+  try {
+    const cleaned = /** @type {Record<string, unknown>} */ (
+      sanitizeValue(properties, new WeakSet())
+    )
+    if (secret !== null) {
+      const probe = secret.length < PROBE_LEN ? secret : secret.slice(0, PROBE_LEN)
+      if (JSON.stringify(cleaned).includes(probe)) return null
+    }
+    return cleaned
+  } catch {
+    return null
+  }
 }
 
 /**

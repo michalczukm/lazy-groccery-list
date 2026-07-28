@@ -17,6 +17,14 @@ describe('shareSecretFrom', () => {
   it('returns null for a payload too short to encode a list', () => {
     expect(shareSecretFrom('?state=abc')).toBeNull()
   })
+
+  it('arms on an 8-character payload, the new floor', () => {
+    expect(shareSecretFrom('?state=12345678')).toBe('12345678')
+  })
+
+  it('rejects a 7-character payload, below the new floor', () => {
+    expect(shareSecretFrom('?state=1234567')).toBeNull()
+  })
 })
 
 describe('sanitizeProperties', () => {
@@ -64,6 +72,16 @@ describe('sanitizeProperties', () => {
     expect(sanitizeProperties({ note: PAYLOAD.slice(0, 30) }, PAYLOAD)).toBeNull()
   })
 
+  it('keeps the event when only a 23-char prefix of the payload survives (below PROBE_LEN)', () => {
+    expect(sanitizeProperties({ note: PAYLOAD.slice(0, 23) }, PAYLOAD)).toEqual({
+      note: PAYLOAD.slice(0, 23),
+    })
+  })
+
+  it('drops the event when exactly a 24-char prefix of the payload survives (PROBE_LEN boundary)', () => {
+    expect(sanitizeProperties({ note: PAYLOAD.slice(0, 24) }, PAYLOAD)).toBeNull()
+  })
+
   it('keeps the event when the payload is absent', () => {
     expect(sanitizeProperties({ $browser: 'Chrome' }, PAYLOAD)).toEqual({ $browser: 'Chrome' })
   })
@@ -72,6 +90,47 @@ describe('sanitizeProperties', () => {
     const props = { $current_url: 'https://example.com/?state=abc' }
     sanitizeProperties(props, null)
     expect(props.$current_url).toBe('https://example.com/?state=abc')
+  })
+
+  it('fails closed on cyclic input instead of throwing', () => {
+    /** @type {Record<string, unknown>} */
+    const o = {}
+    o.self = o
+    expect(() => sanitizeProperties(o, null)).not.toThrow()
+    expect(sanitizeProperties(o, null)).toBeNull()
+  })
+
+  it('does not let toJSON bypass the URL sanitizer', () => {
+    const props = {
+      evil: {
+        toJSON: () => `https://evil.example/?x=${PAYLOAD}`,
+      },
+    }
+    const out = sanitizeProperties(props, null)
+    expect(JSON.stringify(out)).not.toContain(PAYLOAD)
+    expect(out).toEqual({ evil: 'https://evil.example/' })
+  })
+
+  it('drops the event when a toJSON payload survives even without the URL sanitizer catching it', () => {
+    const props = {
+      evil: {
+        toJSON: () => `leaked-${PAYLOAD}-not-url-shaped`,
+      },
+    }
+    expect(sanitizeProperties(props, PAYLOAD)).toBeNull()
+  })
+
+  it('arms the probe for a short (8-23 char) secret and drops when it survives', () => {
+    const shortSecret = PAYLOAD.slice(0, 12)
+    expect(sanitizeProperties({ note: `leaked ${shortSecret}` }, shortSecret)).toBeNull()
+  })
+
+  it('does not arm for a secret shorter than the 8-char floor (caller would pass null)', () => {
+    // shareSecretFrom would never hand back a sub-8-char secret; a null secret
+    // means the probe is skipped entirely regardless of what leaked.
+    expect(sanitizeProperties({ note: 'leaked 1234567' }, null)).toEqual({
+      note: 'leaked 1234567',
+    })
   })
 })
 
