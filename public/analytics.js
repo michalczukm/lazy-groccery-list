@@ -65,34 +65,41 @@ const start = async () => {
     return
   }
 
-  window.posthog?.init(key, {
-    api_host: PROXY,
-    ui_host: UI_HOST,
-    persistence: 'localStorage',
-    autocapture: false,
-    capture_heatmaps: false,
-    disable_session_recording: true,
-    disable_surveys: true,
-    capture_pageview: 'history_change',
-    capture_exceptions: {
-      capture_unhandled_errors: true,
-      capture_unhandled_rejections: true,
-      capture_console_errors: false,
-    },
-    capture_performance: {
-      web_vitals: true,
-      web_vitals_allowed_metrics: ['LCP', 'CLS', 'FCP', 'INP'],
-    },
-    respect_dnt: true,
-    advanced_disable_flags: true,
-    tracing_headers: [location.host],
-    before_send: event => {
-      if (!event) return null
-      const properties = sanitizeProperties(event.properties ?? {}, shareSecret)
-      if (properties === null) return null
-      return { ...event, properties }
-    },
-  })
+  try {
+    window.posthog?.init(key, {
+      api_host: PROXY,
+      ui_host: UI_HOST,
+      persistence: 'localStorage',
+      person_profiles: 'never',
+      autocapture: false,
+      capture_heatmaps: false,
+      disable_session_recording: true,
+      disable_surveys: true,
+      capture_pageview: 'history_change',
+      capture_exceptions: {
+        capture_unhandled_errors: true,
+        capture_unhandled_rejections: true,
+        capture_console_errors: false,
+      },
+      capture_performance: {
+        web_vitals: true,
+        web_vitals_allowed_metrics: ['LCP', 'CLS', 'FCP', 'INP'],
+      },
+      respect_dnt: true,
+      advanced_disable_flags: true,
+      tracing_headers: [location.hostname],
+      before_send: event => {
+        if (!event) return null
+        const properties = sanitizeProperties(event.properties ?? {}, shareSecret)
+        if (properties === null) return null
+        const { $set: _set, $set_once: _setOnce, $unset: _unset, ...rest } = event
+        return { ...rest, properties }
+      },
+    })
+  } catch {
+    boot.dispose()
+    return
+  }
 
   window.Analytics = {
     setListSize: count => window.posthog?.register({ list_size_bucket: bucketSize(count) }),
@@ -101,4 +108,4 @@ const start = async () => {
   boot.flush()
 }
 
-void start()
+start().catch(() => {})
