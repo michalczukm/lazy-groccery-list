@@ -296,6 +296,20 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey }) => (
 
           <div id="turnstile-challenge-widget" class="flex justify-center min-h-[65px] my-4" />
 
+          <p
+            id="turnstile-challenge-error"
+            class="hidden text-red-400 text-[13px] text-center mb-3"
+          >
+            Nie udało się załadować weryfikacji.
+          </p>
+
+          <button
+            id="turnstile-challenge-retry"
+            class="hidden w-full bg-surface text-accent py-3 rounded-xl text-[14px] font-semibold cursor-pointer border border-accent/20 mb-2 active:scale-[0.98] active:opacity-85"
+          >
+            Spróbuj ponownie
+          </button>
+
           <button
             id="turnstile-challenge-cancel"
             class="w-full bg-transparent text-fg/60 py-3 rounded-xl text-[14px] font-medium cursor-pointer border border-fg/10 active:opacity-70"

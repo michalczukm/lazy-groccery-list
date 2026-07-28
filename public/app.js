@@ -199,18 +199,41 @@ function challengeModalHooks() {
   const cancelBtn = /** @type {HTMLButtonElement} */ (
     document.getElementById('turnstile-challenge-cancel')
   )
+  const retryBtn = /** @type {HTMLButtonElement} */ (
+    document.getElementById('turnstile-challenge-retry')
+  )
+  const errorEl = /** @type {HTMLElement} */ (document.getElementById('turnstile-challenge-error'))
   /** @type {(() => void) | null} */
   let cancel = null
+  /** @type {(() => void) | null} */
+  let retry = null
+  const hideError = () => {
+    errorEl.classList.add('hidden')
+    retryBtn.classList.add('hidden')
+  }
   const onCancelClick = () => cancel?.()
+  const onRetryClick = () => {
+    hideError()
+    retry?.()
+  }
 
   return {
     onChallengeVisible: () => {
+      hideError()
       overlay.classList.remove('hidden')
       cancelBtn.addEventListener('click', onCancelClick)
+      retryBtn.addEventListener('click', onRetryClick)
+    },
+    onChallengeError: fn => {
+      retry = fn
+      errorEl.classList.remove('hidden')
+      retryBtn.classList.remove('hidden')
     },
     onChallengeHidden: () => {
       overlay.classList.add('hidden')
+      hideError()
       cancelBtn.removeEventListener('click', onCancelClick)
+      retryBtn.removeEventListener('click', onRetryClick)
     },
     onCancel: fn => {
       cancel = fn
@@ -218,7 +241,7 @@ function challengeModalHooks() {
   }
 }
 
-async function ensureSession() {
+async function requestSession() {
   /** @type {string} */
   let token
   try {
@@ -233,6 +256,19 @@ async function ensureSession() {
     body: JSON.stringify({ turnstileToken: token }),
   })
   if (res.status !== 204) throw new Error('Weryfikacja nie powiodła się. Spróbuj ponownie.')
+}
+
+/** @type {Promise<void> | null} */
+let sessionInFlight = null
+
+/** @returns {Promise<void>} */
+function ensureSession() {
+  if (sessionInFlight === null) {
+    sessionInFlight = requestSession().finally(() => {
+      sessionInFlight = null
+    })
+  }
+  return sessionInFlight
 }
 
 /**
