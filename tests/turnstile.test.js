@@ -12,13 +12,27 @@ function fakeTurnstile() {
   const removed = []
   /** @type {string[]} */
   const executed = []
+  /** @type {string[]} */
+  const reset = []
   let n = 0
+  /** @type {null | 'throw' | 'empty'} */
+  let renderFailure = null
+  /** @type {string | null} */
+  let failFor = null
+  let resetThrows = false
   const api = {
     /**
      * @param {string} container
      * @param {any} opts
      */
     render(container, opts) {
+      if (renderFailure && (failFor === null || failFor === container)) {
+        const mode = renderFailure
+        renderFailure = null
+        failFor = null
+        if (mode === 'throw') throw new Error('render blew up')
+        return undefined
+      }
       const id = `w${++n}`
       renders.push({ container, opts, id })
       return id
@@ -31,8 +45,48 @@ function fakeTurnstile() {
     execute(id) {
       executed.push(id)
     },
+    /** @param {string} id */
+    reset(id) {
+      if (resetThrows) throw new Error('reset blew up')
+      reset.push(id)
+    },
   }
-  return { api, renders, removed, executed }
+  return {
+    api,
+    renders,
+    removed,
+    executed,
+    reset,
+    /**
+     * @param {'throw' | 'empty'} mode
+     * @param {string | null} [container]
+     */
+    failNextRender(mode, container = null) {
+      renderFailure = mode
+      failFor = container
+    },
+    setResetThrows() {
+      resetThrows = true
+    },
+  }
+}
+
+function fakeDocument() {
+  /** @type {string[]} */
+  const wiped = []
+  return {
+    api: {
+      /** @param {string} selector */
+      querySelector(selector) {
+        return {
+          replaceChildren() {
+            wiped.push(selector)
+          },
+        }
+      },
+    },
+    wiped,
+  }
 }
 
 /** @param {ReturnType<typeof fakeTurnstile>} t */
@@ -42,17 +96,23 @@ function last(t) {
 
 /** @type {ReturnType<typeof fakeTurnstile>} */
 let t
+/** @type {ReturnType<typeof fakeDocument>} */
+let d
 
 beforeEach(() => {
   vi.useFakeTimers()
   t = fakeTurnstile()
+  d = fakeDocument()
   globalThis.window = /** @type {any} */ ({ turnstile: t.api })
+  globalThis.document = /** @type {any} */ (d.api)
 })
 
 afterEach(() => {
   vi.useRealTimers()
   // @ts-expect-error test teardown
   delete globalThis.window
+  // @ts-expect-error test teardown
+  delete globalThis.document
 })
 
 describe('executeTurnstile', () => {
@@ -116,20 +176,126 @@ describe('executeTurnstile', () => {
     await expect(p).resolves.toBe('tok-3')
   })
 
-  it('rejects when the visible challenge errors', async () => {
+  it('offers a retry instead of rejecting when the visible challenge errors', async () => {
     const onChallengeHidden = vi.fn()
-    const p = executeTurnstile('site-key', { onChallengeHidden })
+    const onChallengeError = vi.fn()
+    const log = vi.fn()
+    const p = executeTurnstile('site-key', { onChallengeHidden, onChallengeError, log })
     await vi.advanceTimersByTimeAsync(0)
 
-    const silent = last(t)
-    silent.opts['error-callback']('600010')
+    last(t).opts['error-callback']('600010')
     await vi.advanceTimersByTimeAsync(0)
 
     const visible = last(t)
     visible.opts['error-callback']('600010')
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(onChallengeError).toHaveBeenCalledTimes(1)
+    expect(onChallengeHidden).not.toHaveBeenCalled()
+    expect(t.removed).toContain(visible.id)
+    expect(log).toHaveBeenCalledWith(
+      'challenge-error',
+      expect.objectContaining({ reason: 'error', code: '600010' }),
+    )
+
+    const retry = onChallengeError.mock.calls[0][0]
+    retry()
+    await vi.advanceTimersByTimeAsync(0)
+
+    const retried = last(t)
+    expect(retried.container).toBe('#turnstile-challenge-widget')
+    expect(retried.id).not.toBe(visible.id)
+
+    retried.opts.callback('tok-retry')
+    await expect(p).resolves.toBe('tok-retry')
+    expect(onChallengeHidden).toHaveBeenCalledTimes(1)
+  })
+
+  it('removes the previous widget when retry is called again before it settles', async () => {
+    const onChallengeError = vi.fn()
+    const p = executeTurnstile('site-key', { onChallengeError })
+    await vi.advanceTimersByTimeAsync(0)
+
+    last(t).opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+    last(t).opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+
+    const retry = onChallengeError.mock.calls[0][0]
+    retry()
+    await vi.advanceTimersByTimeAsync(0)
+    const firstRetried = last(t)
+
+    /** @type {string[]} */
+    const order = []
+    const originalRemove = t.api.remove.bind(t.api)
+    const originalRender = t.api.render.bind(t.api)
+    t.api.remove = id => {
+      order.push(`remove:${id}`)
+      return originalRemove(id)
+    }
+    t.api.render = (container, opts) => {
+      order.push('render')
+      return originalRender(container, opts)
+    }
+
+    retry()
+    await vi.advanceTimersByTimeAsync(0)
+    const secondRetried = last(t)
+
+    expect(secondRetried.id).not.toBe(firstRetried.id)
+    expect(order).toEqual([`remove:${firstRetried.id}`, 'render'])
+    expect(t.removed).toContain(firstRetried.id)
+
+    secondRetried.opts.callback('tok-second-retry')
+    await expect(p).resolves.toBe('tok-second-retry')
+  })
+
+  it('offers a retry when the visible render returns undefined', async () => {
+    const onChallengeError = vi.fn()
+    const onChallengeHidden = vi.fn()
+    const settledSpy = vi.fn()
+    const p = executeTurnstile('site-key', { onChallengeError, onChallengeHidden })
+    p.then(settledSpy, settledSpy)
+    await vi.advanceTimersByTimeAsync(0)
+
+    t.failNextRender('empty', '#turnstile-challenge-widget')
+    last(t).opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(onChallengeError).toHaveBeenCalledTimes(1)
+    expect(onChallengeHidden).not.toHaveBeenCalled()
+    expect(settledSpy).not.toHaveBeenCalled()
+
+    onChallengeError.mock.calls[0][0]()
+    await vi.advanceTimersByTimeAsync(0)
+    last(t).opts.callback('tok-recovered')
+    await expect(p).resolves.toBe('tok-recovered')
+  })
+
+  it('cancels out of the error state', async () => {
+    const onChallengeHidden = vi.fn()
+    const onChallengeError = vi.fn()
+    /** @type {() => void} */
+    let cancel = () => {}
+    const p = executeTurnstile('site-key', {
+      onChallengeHidden,
+      onChallengeError,
+      onCancel: fn => {
+        cancel = fn
+      },
+    })
+    await vi.advanceTimersByTimeAsync(0)
+
+    last(t).opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+    last(t).opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(onChallengeError).toHaveBeenCalledTimes(1)
+
+    cancel()
     await expect(p).rejects.toThrow('captcha-failed')
     expect(onChallengeHidden).toHaveBeenCalledTimes(1)
-    expect(t.removed).toEqual(expect.arrayContaining([silent.id, visible.id]))
   })
 
   it('rejects when the user cancels the visible challenge', async () => {
@@ -183,5 +349,167 @@ describe('executeTurnstile', () => {
     await vi.advanceTimersByTimeAsync(20000)
     expect(onChallengeVisible).not.toHaveBeenCalled()
     expect(t.renders).toHaveLength(1)
+  })
+
+  it('rejects when the Turnstile script never loads', async () => {
+    // @ts-expect-error simulating a blocked challenges.cloudflare.com script
+    delete globalThis.window
+    const log = vi.fn()
+    const p = executeTurnstile('site-key', { scriptTimeoutMs: 10000, log })
+    const assertion = expect(p).rejects.toThrow('captcha-unavailable')
+
+    await vi.advanceTimersByTimeAsync(10000)
+    await assertion
+    expect(log).toHaveBeenCalledWith(
+      'script-timeout',
+      expect.objectContaining({ scriptTimeoutMs: 10000 }),
+    )
+  })
+
+  it('logs script-ready and silent-success on the happy path', async () => {
+    const log = vi.fn()
+    const p = executeTurnstile('site-key', { log })
+    await vi.advanceTimersByTimeAsync(0)
+
+    last(t).opts.callback('tok-log')
+    await expect(p).resolves.toBe('tok-log')
+
+    const events = log.mock.calls.map(c => c[0])
+    expect(events).toEqual(['script-ready', 'silent-render', 'silent-success'])
+    expect(log.mock.calls[0][1]).toHaveProperty('elapsedMs')
+  })
+
+  it('falls back to the visible challenge when the silent render returns undefined', async () => {
+    const onChallengeVisible = vi.fn()
+    const log = vi.fn()
+    t.failNextRender('empty', '#turnstile-widget')
+    const p = executeTurnstile('site-key', { onChallengeVisible, log })
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(onChallengeVisible).toHaveBeenCalledTimes(1)
+    expect(last(t).container).toBe('#turnstile-challenge-widget')
+    expect(log).toHaveBeenCalledWith(
+      'silent-render-failed',
+      expect.objectContaining({ reason: 'empty' }),
+    )
+
+    last(t).opts.callback('tok-empty')
+    await expect(p).resolves.toBe('tok-empty')
+  })
+
+  it('falls back to the visible challenge when the silent render throws', async () => {
+    const onChallengeVisible = vi.fn()
+    const log = vi.fn()
+    t.failNextRender('throw', '#turnstile-widget')
+    const p = executeTurnstile('site-key', { onChallengeVisible, log })
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(onChallengeVisible).toHaveBeenCalledTimes(1)
+    expect(last(t).container).toBe('#turnstile-challenge-widget')
+    expect(log).toHaveBeenCalledWith(
+      'silent-render-failed',
+      expect.objectContaining({ reason: 'threw' }),
+    )
+
+    last(t).opts.callback('tok-throw')
+    await expect(p).resolves.toBe('tok-throw')
+  })
+
+  it('wipes a container before rendering into it', async () => {
+    const p = executeTurnstile('site-key')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(d.wiped).toContain('#turnstile-widget')
+
+    last(t).opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(d.wiped).toContain('#turnstile-challenge-widget')
+
+    last(t).opts.callback('tok-wipe')
+    await expect(p).resolves.toBe('tok-wipe')
+  })
+
+  it('survives remove() throwing during cleanup', async () => {
+    t.api.remove = () => {
+      throw new Error('already gone')
+    }
+    const p = executeTurnstile('site-key')
+    await vi.advanceTimersByTimeAsync(0)
+
+    last(t).opts.callback('tok-remove')
+    await expect(p).resolves.toBe('tok-remove')
+  })
+
+  it('resets the visible widget when the token expires', async () => {
+    const onChallengeError = vi.fn()
+    const log = vi.fn()
+    const p = executeTurnstile('site-key', { onChallengeError, log })
+    await vi.advanceTimersByTimeAsync(0)
+
+    last(t).opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+    const visible = last(t)
+
+    visible.opts['expired-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(t.reset).toEqual([visible.id])
+    expect(onChallengeError).not.toHaveBeenCalled()
+    expect(log.mock.calls.map(c => c[0])).toEqual(
+      expect.arrayContaining(['challenge-expired', 'challenge-reset']),
+    )
+
+    visible.opts.callback('tok-after-expiry')
+    await expect(p).resolves.toBe('tok-after-expiry')
+  })
+
+  it('fences stale widget callbacks by generation after a retry', async () => {
+    const onChallengeError = vi.fn()
+    const p = executeTurnstile('site-key', { onChallengeError })
+    await vi.advanceTimersByTimeAsync(0)
+
+    last(t).opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+    const widgetA = last(t)
+    widgetA.opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(onChallengeError).toHaveBeenCalledTimes(1)
+
+    const retry = onChallengeError.mock.calls[0][0]
+    retry()
+    await vi.advanceTimersByTimeAsync(0)
+    const widgetB = last(t)
+    expect(widgetB.id).not.toBe(widgetA.id)
+
+    // Widget A is still alive despite being removed; it fires late.
+    widgetA.opts['timeout-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(t.removed).not.toContain(widgetB.id)
+    expect(t.reset).not.toContain(widgetB.id)
+    expect(onChallengeError).toHaveBeenCalledTimes(1)
+
+    widgetB.opts.callback('tok-fenced')
+    await expect(p).resolves.toBe('tok-fenced')
+  })
+
+  it('falls into the error state when reset throws', async () => {
+    const onChallengeError = vi.fn()
+    const p = executeTurnstile('site-key', { onChallengeError })
+    await vi.advanceTimersByTimeAsync(0)
+
+    last(t).opts['error-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+    const visible = last(t)
+
+    t.setResetThrows()
+    visible.opts['expired-callback']()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(onChallengeError).toHaveBeenCalledTimes(1)
+
+    onChallengeError.mock.calls[0][0]()
+    await vi.advanceTimersByTimeAsync(0)
+    last(t).opts.callback('tok-after-reset-fail')
+    await expect(p).resolves.toBe('tok-after-reset-fail')
   })
 })
