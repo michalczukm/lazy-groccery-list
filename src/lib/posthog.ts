@@ -30,6 +30,10 @@ export const proxyPosthog = async (
   const headers = new Headers(request.headers)
   // Our signed session cookie must never reach a third party.
   headers.delete('cookie')
+  // Nor must the caller's real IP — PostHog only ever sees our own server's address.
+  headers.delete('cf-connecting-ip')
+  headers.delete('x-forwarded-for')
+  headers.delete('x-real-ip')
   headers.set('host', new URL(target).host)
 
   const hasBody = request.method !== 'GET' && request.method !== 'HEAD'

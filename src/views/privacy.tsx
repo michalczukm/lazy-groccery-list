@@ -37,9 +37,10 @@ export const PrivacyView: FC = () => (
 
         <Section title="W skrócie">
           <p>
-            Nie zakładasz konta, nie zbieramy danych do śledzenia, nie ma reklam. Twoje listy
-            zakupów żyją w Twojej przeglądarce. Wysyłamy do przetworzenia tylko tekst, który sam
-            wpiszesz, i tylko po to, żeby go pokategoryzować.
+            Nie zakładasz konta, nie ma reklam. Zbieramy tylko anonimowe statystyki użycia i raporty
+            błędów — żeby wiedzieć, czy apka działa poprawnie. Twoje listy zakupów żyją w Twojej
+            przeglądarce. Wysyłamy do przetworzenia tylko tekst, który sam wpiszesz, i tylko po to,
+            żeby go pokategoryzować.
           </p>
         </Section>
 
@@ -91,13 +92,17 @@ export const PrivacyView: FC = () => (
           </p>
           <p>
             <strong>Co wysyłamy:</strong> anonimowy identyfikator, adres strony bez parametrów,
-            nazwę widoku, przybliżony rozmiar listy w widełkach (0, 1-10, 11-30, 30+), typ
-            przeglądarki i urządzenia, kody błędów oraz czasy wczytywania.
+            przybliżony rozmiar listy w widełkach (0, 1-10, 11-30, 30+), typ przeglądarki i
+            urządzenia, treść błędu (komunikat i stack trace) oraz czasy wczytywania. Ten sam
+            anonimowy identyfikator dołączamy też do zapytań, które Twoja przeglądarka wysyła do
+            naszego serwera (np. przy kategoryzowaniu listy) — dzięki temu błąd zgłoszony przez
+            przeglądarkę i błąd zgłoszony przez serwer można ze sobą powiązać.
           </p>
           <p>
             <strong>Czego nigdy nie wysyłamy:</strong> nazw produktów, tytułów list, zawartości
             linków do udostępniania, treści wysyłanych do AI ani odpowiedzi AI. Dokładna liczba
-            produktów też nie jest wysyłana — tylko widełki.
+            produktów też nie jest wysyłana — tylko widełki. Komunikaty błędów są statycznymi
+            tekstami wpisanymi w kodzie apki — nigdy nie zawierają zawartości Twojej listy.
           </p>
           <p>
             Szanujemy ustawienie „Do Not Track” w przeglądarce — jeśli je włączysz, nie zbieramy

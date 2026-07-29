@@ -85,6 +85,32 @@ describe('proxyPosthog', () => {
 
     expect(seen?.headers.get('cookie')).toBeNull()
   })
+
+  it('never forwards client IP headers upstream', async () => {
+    let seen: Request | undefined
+    const fetchImpl = (async (input: Request) => {
+      seen = input as Request
+      return new Response('ok')
+    }) as unknown as typeof fetch
+
+    await proxyPosthog(
+      new Request('https://app.test/basket/e/', {
+        method: 'POST',
+        headers: {
+          'cf-connecting-ip': '1.2.3.4',
+          'x-forwarded-for': '1.2.3.4',
+          'x-real-ip': '1.2.3.4',
+        },
+        body: 'payload',
+      }),
+      { POSTHOG_KEY: 'phc_test' },
+      fetchImpl,
+    )
+
+    expect(seen?.headers.get('cf-connecting-ip')).toBeNull()
+    expect(seen?.headers.get('x-forwarded-for')).toBeNull()
+    expect(seen?.headers.get('x-real-ip')).toBeNull()
+  })
 })
 
 describe('distinctIdFrom', () => {
