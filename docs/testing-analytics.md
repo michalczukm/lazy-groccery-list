@@ -93,11 +93,21 @@ privacy incident, not a bug: revert the analytics init before investigating.
 ## What PostHog receives about the request itself
 
 `proxyPosthog` (`src/lib/posthog.ts`) forwards `/basket/*` requests to PostHog but strips the
-`cookie`, `cf-connecting-ip`, `x-forwarded-for`, and `x-real-ip` headers before forwarding. PostHog
-never sees the visitor's real IP address: those headers are gone, and the outbound `fetch` itself
-originates from the Worker, not the browser, so PostHog sees the Worker as the client. It also
-strips our signed session cookie, so the analytics proxy can never be used to read or replay the
-app's auth cookie.
+`cookie`, `cf-connecting-ip`, `x-forwarded-for`, `x-real-ip`, and `referer` headers before
+forwarding. PostHog never sees the visitor's real IP address: those headers are gone, and the
+outbound `fetch` itself originates from the Worker, not the browser, so PostHog sees the Worker as
+the client. It also strips our signed session cookie, so the analytics proxy can never be used to
+read or replay the app's auth cookie.
+
+`Referer` is stripped because a share link keeps its payload in the query string
+(`/?state=<payload>`), and a browser can be made to send that full URL, query string included, as
+the `Referer` header on a subsequent request (e.g. via `referrerPolicy: 'unsafe-url'`). Today
+Hono's `secureHeaders()` already defaults to `Referrer-Policy: no-referrer`, so browsers don't send
+`Referer` to us in the first place — but that default lives elsewhere and isn't something this
+proxy can rely on staying in place. `before_send` in `public/analytics.js` runs client-side and
+cannot inspect or rewrite HTTP request headers, so this is the only place capable of stopping a
+`Referer` leak, and it strips it unconditionally rather than depending on the header never
+arriving.
 
 ## Opting out
 

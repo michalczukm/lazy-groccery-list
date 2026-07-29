@@ -15,7 +15,7 @@ import { verifyTurnstile } from './lib/turnstile'
 import { categorize } from './lib/mistral'
 import { proxyPosthog, captureServer, distinctIdFrom } from './lib/posthog'
 
-interface Env {
+export interface Env {
   MISTRAL_API_KEY: string
   TURNSTILE_SECRET: string
   SESSION_HMAC_SECRET: string
@@ -112,19 +112,6 @@ app.post('/api/categorize', async c => {
   const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
   const limit = await c.env.AI_RATE_LIMIT.limit({ key: ip })
   if (!limit.success) {
-    fireAndForget(
-      c,
-      captureServer(c.env, {
-        event: 'worker_request_error',
-        distinctId: distinctIdFrom(c.req.raw),
-        properties: {
-          route: '/api/categorize',
-          status: 429,
-          code: 'rate-limited',
-          reason: 'rate_limit',
-        },
-      }),
-    )
     return c.json({ code: 'rate-limited' }, 429)
   }
 

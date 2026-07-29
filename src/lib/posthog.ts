@@ -34,6 +34,9 @@ export const proxyPosthog = async (
   headers.delete('cf-connecting-ip')
   headers.delete('x-forwarded-for')
   headers.delete('x-real-ip')
+  // Referer can carry the share payload (?state=... lives in the query string) —
+  // before_send runs client-side and can't reach HTTP headers, so this must be dropped here.
+  headers.delete('referer')
   headers.set('host', new URL(target).host)
 
   const hasBody = request.method !== 'GET' && request.method !== 'HEAD'

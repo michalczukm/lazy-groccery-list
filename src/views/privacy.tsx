@@ -92,11 +92,19 @@ export const PrivacyView: FC = () => (
           </p>
           <p>
             <strong>Co wysyłamy:</strong> anonimowy identyfikator, adres strony bez parametrów,
-            przybliżony rozmiar listy w widełkach (0, 1-10, 11-30, 30+), typ przeglądarki i
-            urządzenia, treść błędu (komunikat i stack trace) oraz czasy wczytywania. Ten sam
-            anonimowy identyfikator dołączamy też do zapytań, które Twoja przeglądarka wysyła do
-            naszego serwera (np. przy kategoryzowaniu listy) — dzięki temu błąd zgłoszony przez
-            przeglądarkę i błąd zgłoszony przez serwer można ze sobą powiązać.
+            przybliżony rozmiar listy w widełkach (0, 1-10, 11-30, 30+), treść błędu (komunikat i
+            stack trace) oraz czasy wczytywania. Ten sam anonimowy identyfikator dołączamy też do
+            zapytań, które Twoja przeglądarka wysyła do naszego serwera (np. przy kategoryzowaniu
+            listy) — dzięki temu błąd zgłoszony przez przeglądarkę i błąd zgłoszony przez serwer
+            można ze sobą powiązać.
+          </p>
+          <p>
+            Automatycznie wysyłane są też techniczne informacje o Twojej przeglądarce i urządzeniu,
+            które PostHog zbiera standardowo: pełny ciąg identyfikujący przeglądarkę (user-agent),
+            rozmiar ekranu i okna przeglądarki, język przeglądarki, strefa czasowa oraz
+            identyfikator sesji/okna (używany do grupowania zdarzeń z tej samej wizyty). Te dane,
+            razem wzięte, mogłyby częściowo posłużyć do odróżnienia Twojego urządzenia od innych —
+            dlatego wymieniamy je tutaj wprost.
           </p>
           <p>
             <strong>Czego nigdy nie wysyłamy:</strong> nazw produktów, tytułów list, zawartości
@@ -171,7 +179,7 @@ export const PrivacyView: FC = () => (
         </Section>
 
         <p class="text-[12px] text-muted mt-10 border-t border-fg/10 pt-4">
-          Ostatnia aktualizacja: 28 lipca 2026
+          Ostatnia aktualizacja: 29 lipca 2026
         </p>
       </main>
     </body>

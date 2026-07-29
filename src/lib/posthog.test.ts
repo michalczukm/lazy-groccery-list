@@ -111,6 +111,28 @@ describe('proxyPosthog', () => {
     expect(seen?.headers.get('x-forwarded-for')).toBeNull()
     expect(seen?.headers.get('x-real-ip')).toBeNull()
   })
+
+  it('never forwards the Referer header upstream', async () => {
+    // A share link keeps its payload in the query string (?state=...). Referer would
+    // carry that whole URL to a third party if it were ever forwarded.
+    let seen: Request | undefined
+    const fetchImpl = (async (input: Request) => {
+      seen = input as Request
+      return new Response('ok')
+    }) as unknown as typeof fetch
+
+    await proxyPosthog(
+      new Request('https://app.test/basket/e/', {
+        method: 'POST',
+        headers: { referer: 'https://app.test/?state=H4sIAAAA-secret-payload' },
+        body: 'payload',
+      }),
+      { POSTHOG_KEY: 'phc_test' },
+      fetchImpl,
+    )
+
+    expect(seen?.headers.get('referer')).toBeNull()
+  })
 })
 
 describe('distinctIdFrom', () => {

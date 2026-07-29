@@ -111,7 +111,13 @@ const currentList = signal(/** @type {ShoppingListData|null} */ (null))
  */
 const itemCount = list => (list ? list.categories.reduce((n, c) => n + c.items.length, 0) : 0)
 
-currentList.subscribe(list => window.Analytics?.setListSize(itemCount(list)))
+currentList.subscribe(list => {
+  try {
+    window.Analytics?.setListSize(itemCount(list))
+  } catch {
+    // Analytics must never break the app.
+  }
+})
 
 let currentView = 'input'
 
