@@ -24,6 +24,11 @@ POSTHOG_KEY=phc_your_project_token
 
 Then `pnpm dev` and open http://localhost:8787.
 
+In vitest-pool-workers, `.dev.vars` overrides `wrangler.test.jsonc`, so a `POSTHOG_KEY` left in
+`.dev.vars` makes `src/index.test.ts`'s `GET / analytics injection` test fail — it asserts the
+literal `phc_test` from `wrangler.test.jsonc`. Clear `.dev.vars` (or remove the `POSTHOG_KEY` line)
+before running `pnpm test`.
+
 ## Confirming events arrive
 
 1. Open the PostHog EU project → **Activity** (live event feed).
@@ -38,13 +43,25 @@ Then `pnpm dev` and open http://localhost:8787.
 ## How the privacy gates work
 
 `public/analytics.js` calls `posthog.init` with `person_profiles: 'never'`, and its `before_send`
-hook unconditionally strips `$set` / `$set_once` / `$unset` off every event before it reaches
-`sanitizeProperties` — no identity-linking payload leaves the browser, even in a mangled event.
+hook runs `sanitizeProperties` first, then unconditionally strips `$set` / `$set_once` / `$unset`
+off the returned event — no identity-linking payload leaves the browser, even in a mangled event.
 
 `public/analytics-sanitize.js` is the privacy-critical file:
 
-- Every string-valued property that looks like a URL (`^https?://`) is truncated to
-  `origin + pathname` — no query string, no fragment, ever reaches PostHog.
+- `URL_LIKE` (`^https?://`) is anchored at the start of the string, so it only matches when a
+  property's **entire value** is a URL; that value is then truncated to `origin + pathname` before
+  it reaches PostHog. A URL embedded mid-string (e.g. an error message like
+  `` `Failed to fetch ${url}` ``) is not matched, `stripUrl` never runs on it, and any query string
+  or fragment inside it would reach PostHog verbatim.
+  - This is nonetheless safe in this app today: the share-payload kill switch below is
+    position-independent (it searches the whole serialized properties, not just URL-shaped
+    fields), so an embedded _share_ secret is still caught and the entire event is dropped. And
+    every `throw new Error(...)` currently in the codebase uses a static string with no
+    interpolated user data, so no list content or share payload can hide inside a mid-string URL
+    in an `$exception_message`. The "Analytics privacy rule" in `CLAUDE.md` (never interpolate
+    list content into thrown `Error` messages) is what keeps that true going forward — it exists
+    precisely because this anchoring gap means the sanitizer can't catch a mid-string leak on its
+    own.
 - If the page was loaded via a share link (`?state=...` with a value of at least
   `MIN_SECRET_LEN` = 8 characters), `sanitizeProperties` takes a probe of that `state` value (the
   first 24 characters, or the whole value if shorter) and checks whether the serialized,
@@ -77,9 +94,10 @@ privacy incident, not a bug: revert the analytics init before investigating.
 
 `proxyPosthog` (`src/lib/posthog.ts`) forwards `/basket/*` requests to PostHog but strips the
 `cookie`, `cf-connecting-ip`, `x-forwarded-for`, and `x-real-ip` headers before forwarding. PostHog
-never sees the visitor's real IP address — only our own Worker's, since Cloudflare re-adds its own
-connecting-IP header for the outbound `fetch`. It also strips our signed session cookie, so the
-analytics proxy can never be used to read or replay the app's auth cookie.
+never sees the visitor's real IP address: those headers are gone, and the outbound `fetch` itself
+originates from the Worker, not the browser, so PostHog sees the Worker as the client. It also
+strips our signed session cookie, so the analytics proxy can never be used to read or replay the
+app's auth cookie.
 
 ## Opting out
 
