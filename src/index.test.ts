@@ -1,5 +1,7 @@
-import { SELF } from 'cloudflare:test'
-import { describe, it, expect } from 'vitest'
+import { SELF, env, createExecutionContext, waitOnExecutionContext } from 'cloudflare:test'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import worker from './index'
+import { signSession } from './lib/cookie-session'
 
 describe('POST /api/session', () => {
   it('returns 403 when Origin does not match request URL origin', async () => {
@@ -56,6 +58,73 @@ describe('POST /api/categorize', () => {
     })
     expect(res.status).toBe(401)
     expect(await res.json()).toEqual({ code: 'captcha-required' })
+  })
+
+  describe('upstream failure', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('fires worker_request_error to PostHog when Mistral upstream fails', async () => {
+      // Drive a real request through the full /api/categorize handler (session cookie,
+      // gating, categorize() call) so this exercises the live server-capture wiring —
+      // fireAndForget, distinctIdFrom reading the real header, and captureServer being
+      // reached at all — rather than re-testing captureServer in isolation.
+      const cookie = await signSession(env.SESSION_HMAC_SECRET, Math.floor(Date.now() / 1000))
+
+      const posthogCalls: Array<{ url: string; body: unknown }> = []
+
+      const originalFetch = globalThis.fetch
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+        const url = typeof input === 'string' ? input : ((input as Request).url ?? String(input))
+
+        if (url.includes('api.mistral.ai')) {
+          // Simulate the AI upstream failing, driving categorize() into its 'upstream' branch.
+          return new Response('upstream down', { status: 500 })
+        }
+
+        if (url.endsWith('/i/v0/e')) {
+          posthogCalls.push({ url, body: JSON.parse(String(init?.body)) })
+          return new Response(null, { status: 200 })
+        }
+
+        // Anything else is unexpected in this test — fall through to the real fetch
+        // rather than silently swallowing an unhandled request.
+        return originalFetch(input as RequestInfo, init)
+      })
+
+      const request = new Request('https://example.com/api/categorize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: 'https://example.com',
+          Cookie: `lazy_list_session=${cookie}`,
+          'X-POSTHOG-DISTINCT-ID': 'test-distinct-id',
+        },
+        body: JSON.stringify({ text: 'mleko, chleb' }),
+      })
+
+      const ctx = createExecutionContext()
+      const res = await worker.fetch(request, env, ctx)
+      expect(res.status).toBe(502)
+      expect(await res.json()).toEqual({ code: 'upstream-error' })
+
+      // fireAndForget hands the capture off via c.executionCtx.waitUntil — wait for it.
+      await waitOnExecutionContext(ctx)
+
+      expect(posthogCalls).toHaveLength(1)
+      expect(posthogCalls[0].url).toContain('/i/v0/e')
+      expect(posthogCalls[0].body).toMatchObject({
+        event: 'worker_request_error',
+        distinct_id: 'test-distinct-id',
+        properties: {
+          route: '/api/categorize',
+          status: 502,
+          code: 'upstream-error',
+          reason: 'upstream',
+        },
+      })
+    })
   })
 })
 
@@ -129,5 +198,20 @@ describe('GET / font size toggle', () => {
     const html = await res.text()
     expect(html).toContain('html.large')
     expect(html).toContain('zoom: 1.15')
+  })
+})
+
+describe('GET / analytics injection', () => {
+  it('injects the posthog key and analytics module when configured', async () => {
+    const res = await SELF.fetch('https://example.com/')
+    const html = await res.text()
+    expect(html).toContain('window.__POSTHOG_KEY__ = "phc_test"')
+    expect(html).toContain('src="/analytics.js"')
+  })
+
+  it('keeps the CSP free of third-party analytics hosts', async () => {
+    const res = await SELF.fetch('https://example.com/')
+    const csp = res.headers.get('content-security-policy') ?? ''
+    expect(csp).not.toContain('posthog')
   })
 })

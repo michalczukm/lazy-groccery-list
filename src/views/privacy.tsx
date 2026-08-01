@@ -2,6 +2,7 @@ import type { FC, PropsWithChildren } from 'hono/jsx'
 import { THEME_ANTIFLASH, THEME_CONFIG, THEME_VARS } from '../theme'
 
 const TURNSTILE_PRIVACY_URL = 'https://www.cloudflare.com/en-gb/turnstile-privacy-policy/'
+const POSTHOG_PRIVACY_URL = 'https://posthog.com/privacy'
 
 const Section: FC<{ title: string } & PropsWithChildren> = ({ title, children }) => (
   <section class="mt-6">
@@ -36,9 +37,10 @@ export const PrivacyView: FC = () => (
 
         <Section title="W skrócie">
           <p>
-            Nie zakładasz konta, nie zbieramy danych do śledzenia, nie ma reklam. Twoje listy
-            zakupów żyją w Twojej przeglądarce. Wysyłamy do przetworzenia tylko tekst, który sam
-            wpiszesz, i tylko po to, żeby go pokategoryzować.
+            Nie zakładasz konta, nie ma reklam. Zbieramy tylko anonimowe statystyki użycia i raporty
+            błędów — żeby wiedzieć, czy apka działa poprawnie. Twoje listy zakupów żyją w Twojej
+            przeglądarce. Wysyłamy do przetworzenia tylko tekst, który sam wpiszesz, i tylko po to,
+            żeby go pokategoryzować.
           </p>
         </Section>
 
@@ -49,6 +51,11 @@ export const PrivacyView: FC = () => (
             usuniesz. W pamięci przeglądarki zapisujemy też Twoją preferencję motywu (jasny lub
             ciemny) oraz rozmiar tekstu (zwykły lub duży) — wyłącznie lokalnie, nigdy nie wysyłamy
             ich na serwer.
+          </p>
+          <p>
+            W pamięci przeglądarki (localStorage) zapisujemy też anonimowy identyfikator
+            analityczny. Nie jest powiązany z Twoim imieniem, e-mailem ani żadnymi danymi osobowymi
+            — służy tylko do policzenia, ile razy apka działała poprawnie, a ile razy się wysypała.
           </p>
         </Section>
 
@@ -76,6 +83,50 @@ export const PrivacyView: FC = () => (
           </p>
         </Section>
 
+        <Section title="Analityka i błędy — PostHog">
+          <p>
+            Żeby wiedzieć, czy apka działa poprawnie, zbieramy anonimowe statystyki oraz raporty
+            błędów przez <strong>PostHog</strong> (serwery w Unii Europejskiej). Ruch analityczny
+            przechodzi przez nasz własny serwer — PostHog nie widzi Twojego adresu IP inaczej niż
+            jako adres naszego serwera.
+          </p>
+          <p>
+            <strong>Co wysyłamy:</strong> anonimowy identyfikator, adres strony bez parametrów,
+            treść błędu (komunikat i stack trace) oraz czasy wczytywania. Ten sam anonimowy
+            identyfikator dołączamy też do zapytań, które Twoja przeglądarka wysyła do naszego
+            serwera (np. przy kategoryzowaniu listy) — dzięki temu błąd zgłoszony przez przeglądarkę
+            i błąd zgłoszony przez serwer można ze sobą powiązać.
+          </p>
+          <p>
+            Automatycznie wysyłane są też techniczne informacje o Twojej przeglądarce i urządzeniu,
+            które PostHog zbiera standardowo: pełny ciąg identyfikujący przeglądarkę (user-agent),
+            rozmiar ekranu i okna przeglądarki, język przeglądarki, strefa czasowa oraz
+            identyfikator sesji/okna (używany do grupowania zdarzeń z tej samej wizyty). Te dane,
+            razem wzięte, mogłyby częściowo posłużyć do odróżnienia Twojego urządzenia od innych —
+            dlatego wymieniamy je tutaj wprost.
+          </p>
+          <p>
+            <strong>Czego nigdy nie wysyłamy:</strong> nazw produktów, tytułów list, zawartości
+            linków do udostępniania, treści wysyłanych do AI ani odpowiedzi AI. Liczby produktów na
+            liście też nie wysyłamy — ani dokładnej, ani przybliżonej. Komunikaty błędów są
+            statycznymi tekstami wpisanymi w kodzie apki — nigdy nie zawierają zawartości Twojej
+            listy.
+          </p>
+          <p>
+            Szanujemy ustawienie „Do Not Track” w przeglądarce — jeśli je włączysz, nie zbieramy
+            nic. Szczegóły opisuje{' '}
+            <a
+              href={POSTHOG_PRIVACY_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-accent underline underline-offset-2 break-words"
+            >
+              polityka prywatności PostHog
+            </a>
+            .
+          </p>
+        </Section>
+
         <Section title="Adres IP">
           <p>
             Adres IP wykorzystujemy doraźnie — do ograniczania liczby zapytań (ochrona przed
@@ -88,7 +139,8 @@ export const PrivacyView: FC = () => (
             Używamy jednego niezbędnego ciasteczka{' '}
             <code class="text-accent">lazy_list_session</code> (httpOnly, podpisanego, ważnego 24
             godziny), które pozwala korzystać z kategoryzacji bez ponownego rozwiązywania wyzwania.
-            Nie zawiera danych osobowych. Nie używamy ciasteczek analitycznych ani śledzących.
+            Nie zawiera danych osobowych. Nie używamy ciasteczek analitycznych — nasza analityka
+            trzyma swój anonimowy identyfikator w localStorage, nie w ciasteczku.
           </p>
         </Section>
 
@@ -127,7 +179,7 @@ export const PrivacyView: FC = () => (
         </Section>
 
         <p class="text-[12px] text-muted mt-10 border-t border-fg/10 pt-4">
-          Ostatnia aktualizacja: 9 lipca 2026
+          Ostatnia aktualizacja: 1 sierpnia 2026
         </p>
       </main>
     </body>

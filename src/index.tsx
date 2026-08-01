@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import type { ExecutionContext } from 'hono'
 import { jsxRenderer } from 'hono/jsx-renderer'
 import { secureHeaders } from 'hono/secure-headers'
 import { setCookie, getCookie } from 'hono/cookie'
@@ -12,13 +13,16 @@ import { isSameOrigin } from './lib/origin-guard'
 import { signSession, verifySession } from './lib/cookie-session'
 import { verifyTurnstile } from './lib/turnstile'
 import { categorize } from './lib/mistral'
+import { proxyPosthog, captureServer, distinctIdFrom } from './lib/posthog'
 
-interface Env {
+export interface Env {
   MISTRAL_API_KEY: string
   TURNSTILE_SECRET: string
   SESSION_HMAC_SECRET: string
   TURNSTILE_SITE_KEY: string
   AI_RATE_LIMIT: RateLimit
+  POSTHOG_KEY?: string
+  POSTHOG_HOST?: string
 }
 
 const SESSION_COOKIE = 'lazy_list_session'
@@ -92,6 +96,14 @@ app.post('/api/session', async c => {
   return c.body(null, 204)
 })
 
+const fireAndForget = (c: { executionCtx: ExecutionContext }, work: Promise<unknown>): void => {
+  try {
+    c.executionCtx.waitUntil(work)
+  } catch {
+    work.catch(() => {})
+  }
+}
+
 app.post('/api/categorize', async c => {
   if (!isSameOrigin(c.req.raw)) {
     return c.json({ code: 'forbidden' }, 403)
@@ -125,14 +137,29 @@ app.post('/api/categorize', async c => {
 
   const result = await categorize(text, c.env.MISTRAL_API_KEY)
   if (!result.ok) {
+    fireAndForget(
+      c,
+      captureServer(c.env, {
+        event: 'worker_request_error',
+        distinctId: distinctIdFrom(c.req.raw),
+        properties: {
+          route: '/api/categorize',
+          status: 502,
+          code: 'upstream-error',
+          reason: result.reason,
+        },
+      }),
+    )
     return c.json({ code: 'upstream-error' }, 502)
   }
   return c.json({ categories: result.categories })
 })
 
+app.all('/basket/*', c => proxyPosthog(c.req.raw, c.env))
+
 app.get('/', jsxRenderer(), c =>
   c.render(
-    <Layout turnstileSiteKey={c.env.TURNSTILE_SITE_KEY}>
+    <Layout turnstileSiteKey={c.env.TURNSTILE_SITE_KEY} posthogKey={c.env.POSTHOG_KEY}>
       <InputView />
     </Layout>,
   ),

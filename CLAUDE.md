@@ -20,6 +20,10 @@ Linting/formatting via oxc: `oxlint` (`.oxlintrc.json`) + `oxfmt` (`.oxfmtrc.jso
 
 **Client JS docs:** `public/*.js` carry type-checked JSDoc that is **TYPES-ONLY** — JSDoc blocks contain only typed tags (`@param {Type} name`, `@returns {Type}`) with **no prose**: no summary line, no `@param`/`@returns` descriptions. A function with no parameters and no meaningful return may **omit the JSDoc block entirely** (an empty block is not required); keep a one-line `@returns {Type}` only where the type is load-bearing for inference (e.g. a `new Promise()` resolve hint). Reference the shared `@typedef`s in `public/globals.d.ts` (`ShoppingListData`, `Category`, `Item`, `Template`, …) by name. Preact components use `@returns {import('preact').VNode}` and a single typed `props` object. `pnpm typecheck` runs three tsconfigs — `tsconfig.test.json` (Workers `src`), `tsconfig.public.json` (browser DOM JS via the glob `public/**/*.js`, with `public/sw.js` excluded), and `tsconfig.sw.json` (service worker) — all with `checkJs`. The type-only devDeps `preact`, `@preact/signals`, `@types/canvas-confetti` exist solely so `checkJs` can resolve app.js's esm.sh imports (runtime still loads them from the importmap). oxlint runs the `jsdoc` plugin on `public/**/*.js` and enforces `@param`/`@returns` _types_ where blocks exist (no `require-*-description` rules are enabled, so dropping descriptions stays lint-clean); note oxlint 1.71 has no `require-jsdoc` and no `jsdoc/check-param-names`, so JSDoc presence and `@param` name matching are by convention/review while types are machine-enforced.
 
+**Analytics privacy rule:** never interpolate list content (item names, titles, share payloads)
+into thrown `Error` messages. `$exception_message` and stack traces reach PostHog and are the one
+property no sanitizer can clean. Buckets and codes only.
+
 ## Architecture
 
 **Stack:** Hono (edge framework) + Cloudflare Workers runtime. UI uses HTMX for partial HTML swaps plus Preact islands for interactive components. PWA with service worker.
@@ -59,9 +63,12 @@ Input is capped at `MAX_INPUT_CHARS` (10 000).
 - `public/turnstile.js` — invisible Turnstile widget helper
 - `public/share-state.js` — gzip encode/decode list for share links
 - `public/merge-amend.js` — merge appended categories into an existing list
+- `public/analytics.js` — PostHog init, boot-error buffer
+- `public/analytics-sanitize.js` — URL sanitizer + share-payload kill switch (privacy-critical)
+- `src/lib/posthog.ts` — `/basket/*` reverse proxy + server-side `captureServer()`
 - `wrangler.jsonc` — Workers config (entry: `src/index.tsx`, assets: `./public`, `AI_RATE_LIMIT` ratelimit binding)
 
-**Secrets / vars (wrangler):** `MISTRAL_API_KEY`, `TURNSTILE_SECRET`, `SESSION_HMAC_SECRET` (secrets); `TURNSTILE_SITE_KEY` (public var).
+**Secrets / vars (wrangler):** `MISTRAL_API_KEY`, `TURNSTILE_SECRET`, `SESSION_HMAC_SECRET` (secrets); `TURNSTILE_SITE_KEY` (public var); `POSTHOG_KEY`, `POSTHOG_HOST` (public vars, optional — absent means analytics is fully disabled).
 
 **Data shape stored in IndexedDB** (emoji is derived client-side, not stored):
 
@@ -98,3 +105,4 @@ Run: `pnpm test` (vitest). Tests live next to source: `src/index.test.ts`, `src/
 
 - [Share feature testing guide](docs/testing-share-feature.md) — manual steps, automated snippets, known bugs fixed, edge cases.
 - [Testing server-side AI proxy](docs/testing-server-proxy.md) — manual steps, automated snippets, known bugs fixed, edge cases.
+- [Testing PostHog analytics](docs/testing-analytics.md) — off-by-default gates, enabling locally, and the pre-release privacy check.

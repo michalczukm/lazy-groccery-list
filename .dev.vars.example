@@ -2,3 +2,7 @@ TURNSTILE_SITE_KEY=1x00000000000000000000BB
 TURNSTILE_SECRET=1x0000000000000000000000000000000AA
 MISTRAL_API_KEY=
 SESSION_HMAC_SECRET=dev-only-rotate-me-please-32bytes-min
+# Analytics is OFF unless POSTHOG_KEY is set. Leave blank for local dev.
+POSTHOG_KEY=
+# Optional. Defaults to https://eu.i.posthog.com
+POSTHOG_HOST=
