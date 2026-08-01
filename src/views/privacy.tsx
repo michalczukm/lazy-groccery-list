@@ -92,11 +92,10 @@ export const PrivacyView: FC = () => (
           </p>
           <p>
             <strong>Co wysyłamy:</strong> anonimowy identyfikator, adres strony bez parametrów,
-            przybliżony rozmiar listy w widełkach (0, 1-10, 11-30, 30+), treść błędu (komunikat i
-            stack trace) oraz czasy wczytywania. Ten sam anonimowy identyfikator dołączamy też do
-            zapytań, które Twoja przeglądarka wysyła do naszego serwera (np. przy kategoryzowaniu
-            listy) — dzięki temu błąd zgłoszony przez przeglądarkę i błąd zgłoszony przez serwer
-            można ze sobą powiązać.
+            treść błędu (komunikat i stack trace) oraz czasy wczytywania. Ten sam anonimowy
+            identyfikator dołączamy też do zapytań, które Twoja przeglądarka wysyła do naszego
+            serwera (np. przy kategoryzowaniu listy) — dzięki temu błąd zgłoszony przez przeglądarkę
+            i błąd zgłoszony przez serwer można ze sobą powiązać.
           </p>
           <p>
             Automatycznie wysyłane są też techniczne informacje o Twojej przeglądarce i urządzeniu,
@@ -108,9 +107,10 @@ export const PrivacyView: FC = () => (
           </p>
           <p>
             <strong>Czego nigdy nie wysyłamy:</strong> nazw produktów, tytułów list, zawartości
-            linków do udostępniania, treści wysyłanych do AI ani odpowiedzi AI. Dokładna liczba
-            produktów też nie jest wysyłana — tylko widełki. Komunikaty błędów są statycznymi
-            tekstami wpisanymi w kodzie apki — nigdy nie zawierają zawartości Twojej listy.
+            linków do udostępniania, treści wysyłanych do AI ani odpowiedzi AI. Liczby produktów na
+            liście też nie wysyłamy — ani dokładnej, ani przybliżonej. Komunikaty błędów są
+            statycznymi tekstami wpisanymi w kodzie apki — nigdy nie zawierają zawartości Twojej
+            listy.
           </p>
           <p>
             Szanujemy ustawienie „Do Not Track” w przeglądarce — jeśli je włączysz, nie zbieramy
@@ -179,7 +179,7 @@ export const PrivacyView: FC = () => (
         </Section>
 
         <p class="text-[12px] text-muted mt-10 border-t border-fg/10 pt-4">
-          Ostatnia aktualizacja: 29 lipca 2026
+          Ostatnia aktualizacja: 1 sierpnia 2026
         </p>
       </main>
     </body>

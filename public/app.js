@@ -105,20 +105,6 @@ const DB = (() => {
 /** @type {import('@preact/signals').Signal<ShoppingListData|null>} */
 const currentList = signal(/** @type {ShoppingListData|null} */ (null))
 
-/**
- * @param {ShoppingListData | null} list
- * @returns {number}
- */
-const itemCount = list => (list ? list.categories.reduce((n, c) => n + c.items.length, 0) : 0)
-
-currentList.subscribe(list => {
-  try {
-    window.Analytics?.setListSize(itemCount(list))
-  } catch {
-    // Analytics must never break the app.
-  }
-})
-
 let currentView = 'input'
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
@@ -268,7 +254,7 @@ async function callCategorize(rawText, allowRetry = true) {
   } catch (err) {
     window.posthog?.capture('network_request_failed', {
       route: '/api/categorize',
-      action_source: 'ai',
+      trigger: 'user_action',
     })
     throw err
   }

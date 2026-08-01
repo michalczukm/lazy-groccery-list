@@ -1,4 +1,4 @@
-import { shareSecretFrom, sanitizeProperties, bucketSize } from './analytics-sanitize.js'
+import { shareSecretFrom, sanitizeProperties } from './analytics-sanitize.js'
 
 const PROXY = '/basket'
 const UI_HOST = 'https://eu.posthog.com'
@@ -99,10 +99,6 @@ const start = async () => {
   } catch {
     boot.dispose()
     return
-  }
-
-  window.Analytics = {
-    setListSize: count => window.posthog?.register({ list_size_bucket: bucketSize(count) }),
   }
 
   boot.flush()

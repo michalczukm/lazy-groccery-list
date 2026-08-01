@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { shareSecretFrom, sanitizeProperties, bucketSize } from '../public/analytics-sanitize.js'
+import { shareSecretFrom, sanitizeProperties } from '../public/analytics-sanitize.js'
 
 const PAYLOAD =
   'H4sIAAAAAAAAA6tWSlSyUkrKzFPSUUpKLElVslLKTC1RsopWKlDSUUosLlHSUUqvyswrUdJRKk4tKlHSUQIA'
@@ -131,16 +131,5 @@ describe('sanitizeProperties', () => {
     expect(sanitizeProperties({ note: 'leaked 1234567' }, null)).toEqual({
       note: 'leaked 1234567',
     })
-  })
-})
-
-describe('bucketSize', () => {
-  it('buckets counts into coarse ranges', () => {
-    expect(bucketSize(0)).toBe('0')
-    expect(bucketSize(1)).toBe('1-10')
-    expect(bucketSize(10)).toBe('1-10')
-    expect(bucketSize(11)).toBe('11-30')
-    expect(bucketSize(30)).toBe('11-30')
-    expect(bucketSize(31)).toBe('30+')
   })
 })

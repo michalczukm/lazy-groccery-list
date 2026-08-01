@@ -62,14 +62,3 @@ export const sanitizeProperties = (properties, secret) => {
     return null
   }
 }
-
-/**
- * @param {number} count
- * @returns {string}
- */
-export const bucketSize = count => {
-  if (count <= 0) return '0'
-  if (count <= 10) return '1-10'
-  if (count <= 30) return '11-30'
-  return '30+'
-}
