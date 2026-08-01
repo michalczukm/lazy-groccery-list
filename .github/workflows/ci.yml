@@ -67,6 +67,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # `wrangler versions upload` is invoked directly rather than through a
+      # package.json script, so it does not pick up the `pnpm vendor` prefix that
+      # `pnpm dev`/`pnpm deploy` carry. Without this step public/vendor would be
+      # empty (it is gitignored) and the preview would ship a broken importmap.
+      - name: Vendor client deps
+        run: pnpm vendor
+
       # Uploads a new *version* of the same worker (does NOT shift prod traffic)
       # and prints a unique preview URL. Inherits prod secrets + bindings.
       - name: Upload preview version
