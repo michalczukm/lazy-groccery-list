@@ -8,6 +8,7 @@
   "env": {
     "builtin": true
   },
+  "ignorePatterns": ["public/vendor/**"],
   "overrides": [
     {
       "files": ["public/**/*.js"],

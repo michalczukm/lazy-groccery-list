@@ -4,5 +4,11 @@
   "semi": false,
   "arrowParens": "avoid",
   "trailingComma": "all",
-  "ignorePatterns": ["worker-configuration.d.ts", "pnpm-lock.yaml", ".wrangler/**", "dist/**"]
+  "ignorePatterns": [
+    "worker-configuration.d.ts",
+    "pnpm-lock.yaml",
+    ".wrangler/**",
+    "dist/**",
+    "public/vendor/**"
+  ]
 }

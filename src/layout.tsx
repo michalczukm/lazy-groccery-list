@@ -48,16 +48,21 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
         type="importmap"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
+            // Served from public/vendor, built by `pnpm vendor` (esbuild) out of
+            // node_modules — see scripts/vendor-entries/. Versions come from
+            // pnpm-lock.yaml, so nothing resolves over the network at runtime.
+            //
+            // Transitive deps (@preact/signals-core) are bundled into their
+            // importer and deliberately absent here — nothing requests them by
+            // bare name. esbuild's --splitting hoists preact into one shared
+            // chunk, so signals cannot end up on a second preact instance
+            // patching an `options` object the app never renders through.
             imports: {
-              preact: 'https://esm.sh/preact@10.29.2',
-              'preact/hooks': 'https://esm.sh/preact@10.29.2/hooks',
-              // external=preact forces signals to share the app's preact instance
-              // (importmap'd 10.29.2) instead of esm.sh resolving its own preact@10.x.
-              // Two preact copies => signals patches the wrong `options` and component
-              // auto-subscription never fires (list never re-renders on add/toggle).
-              '@preact/signals': 'https://esm.sh/@preact/signals@1.3.4?external=preact',
-              htm: 'https://esm.sh/htm@3.1.1',
-              'canvas-confetti': 'https://esm.sh/canvas-confetti@1.6.0',
+              preact: '/vendor/preact.js',
+              'preact/hooks': '/vendor/hooks.js',
+              '@preact/signals': '/vendor/signals.js',
+              htm: '/vendor/htm.js',
+              'canvas-confetti': '/vendor/confetti.js',
             },
           }),
         }}

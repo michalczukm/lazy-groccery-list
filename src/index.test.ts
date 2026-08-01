@@ -166,14 +166,56 @@ describe('GET /privacy', () => {
   })
 })
 
+describe('CSP', () => {
+  it('does not grant esm.sh any privileges', async () => {
+    // Regression: the client deps were loaded from esm.sh, so script-src trusted
+    // that origin wholesale and connect-src pinned per-version paths. esm.sh
+    // resolves transitive deps by range at request time (@preact/signals imports
+    // "@preact/signals-core@^1.7.0"), so a 1.14.3 -> 1.14.4 upstream bump broke
+    // CSP on its own. Deps are vendored to public/vendor now; esm.sh is gone.
+    const res = await SELF.fetch('https://example.com/')
+    const csp = res.headers.get('content-security-policy') ?? ''
+    expect(csp).not.toContain('esm.sh')
+  })
+
+  it('restricts connect-src to same origin', async () => {
+    const res = await SELF.fetch('https://example.com/')
+    const csp = res.headers.get('content-security-policy') ?? ''
+    expect(csp).toContain("connect-src 'self';")
+  })
+})
+
 describe('GET / importmap', () => {
-  it('pins @preact/signals to the app preact instance via external=preact', async () => {
-    // Regression: esm.sh otherwise resolves its own preact@10.x for signals, giving
-    // a second preact instance whose patched `options` the app never renders through,
-    // so signal-driven components never re-render (list stale after add/toggle).
+  /** The importmap object literal embedded in the page. */
+  async function fetchImports(): Promise<Record<string, string>> {
     const res = await SELF.fetch('https://example.com/')
     const html = await res.text()
-    expect(html).toContain('@preact/signals@1.3.4?external=preact')
+    const json = /<script type="importmap"[^>]*>(.*?)<\/script>/s.exec(html)?.[1]
+    expect(json, 'no importmap found in the page').toBeTruthy()
+    return JSON.parse(json as string).imports
+  }
+
+  it('maps exactly the bare specifiers the client imports, all to /vendor', async () => {
+    // Every entry must be a specifier public/*.js actually imports, and every
+    // specifier they import must have an entry — a missing one is unresolvable
+    // in the browser, a stray one is a dep nothing bundles any more.
+    const imports = await fetchImports()
+    expect(Object.keys(imports).sort()).toEqual([
+      '@preact/signals',
+      'canvas-confetti',
+      'htm',
+      'preact',
+      'preact/hooks',
+    ])
+    for (const url of Object.values(imports)) expect(url).toMatch(/^\/vendor\//)
+  })
+
+  it('does not map transitive deps that esbuild bundles into their importer', async () => {
+    // @preact/signals-core is reached only through @preact/signals, so esbuild
+    // inlines it and nothing requests it by bare name. Re-adding it here would
+    // load a second copy of signals-core alongside the bundled one.
+    const imports = await fetchImports()
+    expect(imports).not.toHaveProperty('@preact/signals-core')
   })
 })
 

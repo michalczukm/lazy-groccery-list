@@ -5,8 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-pnpm dev        # local dev server via wrangler
-pnpm deploy     # deploy to Cloudflare Workers (minified)
+pnpm vendor     # esbuild client deps from node_modules → public/vendor (gitignored)
+pnpm dev        # pnpm vendor, then local dev server via wrangler
+pnpm deploy     # pnpm vendor, then deploy to Cloudflare Workers (minified)
 pnpm test       # run vitest (Cloudflare Workers pool)
 pnpm typecheck  # tsc on src (Workers) + public DOM JS + service worker (all checkJs)
 pnpm cf-typegen # regenerate Cloudflare bindings types → worker-configuration.d.ts
@@ -18,7 +19,7 @@ pnpm fmt:check  # oxfmt --check
 
 Linting/formatting via oxc: `oxlint` (`.oxlintrc.json`) + `oxfmt` (`.oxfmtrc.json`, single-quote/no-semi/avoid-arrow-parens). A husky `pre-commit` hook runs `lint-staged`, which applies `oxlint --fix` + `oxfmt` to staged files only.
 
-**Client JS docs:** `public/*.js` carry type-checked JSDoc that is **TYPES-ONLY** — JSDoc blocks contain only typed tags (`@param {Type} name`, `@returns {Type}`) with **no prose**: no summary line, no `@param`/`@returns` descriptions. A function with no parameters and no meaningful return may **omit the JSDoc block entirely** (an empty block is not required); keep a one-line `@returns {Type}` only where the type is load-bearing for inference (e.g. a `new Promise()` resolve hint). Reference the shared `@typedef`s in `public/globals.d.ts` (`ShoppingListData`, `Category`, `Item`, `Template`, …) by name. Preact components use `@returns {import('preact').VNode}` and a single typed `props` object. `pnpm typecheck` runs three tsconfigs — `tsconfig.test.json` (Workers `src`), `tsconfig.public.json` (browser DOM JS via the glob `public/**/*.js`, with `public/sw.js` excluded), and `tsconfig.sw.json` (service worker) — all with `checkJs`. The type-only devDeps `preact`, `@preact/signals`, `@types/canvas-confetti` exist solely so `checkJs` can resolve app.js's esm.sh imports (runtime still loads them from the importmap). oxlint runs the `jsdoc` plugin on `public/**/*.js` and enforces `@param`/`@returns` _types_ where blocks exist (no `require-*-description` rules are enabled, so dropping descriptions stays lint-clean); note oxlint 1.71 has no `require-jsdoc` and no `jsdoc/check-param-names`, so JSDoc presence and `@param` name matching are by convention/review while types are machine-enforced.
+**Client JS docs:** `public/*.js` carry type-checked JSDoc that is **TYPES-ONLY** — JSDoc blocks contain only typed tags (`@param {Type} name`, `@returns {Type}`) with **no prose**: no summary line, no `@param`/`@returns` descriptions. A function with no parameters and no meaningful return may **omit the JSDoc block entirely** (an empty block is not required); keep a one-line `@returns {Type}` only where the type is load-bearing for inference (e.g. a `new Promise()` resolve hint). Reference the shared `@typedef`s in `public/globals.d.ts` (`ShoppingListData`, `Category`, `Item`, `Template`, …) by name. Preact components use `@returns {import('preact').VNode}` and a single typed `props` object. `pnpm typecheck` runs three tsconfigs — `tsconfig.test.json` (Workers `src`), `tsconfig.public.json` (browser DOM JS via the glob `public/**/*.js`, with `public/sw.js` and the generated `public/vendor` excluded), and `tsconfig.sw.json` (service worker) — all with `checkJs`. `preact`, `@preact/signals`, `htm` and `canvas-confetti` are runtime `dependencies` (vendored into `public/vendor`, see above) and double as the types `checkJs` resolves app.js's bare imports against; `@types/canvas-confetti` supplies the types that package ships without. oxlint runs the `jsdoc` plugin on `public/**/*.js` and enforces `@param`/`@returns` _types_ where blocks exist (no `require-*-description` rules are enabled, so dropping descriptions stays lint-clean); note oxlint 1.71 has no `require-jsdoc` and no `jsdoc/check-param-names`, so JSDoc presence and `@param` name matching are by convention/review while types are machine-enforced.
 
 **Analytics privacy rule:** never interpolate list content (item names, titles, share payloads)
 into thrown `Error` messages. `$exception_message` and stack traces reach PostHog and are the one
@@ -32,6 +33,19 @@ property no sanitizer can clean. Buckets and codes only.
 
 - `src/` — server-side Hono JSX views **plus** the AI proxy API (`/api/session`, `/api/categorize`). Views return static HTML shells (empty containers). No persistent server-side state — IndexedDB on the client holds all lists.
 - `public/app.js` — client business logic. Preact components mount into server-rendered containers at runtime.
+- `public/vendor/` — **generated, gitignored.** `pnpm vendor` runs esbuild over the one-line re-export stubs in `scripts/vendor-entries/` (see the README there), bundling `preact`, `preact/hooks`, `@preact/signals`, `htm` and `canvas-confetti` out of `node_modules` into minified ESM + source maps. The importmap in `src/layout.tsx` points every bare specifier at the resulting entry files.
+
+**Client deps are vendored, not CDN-loaded.** They used to come from esm.sh, which forced CSP to trust that origin in `script-src` and pin per-version paths in `connect-src` — and esm.sh resolves transitive deps by semver **range** at request time (`@preact/signals` imports `@preact/signals-core@^1.7.0`), so an upstream 1.14.3 → 1.14.4 bump changed the shipped bytes and broke CSP with no commit anywhere. Vendoring makes `pnpm-lock.yaml` the single source of truth and lets CSP drop esm.sh entirely.
+
+This is the only build step in the project; `public/*.js` app code is still hand-authored and served raw, never bundled.
+
+Consequences to keep in mind when touching this:
+
+- `preact`, `@preact/signals`, `htm`, `canvas-confetti` are real `dependencies`, not devDeps — their bytes ship.
+- `--splitting` is load-bearing, not a size optimisation. It hoists preact into one shared chunk that `preact.js`, `hooks.js` and `signals.js` all import. Drop it and each entry inlines its own preact; signals then patches an `options` object the app never renders through, and the list goes stale on add/toggle. This replaces the old esm.sh `?external=preact` query hack.
+- Transitive deps (`@preact/signals-core`) are bundled into their importer and must **not** get importmap entries — nothing requests them by bare name, and an entry would load a second copy alongside the bundled one. A test asserts the importmap keys exactly.
+- `public/vendor` is excluded from `tsconfig.public.json`, `.oxlintrc.json` and `.oxfmtrc.json` — it is third-party dist code, not ours.
+- Anything invoking wrangler **directly** rather than through a package.json script must run `pnpm vendor` first, or it ships an empty `public/vendor`. The CI preview job (`wrangler versions upload`) does exactly this and has its own vendor step.
 
 **Data flow:**
 
@@ -66,6 +80,7 @@ Input is capped at `MAX_INPUT_CHARS` (10 000).
 - `public/analytics.js` — PostHog init, boot-error buffer
 - `public/analytics-sanitize.js` — URL sanitizer + share-payload kill switch (privacy-critical)
 - `src/lib/posthog.ts` — `/basket/*` reverse proxy + server-side `captureServer()`
+- `scripts/vendor-entries/` — one-line re-export stubs, one per bare specifier; esbuild entry points for `pnpm vendor`
 - `wrangler.jsonc` — Workers config (entry: `src/index.tsx`, assets: `./public`, `AI_RATE_LIMIT` ratelimit binding)
 
 **Secrets / vars (wrangler):** `MISTRAL_API_KEY`, `TURNSTILE_SECRET`, `SESSION_HMAC_SECRET` (secrets); `TURNSTILE_SITE_KEY` (public var); `POSTHOG_KEY`, `POSTHOG_HOST` (public vars, optional — absent means analytics is fully disabled).
