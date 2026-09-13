@@ -9,6 +9,7 @@ import { encodeState, decodeState } from './share-state.js'
 import { mergeAmendInto } from './merge-amend.js'
 import { listToTemplate, templateToList } from './template-shape.js'
 import { executeTurnstile } from './turnstile.js'
+import { getItemLink } from './item-link.js'
 
 // Emoji per category name. Keep in sync with CATEGORIES in src/lib/mistral.ts.
 /** @type {Record<string, string>} */
@@ -539,6 +540,10 @@ function ShoppingList() {
       ),
     }
   }
+  /** @param {MouseEvent} e */
+  function stopItemLinkClick(e) {
+    e.stopPropagation()
+  }
 
   return html` <div>
     <div class="mb-5 pt-1">
@@ -597,8 +602,12 @@ function ShoppingList() {
           <div class="cat-grid ${cat.collapsed ? 'collapsed' : ''}">
             <div class="cat-grid-inner">
               <div>
-                ${cat.items.map(
-                  (item, ii) => html`
+                ${cat.items.map((item, ii) => {
+                  const link = getItemLink(item.name)
+                  const itemTextClass = `text-[15px] ${
+                    item.checked ? 'text-muted line-through' : 'text-fg/90'
+                  }`
+                  return html`
                     <div
                       class="flex items-center px-1 py-[13px] border-b border-fg/[0.07] last:border-0 cursor-pointer active:opacity-70"
                       onClick=${() => toggleItem(ci, ii)}
@@ -611,15 +620,19 @@ function ShoppingList() {
                       >
                         ${item.checked && html`<${CheckIcon} />`}
                       </div>
-                      <span
-                        class="text-[15px] ${item.checked
-                          ? 'text-muted line-through'
-                          : 'text-fg/90'}"
-                        >${item.name}</span
-                      >
+                      ${link
+                        ? html`<a
+                            class="${itemTextClass} underline decoration-fg/30 underline-offset-4"
+                            href=${link.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick=${stopItemLinkClick}
+                            >${link.label}</a
+                          >`
+                        : html`<span class=${itemTextClass}>${item.name}</span>`}
                     </div>
-                  `,
-                )}
+                  `
+                })}
               </div>
             </div>
           </div>
