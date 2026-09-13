@@ -9,6 +9,7 @@ import { encodeState, decodeState } from './share-state.js'
 import { mergeAmendInto } from './merge-amend.js'
 import { listToTemplate, templateToList } from './template-shape.js'
 import { executeTurnstile } from './turnstile.js'
+import { getItemLinkSegments, stopItemLinkClick } from './item-link.js'
 
 // Emoji per category name. Keep in sync with CATEGORIES in src/lib/mistral.ts.
 /** @type {Record<string, string>} */
@@ -539,7 +540,6 @@ function ShoppingList() {
       ),
     }
   }
-
   return html` <div>
     <div class="mb-5 pt-1">
       <div class="flex items-center justify-between mb-2">
@@ -597,8 +597,12 @@ function ShoppingList() {
           <div class="cat-grid ${cat.collapsed ? 'collapsed' : ''}">
             <div class="cat-grid-inner">
               <div>
-                ${cat.items.map(
-                  (item, ii) => html`
+                ${cat.items.map((item, ii) => {
+                  const linkSegments = getItemLinkSegments(item.name)
+                  const itemTextClass = `text-[15px] ${
+                    item.checked ? 'text-muted line-through' : 'text-fg/90'
+                  }`
+                  return html`
                     <div
                       class="flex items-center px-1 py-[13px] border-b border-fg/[0.07] last:border-0 cursor-pointer active:opacity-70"
                       onClick=${() => toggleItem(ci, ii)}
@@ -611,15 +615,24 @@ function ShoppingList() {
                       >
                         ${item.checked && html`<${CheckIcon} />`}
                       </div>
-                      <span
-                        class="text-[15px] ${item.checked
-                          ? 'text-muted line-through'
-                          : 'text-fg/90'}"
-                        >${item.name}</span
-                      >
+                      <span class=${itemTextClass}>
+                        ${linkSegments.map((segment, segmentIndex) =>
+                          segment.href
+                            ? html`<a
+                                class="underline decoration-fg/30 underline-offset-4"
+                                href=${segment.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick=${stopItemLinkClick}
+                                key=${segmentIndex}
+                                >${segment.text}</a
+                              >`
+                            : html`<span key=${segmentIndex}>${segment.text}</span>`,
+                        )}
+                      </span>
                     </div>
-                  `,
-                )}
+                  `
+                })}
               </div>
             </div>
           </div>
