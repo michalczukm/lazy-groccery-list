@@ -24,6 +24,8 @@ declare global {
     title: string
     date: number
     saved: boolean
+    shareId?: string
+    shareUpdatedAt?: number
     categories: Category[]
   }
 

@@ -6,6 +6,13 @@ import { html } from './html.js'
 import { PlusIcon, CheckIcon } from './icons.js'
 import { Meatballs } from './meatballs.js'
 import { encodeState, decodeState } from './share-state.js'
+import {
+  createShareId,
+  isListSyncMessage,
+  listToSyncMessage,
+  sanitizeShareId,
+  syncMessageToList,
+} from './list-sync.js'
 import { mergeAmendInto } from './merge-amend.js'
 import { listToTemplate, templateToList } from './template-shape.js'
 import { executeTurnstile } from './turnstile.js'
@@ -107,6 +114,89 @@ const DB = (() => {
 const currentList = signal(/** @type {ShoppingListData|null} */ (null))
 
 let currentView = 'input'
+const syncClientId = createShareId()
+/** @type {{ shareId: string, socket: WebSocket } | null} */
+let activeSync = null
+/** @type {ReturnType<typeof setTimeout> | null} */
+let syncReconnectTimer = null
+let applyingRemoteSync = false
+
+function stopListSync() {
+  if (syncReconnectTimer) {
+    clearTimeout(syncReconnectTimer)
+    syncReconnectTimer = null
+  }
+  if (activeSync) {
+    activeSync.socket.close()
+    activeSync = null
+  }
+}
+
+/** @param {ShoppingListData} list */
+function broadcastListSync(list) {
+  if (!activeSync || activeSync.shareId !== list.shareId) return
+  if (activeSync.socket.readyState !== WebSocket.OPEN) return
+  activeSync.socket.send(JSON.stringify(listToSyncMessage(list, syncClientId)))
+}
+
+/** @param {ShoppingListData | null} list */
+function startListSync(list) {
+  const shareId = sanitizeShareId(list?.shareId)
+  if (!list || !shareId) {
+    stopListSync()
+    return
+  }
+  if (activeSync?.shareId === shareId) return
+
+  stopListSync()
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const socket = new WebSocket(`${protocol}//${location.host}/api/list-sync/${shareId}`)
+  activeSync = { shareId, socket }
+
+  socket.addEventListener('open', () => {
+    if (currentList.value?.shareId === shareId) broadcastListSync(currentList.value)
+  })
+  socket.addEventListener('message', async event => {
+    if (typeof event.data !== 'string') return
+    let data
+    try {
+      data = JSON.parse(event.data)
+    } catch {
+      return
+    }
+    if (!isListSyncMessage(data)) return
+    if (data.clientId === syncClientId) return
+    if (data.shareId !== shareId) return
+    const current = currentList.value
+    if (!current || current.shareId !== shareId) return
+    if ((current.shareUpdatedAt ?? 0) >= data.updatedAt) return
+
+    applyingRemoteSync = true
+    try {
+      const synced = syncMessageToList(data, current)
+      currentList.value = synced
+      await DB.save(synced)
+      updateHeader(currentView)
+    } finally {
+      applyingRemoteSync = false
+    }
+  })
+  socket.addEventListener('close', () => {
+    if (activeSync?.socket === socket) {
+      activeSync = null
+      syncReconnectTimer = setTimeout(() => startListSync(currentList.value), 1500)
+    }
+  })
+}
+
+/** @param {ShoppingListData} list */
+async function saveSyncedList(list) {
+  const next = list.shareId ? { ...list, shareUpdatedAt: Date.now() } : list
+  await DB.save(next)
+  currentList.value = next
+  startListSync(next)
+  if (!applyingRemoteSync) broadcastListSync(next)
+}
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 function openAmendModal() {
@@ -372,8 +462,8 @@ async function amendCurrentList() {
     const { categories, added, skipped } = mergeAmendInto(currentList.value, newCategories)
 
     const updated = { ...currentList.value, categories }
-    if (updated.saved) await DB.save(updated)
-    currentList.value = updated
+    if (updated.saved) await saveSyncedList(updated)
+    else currentList.value = updated
 
     hideLoading()
     closeAmendModal()
@@ -391,13 +481,13 @@ async function amendCurrentList() {
 // ── List actions ──────────────────────────────────────────────────────────────
 async function saveCurrentList() {
   const saved = /** @type {ShoppingListData} */ ({ ...currentList.value, saved: true })
-  await DB.save(saved)
-  currentList.value = saved
+  await saveSyncedList(saved)
   toast('Lista zapisana 💾')
 }
 
 function discardCurrentList() {
   if (!confirm('Odrzucić bieżącą listę?')) return
+  stopListSync()
   currentList.value = null
   navigateTo('input')
 }
@@ -437,6 +527,7 @@ async function loadHistory(id) {
     c.manualExpand ??= false
   })
   currentList.value = l
+  startListSync(l)
   navigateTo('list')
 }
 
@@ -445,6 +536,7 @@ async function delHistory(id) {
   if (!confirm('Usunąć tę listę?')) return
   await DB.del(id)
   if (currentList.value?.id === id) currentList.value = null
+  if (!currentList.value) stopListSync()
   await mountHistoryIsland()
   toast('Lista usunięta')
 }
@@ -521,10 +613,11 @@ function ShoppingList() {
           ...cur,
           categories: cur.categories.map((c, i) => (i === ci ? { ...c, collapsed: true } : c)),
         }
+        if (cur.saved) saveSyncedList(/** @type {ShoppingListData} */ (currentList.value))
       }, 450)
     }
     if (/** @type {ShoppingListData} */ (list).saved) {
-      DB.save(/** @type {ShoppingListData} */ (currentList.value)).catch(e =>
+      saveSyncedList(/** @type {ShoppingListData} */ (currentList.value)).catch(e =>
         console.error('Auto-save failed', e),
       )
     }
@@ -539,6 +632,7 @@ function ShoppingList() {
         i !== ci ? c : { ...c, collapsed: !c.collapsed, manualExpand: c.collapsed },
       ),
     }
+    if (cur.saved) saveSyncedList(/** @type {ShoppingListData} */ (currentList.value))
   }
   return html` <div>
     <div class="mb-5 pt-1">
@@ -857,6 +951,7 @@ async function pickTemplate(id) {
   const list = templateToList(t, now, t.name + ' ' + fmtDate(now))
   await DB.save(list)
   currentList.value = list
+  startListSync(list)
   navigateTo('list')
 }
 
@@ -936,10 +1031,15 @@ function fmtDateFull(ts) {
 /** @param {ShoppingListData} list */
 async function shareList(list) {
   try {
-    const encoded = await encodeState(list)
-    const url = `${location.origin}/?state=${encoded}`
+    const shareId = sanitizeShareId(list.shareId) ?? createShareId()
+    const sharedList = { ...list, shareId, shareUpdatedAt: Date.now() }
+    await DB.save(sharedList)
+    currentList.value = sharedList
+    startListSync(sharedList)
+    const encoded = await encodeState(sharedList)
+    const url = `${location.origin}/?state=${encoded}&share=${shareId}`
     if (navigator.share) {
-      await navigator.share({ title: list.title, url })
+      await navigator.share({ title: sharedList.title, url })
     } else if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(url)
       toast('Link skopiowany 🔗')
@@ -954,15 +1054,19 @@ async function shareList(list) {
 
 /** @returns {Promise<boolean>} */
 async function handleSharedState() {
-  const state = new URLSearchParams(location.search).get('state')
+  const params = new URLSearchParams(location.search)
+  const state = params.get('state')
   if (!state) return false
   try {
     const payload = await decodeState(state)
+    const shareId = sanitizeShareId(params.get('share')) ?? undefined
     currentList.value = /** @type {ShoppingListData} */ ({
       id: Date.now(),
       title: payload.title,
       date: payload.date,
       saved: true,
+      shareId,
+      shareUpdatedAt: 0,
       model: '',
       categories: payload.categories.map(c => ({
         name: c.name,
@@ -972,6 +1076,7 @@ async function handleSharedState() {
       })),
     })
     await DB.save(/** @type {ShoppingListData} */ (currentList.value))
+    startListSync(currentList.value)
     history.replaceState(null, '', '/')
     return true
   } catch {

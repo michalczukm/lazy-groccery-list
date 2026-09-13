@@ -147,14 +147,25 @@ export const PrivacyView: FC = () => (
         <Section title="Udostępnianie list">
           <p>
             Gdy tworzysz link do udostępnienia listy, jej zawartość jest zakodowana bezpośrednio w
-            adresie URL. Udostępniasz ją dobrowolnie i to Ty decydujesz, komu wyślesz link. Gdy
-            otworzysz otrzymany link, lista zapisuje się w pamięci Twojej przeglądarki (IndexedDB) —
-            tak samo jak Twoje własne listy — i zostaje u Ciebie, dopóki jej nie usuniesz.
+            adresie URL, razem z losowym identyfikatorem pokoju współdzielenia. Udostępniasz ją
+            dobrowolnie i to Ty decydujesz, komu wyślesz link. Gdy otworzysz otrzymany link, lista
+            zapisuje się w pamięci Twojej przeglądarki (IndexedDB) — tak samo jak Twoje własne listy
+            — i zostaje u Ciebie, dopóki jej nie usuniesz.
+          </p>
+          <p>
+            Jeśli dwie osoby mają otwartą tę samą udostępnioną listę, zmiany synchronizują się na
+            żywo przez WebSocket obsługiwany przez Cloudflare Workers i Durable Objects. Serwer
+            przekazuje aktualny stan listy między otwartymi przeglądarkami, ale nie zapisuje listy
+            jako trwałej bazy danych — trwała kopia pozostaje w przeglądarkach osób, które otworzyły
+            link.
           </p>
         </Section>
 
         <Section title="Hosting">
-          <p>Apka działa na Cloudflare Workers.</p>
+          <p>
+            Apka działa na Cloudflare Workers. Synchronizacja na żywo używa Cloudflare Durable
+            Objects.
+          </p>
         </Section>
 
         <Section title="Twoja kontrola nad danymi">
@@ -179,7 +190,7 @@ export const PrivacyView: FC = () => (
         </Section>
 
         <p class="text-[12px] text-muted mt-10 border-t border-fg/10 pt-4">
-          Ostatnia aktualizacja: 1 sierpnia 2026
+          Ostatnia aktualizacja: 13 września 2026
         </p>
       </main>
     </body>
