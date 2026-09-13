@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getItemLink, getItemLinkSegments } from '../public/item-link.js'
+import { getItemLink, getItemLinkSegments, stopItemLinkClick } from '../public/item-link.js'
 
 describe('getItemLink', () => {
   it('returns an external href for http and https item names', () => {
@@ -33,5 +33,41 @@ describe('getItemLinkSegments', () => {
       { text: 'www.example.com/deals', href: 'https://www.example.com/deals' },
       { text: ' today' },
     ])
+  })
+
+  it('keeps trailing sentence punctuation outside url links', () => {
+    expect(getItemLinkSegments('buy www.example.com/deals, today')).toEqual([
+      { text: 'buy ' },
+      { text: 'www.example.com/deals', href: 'https://www.example.com/deals' },
+      { text: ', today' },
+    ])
+    expect(getItemLinkSegments('see https://example.com/a_(b).')).toEqual([
+      { text: 'see ' },
+      { text: 'https://example.com/a_(b)', href: 'https://example.com/a_(b)' },
+      { text: '.' },
+    ])
+  })
+
+  it('links each url segment independently', () => {
+    expect(getItemLinkSegments('compare www.example.com and https://shop.example/cart')).toEqual([
+      { text: 'compare ' },
+      { text: 'www.example.com', href: 'https://www.example.com/' },
+      { text: ' and ' },
+      { text: 'https://shop.example/cart', href: 'https://shop.example/cart' },
+    ])
+  })
+})
+
+describe('stopItemLinkClick', () => {
+  it('stops link clicks from toggling the item row', () => {
+    let stopped = false
+
+    stopItemLinkClick({
+      stopPropagation() {
+        stopped = true
+      },
+    })
+
+    expect(stopped).toBe(true)
   })
 })

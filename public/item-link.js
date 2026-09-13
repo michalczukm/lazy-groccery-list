@@ -1,4 +1,64 @@
 const ITEM_URL_PATTERN = /(?:https?:\/\/|www\.)[^\s]+/gi
+const TRAILING_URL_PUNCTUATION = new Set(['.', ',', '!', '?', ':', ';', '"', "'"])
+const TRAILING_PAIRED_PUNCTUATION = {
+  ')': '(',
+  ']': '[',
+  '}': '{',
+}
+
+/**
+ * @param {string} value
+ * @param {string} char
+ * @returns {number}
+ */
+function countChar(value, char) {
+  let count = 0
+  for (const current of value) {
+    if (current === char) count += 1
+  }
+  return count
+}
+
+/**
+ * @param {string} candidate
+ * @returns {{ label: string, trailingText: string }}
+ */
+function splitTrailingUrlPunctuation(candidate) {
+  let label = candidate
+  let trailingText = ''
+
+  while (label) {
+    const lastChar = label.at(-1)
+    if (!lastChar) break
+
+    const openingPair =
+      /** @type {Partial<Record<string, string>>} */ (TRAILING_PAIRED_PUNCTUATION)[lastChar]
+    const shouldTrimPair = openingPair && countChar(label, lastChar) > countChar(label, openingPair)
+    const shouldTrim = TRAILING_URL_PUNCTUATION.has(lastChar) || shouldTrimPair
+    if (!shouldTrim) break
+
+    trailingText = lastChar + trailingText
+    label = label.slice(0, -1)
+  }
+
+  return { label, trailingText }
+}
+
+/**
+ * @param {Array<{ text: string, href?: string }>} segments
+ * @param {string} text
+ */
+function pushTextSegment(segments, text) {
+  if (!text) return
+
+  const previous = segments.at(-1)
+  if (previous && !previous.href) {
+    previous.text += text
+    return
+  }
+
+  segments.push({ text })
+}
 
 /**
  * @param {string} label
@@ -40,16 +100,23 @@ export function getItemLinkSegments(name) {
   let lastIndex = 0
 
   for (const match of name.matchAll(ITEM_URL_PATTERN)) {
-    const text = match[0]
+    const candidate = match[0]
+    const { label: text, trailingText } = splitTrailingUrlPunctuation(candidate)
     const index = /** @type {number} */ (match.index)
     const href = normalizeHref(text)
     if (!href) continue
 
-    if (index > lastIndex) segments.push({ text: name.slice(lastIndex, index) })
+    if (index > lastIndex) pushTextSegment(segments, name.slice(lastIndex, index))
     segments.push({ text, href })
-    lastIndex = index + text.length
+    pushTextSegment(segments, trailingText)
+    lastIndex = index + candidate.length
   }
 
-  if (lastIndex < name.length) segments.push({ text: name.slice(lastIndex) })
+  if (lastIndex < name.length) pushTextSegment(segments, name.slice(lastIndex))
   return segments.length ? segments : [{ text: name }]
+}
+
+/** @param {{ stopPropagation: () => void }} e */
+export function stopItemLinkClick(e) {
+  e.stopPropagation()
 }

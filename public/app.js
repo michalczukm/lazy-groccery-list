@@ -9,7 +9,7 @@ import { encodeState, decodeState } from './share-state.js'
 import { mergeAmendInto } from './merge-amend.js'
 import { listToTemplate, templateToList } from './template-shape.js'
 import { executeTurnstile } from './turnstile.js'
-import { getItemLinkSegments } from './item-link.js'
+import { getItemLinkSegments, stopItemLinkClick } from './item-link.js'
 
 // Emoji per category name. Keep in sync with CATEGORIES in src/lib/mistral.ts.
 /** @type {Record<string, string>} */
@@ -540,11 +540,6 @@ function ShoppingList() {
       ),
     }
   }
-  /** @param {MouseEvent} e */
-  function stopItemLinkClick(e) {
-    e.stopPropagation()
-  }
-
   return html` <div>
     <div class="mb-5 pt-1">
       <div class="flex items-center justify-between mb-2">
