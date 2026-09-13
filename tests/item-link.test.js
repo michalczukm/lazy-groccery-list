@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getItemLink } from '../public/item-link.js'
+import { getItemLink, getItemLinkSegments } from '../public/item-link.js'
 
 describe('getItemLink', () => {
   it('returns an external href for http and https item names', () => {
@@ -23,5 +23,15 @@ describe('getItemLink', () => {
   it('leaves non-link item names as plain text', () => {
     expect(getItemLink('milk')).toBeNull()
     expect(getItemLink('example.com')).toBeNull()
+  })
+})
+
+describe('getItemLinkSegments', () => {
+  it('links only the url text inside an item name', () => {
+    expect(getItemLinkSegments('bread www.example.com/deals today')).toEqual([
+      { text: 'bread ' },
+      { text: 'www.example.com/deals', href: 'https://www.example.com/deals' },
+      { text: ' today' },
+    ])
   })
 })
