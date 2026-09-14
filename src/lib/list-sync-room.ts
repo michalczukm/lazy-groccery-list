@@ -48,7 +48,15 @@ function isListSyncMessage(value: unknown): value is ListSyncMessage {
 
 function compareSyncMessages(a: ListSyncMessage, b: ListSyncMessage): number {
   if (a.updatedAt !== b.updatedAt) return a.updatedAt - b.updatedAt
-  return a.clientId.localeCompare(b.clientId)
+  if (a.clientId === b.clientId) return 0
+  return a.clientId < b.clientId ? -1 : 1
+}
+
+export async function loadLatestListState(storage: {
+  get<T = unknown>(key: string): Promise<T | undefined>
+}): Promise<ListSyncMessage | null> {
+  const latest = await storage.get<unknown>(LATEST_STATE_KEY)
+  return isListSyncMessage(latest) ? latest : null
 }
 
 export class ListSyncRoom extends DurableObject {
@@ -84,8 +92,7 @@ export class ListSyncRoom extends DurableObject {
 
   private async loadLatestState(): Promise<void> {
     if (this.latestLoaded) return
-    const latest = await this.ctx.storage.get<unknown>(LATEST_STATE_KEY)
-    this.latest = isListSyncMessage(latest) ? latest : null
+    this.latest = await loadLatestListState(this.ctx.storage)
     this.latestLoaded = true
   }
 

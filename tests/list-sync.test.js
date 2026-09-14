@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
+  compareSyncMessages,
+  createShareVersionAllocator,
   createShareId,
   isListSyncMessage,
   listToSyncMessage,
@@ -45,11 +47,11 @@ describe('share room IDs', () => {
 
 describe('list sync messages', () => {
   it('serializes a list without UI-only category state', () => {
-    const message = listToSyncMessage(list, 'client-a')
+    const message = listToSyncMessage({ ...list, shareUpdatedBy: 'original-writer' }, 'client-a')
 
     expect(message).toEqual({
       type: 'list-state',
-      clientId: 'client-a',
+      clientId: 'original-writer',
       shareId: 'room_abc',
       updatedAt: 2000,
       title: 'Zakupy test',
@@ -61,6 +63,22 @@ describe('list sync messages', () => {
         },
       ],
     })
+  })
+
+  it('uses locale-independent code-unit ordering for equal timestamps', () => {
+    expect(
+      compareSyncMessages({ updatedAt: 1, clientId: 'I' }, { updatedAt: 1, clientId: 'i' }),
+    ).toBeLessThan(0)
+    expect(
+      compareSyncMessages({ updatedAt: 1, clientId: 'i' }, { updatedAt: 1, clientId: 'I' }),
+    ).toBeGreaterThan(0)
+  })
+
+  it('allocates unique increasing local versions for overlapping saves', () => {
+    const allocate = createShareVersionAllocator('client-a', () => 2000)
+
+    expect(allocate(list)).toEqual({ shareUpdatedAt: 2001, shareUpdatedBy: 'client-a' })
+    expect(allocate(list)).toEqual({ shareUpdatedAt: 2002, shareUpdatedBy: 'client-a' })
   })
 
   it('validates inbound messages before applying them', () => {

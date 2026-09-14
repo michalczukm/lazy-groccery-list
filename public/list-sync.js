@@ -41,7 +41,22 @@ export function createShareId() {
  */
 export function compareSyncMessages(a, b) {
   if (a.updatedAt !== b.updatedAt) return a.updatedAt - b.updatedAt
-  return a.clientId.localeCompare(b.clientId)
+  if (a.clientId === b.clientId) return 0
+  return a.clientId < b.clientId ? -1 : 1
+}
+
+/**
+ * @param {string} clientId
+ * @param {() => number} [now]
+ * @returns {(list: ShoppingListData) => { shareUpdatedAt: number, shareUpdatedBy: string }}
+ */
+export function createShareVersionAllocator(clientId, now = Date.now) {
+  let lastShareUpdatedAt = 0
+  return list => {
+    const shareUpdatedAt = Math.max(now(), (list.shareUpdatedAt ?? 0) + 1, lastShareUpdatedAt + 1)
+    lastShareUpdatedAt = shareUpdatedAt
+    return { shareUpdatedAt, shareUpdatedBy: clientId }
+  }
 }
 
 /**
@@ -52,7 +67,7 @@ export function compareSyncMessages(a, b) {
 export function listToSyncMessage(list, clientId) {
   return {
     type: 'list-state',
-    clientId,
+    clientId: list.shareUpdatedBy ?? clientId,
     shareId: list.shareId,
     updatedAt: list.shareUpdatedAt ?? Date.now(),
     title: list.title,

@@ -8,6 +8,7 @@ import { Meatballs } from './meatballs.js'
 import { encodeState, decodeState } from './share-state.js'
 import {
   compareSyncMessages,
+  createShareVersionAllocator,
   createShareId,
   isListSyncMessage,
   listToSyncMessage,
@@ -117,22 +118,12 @@ const currentList = signal(/** @type {ShoppingListData|null} */ (null))
 
 let currentView = 'input'
 const syncClientId = createShareId()
+const nextShareUpdate = createShareVersionAllocator(syncClientId)
 /** @type {{ shareId: string, socket: WebSocket } | null} */
 let activeSync = null
 /** @type {ReturnType<typeof setTimeout> | null} */
 let syncReconnectTimer = null
 let applyingRemoteSync = false
-
-/**
- * @param {ShoppingListData} list
- * @returns {{ shareUpdatedAt: number, shareUpdatedBy: string }}
- */
-function nextShareUpdate(list) {
-  return {
-    shareUpdatedAt: Math.max(Date.now(), (list.shareUpdatedAt ?? 0) + 1),
-    shareUpdatedBy: syncClientId,
-  }
-}
 
 function stopListSync() {
   if (syncReconnectTimer) {

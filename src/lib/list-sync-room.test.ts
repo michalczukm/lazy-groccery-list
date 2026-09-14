@@ -1,5 +1,6 @@
 import { SELF } from 'cloudflare:test'
 import { describe, it, expect } from 'vitest'
+import { loadLatestListState } from './list-sync-room'
 
 async function connect(room = 'room_12345678'): Promise<WebSocket> {
   const response = await SELF.fetch(`https://example.com/api/list-sync/${room}`, {
@@ -74,6 +75,17 @@ describe('GET /api/list-sync/:room', () => {
     const second = await connect(room)
 
     expect(await nextMessage(second)).toBe(message(room, 2000, 'Fresh room state'))
+  })
+
+  it('loads the latest room state from Durable Object storage', async () => {
+    const room = 'room_replay_12345678'
+    const stored = JSON.parse(message(room, 2000, 'Persisted room state'))
+
+    await expect(
+      loadLatestListState({
+        get: async (key: string) => (key === 'latest-list-state' ? stored : undefined),
+      }),
+    ).resolves.toEqual(stored)
   })
 
   it('does not rebroadcast an older state over newer room state', async () => {
