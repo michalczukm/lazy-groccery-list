@@ -1,6 +1,6 @@
 import { render } from 'preact'
 import { useEffect, useRef } from 'preact/hooks'
-import { signal } from '@preact/signals'
+import { effect, signal } from '@preact/signals'
 import confetti from 'canvas-confetti'
 import { html } from './html.js'
 import { PlusIcon, CheckIcon } from './icons.js'
@@ -17,6 +17,7 @@ import { mergeAmendInto } from './merge-amend.js'
 import { listToTemplate, templateToList } from './template-shape.js'
 import { executeTurnstile } from './turnstile.js'
 import { getItemLinkSegments, stopItemLinkClick } from './item-link.js'
+import { createScreenWakeLockController } from './wake-lock.js'
 
 // Emoji per category name. Keep in sync with CATEGORIES in src/lib/mistral.ts.
 /** @type {Record<string, string>} */
@@ -120,6 +121,23 @@ let activeSync = null
 /** @type {ReturnType<typeof setTimeout> | null} */
 let syncReconnectTimer = null
 let applyingRemoteSync = false
+
+const screenWakeLock = createScreenWakeLockController({
+  document,
+  navigator,
+  onUserVisibleError: () => toast('Ekran może się wygaszać podczas zakupów.', 4000, true),
+})
+
+function syncScreenWakeLock() {
+  screenWakeLock
+    .setActiveListView(currentView === 'list' && currentList.value !== null)
+    .catch(() => {})
+}
+
+effect(() => {
+  void currentList.value
+  syncScreenWakeLock()
+})
 
 function stopListSync() {
   if (syncReconnectTimer) {
@@ -251,6 +269,7 @@ const META = {
  */
 function navigateTo(name) {
   currentView = name
+  syncScreenWakeLock()
   const btn = document.querySelector(`[data-view="${name}"]`)
   setActiveNav(btn)
   updateHeader(name)
@@ -261,6 +280,7 @@ function navigateTo(name) {
 function handleNavClick(el) {
   const name = /** @type {string} */ (el.dataset.view)
   currentView = name
+  syncScreenWakeLock()
   setActiveNav(el)
   updateHeader(name)
 }
