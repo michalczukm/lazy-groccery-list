@@ -15,6 +15,7 @@ import {
 } from './list-sync.js'
 import { mergeAmendInto } from './merge-amend.js'
 import { listToTemplate, templateToList } from './template-shape.js'
+import { deleteCurrentListFlow } from './list-actions.js'
 import { executeTurnstile } from './turnstile.js'
 import { getItemLinkSegments, stopItemLinkClick } from './item-link.js'
 
@@ -492,6 +493,21 @@ function discardCurrentList() {
   navigateTo('input')
 }
 
+/** @returns {Promise<void>} */
+function deleteCurrentList() {
+  return deleteCurrentListFlow({
+    getCurrentList: () => currentList.value,
+    clearCurrentList: () => {
+      currentList.value = null
+    },
+    deleteList: id => DB.del(id),
+    stopSync: stopListSync,
+    navigateToHistory: () => navigateTo('history'),
+    showToast: toast,
+    confirmDelete: msg => confirm(msg),
+  })
+}
+
 // ── Today's list lookup ───────────────────────────────────────────────────────
 /**
  * @param {number} ts
@@ -656,6 +672,7 @@ function ShoppingList() {
                 label: 'Udostępnij',
                 onClick: () => shareList(/** @type {ShoppingListData} */ (currentList.value)),
               },
+              { icon: '🗑', label: 'Usuń listę', onClick: deleteCurrentList },
             ]}
           />
         </div>
