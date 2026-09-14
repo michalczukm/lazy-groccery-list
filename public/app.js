@@ -14,6 +14,7 @@ import {
   syncMessageToList,
 } from './list-sync.js'
 import { mergeAmendInto } from './merge-amend.js'
+import { listToMarkdown } from './list-markdown.js'
 import { listToTemplate, templateToList } from './template-shape.js'
 import { executeTurnstile } from './turnstile.js'
 import { getItemLinkSegments, stopItemLinkClick } from './item-link.js'
@@ -555,6 +556,24 @@ async function makeTemplateFromCurrent() {
   toast('Szablon zapisany 📌')
 }
 
+async function exportCurrentListAsMarkdown() {
+  const l = currentList.value
+  if (!l) {
+    toast('Brak aktywnej listy')
+    return
+  }
+  if (!navigator.clipboard?.writeText) {
+    toast('Nie udało się skopiować Markdown', 4000, true)
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(listToMarkdown(l))
+    toast('Markdown skopiowany ✓')
+  } catch {
+    toast('Nie udało się skopiować Markdown', 4000, true)
+  }
+}
+
 async function clearAllHistory() {
   if (!confirm('Usunąć WSZYSTKIE zapisane listy?')) return
   await DB.clear()
@@ -651,6 +670,11 @@ function ShoppingList() {
           <${Meatballs}
             items=${[
               { icon: '📌', label: 'Utwórz szablon', onClick: makeTemplateFromCurrent },
+              {
+                icon: '📝',
+                label: 'Eksportuj jako Markdown',
+                onClick: exportCurrentListAsMarkdown,
+              },
               {
                 icon: '🔗',
                 label: 'Udostępnij',
