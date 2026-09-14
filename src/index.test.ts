@@ -3,6 +3,17 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import worker from './index'
 import { signSession } from './lib/cookie-session'
 
+async function decodeIntegrationState(str: string): Promise<unknown> {
+  const binary = atob(str.replace(/-/g, '+').replace(/_/g, '/'))
+  const bytes = Uint8Array.from(binary, c => c.charCodeAt(0))
+  const stream = new DecompressionStream('gzip')
+  const writer = stream.writable.getWriter()
+  const bufPromise = new Response(stream.readable).arrayBuffer()
+  await writer.write(bytes)
+  await writer.close()
+  return JSON.parse(new TextDecoder().decode(await bufPromise))
+}
+
 describe('POST /api/session', () => {
   it('returns 403 when Origin does not match request URL origin', async () => {
     const res = await SELF.fetch('https://example.com/api/session', {
@@ -125,6 +136,145 @@ describe('POST /api/categorize', () => {
         },
       })
     })
+  })
+})
+
+describe('POST /api/integrations/categorize', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('returns 400 when text is missing', async () => {
+    const res = await SELF.fetch('https://example.com/api/integrations/categorize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({ code: 'missing-text' })
+  })
+
+  it('returns 429 when the AI rate limit rejects the caller IP', async () => {
+    const request = new Request('https://example.com/api/integrations/categorize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': '203.0.113.4' },
+      body: JSON.stringify({ text: 'mleko, chleb' }),
+    })
+    const ctx = createExecutionContext()
+    const res = await worker.fetch(
+      request,
+      {
+        ...env,
+        AI_RATE_LIMIT: {
+          limit: vi.fn().mockResolvedValue({ success: false }),
+        } as unknown as RateLimit,
+      },
+      ctx,
+    )
+    expect(res.status).toBe(429)
+    expect(await res.json()).toEqual({ code: 'rate-limited' })
+  })
+
+  it('returns categorize-failed without logging request text when Mistral fails', async () => {
+    const posthogCalls: Array<{ body: unknown }> = []
+    const originalFetch = globalThis.fetch
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = typeof input === 'string' ? input : ((input as Request).url ?? String(input))
+      if (url.includes('api.mistral.ai')) return new Response('upstream down', { status: 500 })
+      if (url.endsWith('/i/v0/e')) {
+        posthogCalls.push({ body: JSON.parse(String(init?.body)) })
+        return new Response(null, { status: 200 })
+      }
+      return originalFetch(input as RequestInfo, init)
+    })
+
+    const request = new Request('https://example.com/api/integrations/categorize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-POSTHOG-DISTINCT-ID': 'integration-test' },
+      body: JSON.stringify({ text: 'mleko, chleb' }),
+    })
+
+    const ctx = createExecutionContext()
+    const res = await worker.fetch(request, env, ctx)
+    expect(res.status).toBe(502)
+    expect(await res.json()).toEqual({ code: 'categorize-failed' })
+
+    await waitOnExecutionContext(ctx)
+
+    expect(JSON.stringify(posthogCalls)).not.toContain('mleko')
+    expect(JSON.stringify(posthogCalls)).not.toContain('chleb')
+    expect(posthogCalls[0].body).toMatchObject({
+      event: 'worker_request_error',
+      distinct_id: 'integration-test',
+      properties: {
+        route: '/api/integrations/categorize',
+        status: 502,
+        code: 'categorize-failed',
+        reason: 'upstream',
+      },
+    })
+  })
+
+  it('returns a share URL that decodes to the categorized list without browser auth', async () => {
+    const originalFetch = globalThis.fetch
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = typeof input === 'string' ? input : ((input as Request).url ?? String(input))
+      if (url.includes('api.mistral.ai')) {
+        return Response.json({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  categories: [
+                    { name: 'nabiał', items: ['mleko'] },
+                    { name: 'pieczywo', items: ['chleb'] },
+                  ],
+                }),
+              },
+            },
+          ],
+        })
+      }
+      return originalFetch(input as RequestInfo, init)
+    })
+
+    const res = await SELF.fetch(
+      'https://lazy-shopping.michalczukm.xyz/api/integrations/categorize',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: 'mleko, chleb' }),
+      },
+    )
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { url: string }
+    const url = new URL(body.url)
+    expect(url.origin).toBe('https://lazy-shopping.michalczukm.xyz')
+    expect(url.pathname).toBe('/')
+    expect(url.searchParams.get('state')).toMatch(/^[A-Za-z0-9_-]+$/)
+
+    const shared = await decodeIntegrationState(url.searchParams.get('state') as string)
+    expect(shared).toEqual({
+      title: expect.stringMatching(/^Zakupy /),
+      date: expect.any(Number),
+      categories: [
+        { name: 'nabiał', items: [{ name: 'mleko', checked: false }] },
+        { name: 'pieczywo', items: [{ name: 'chleb', checked: false }] },
+      ],
+    })
+  })
+})
+
+describe('GET /integrations', () => {
+  it('returns markdown instructions for integration callers', async () => {
+    const res = await SELF.fetch('https://example.com/integrations')
+    const text = await res.text()
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toContain('text/markdown')
+    expect(text).toContain('POST /api/integrations/categorize')
+    expect(text).toContain('curl')
+    expect(text).toContain('?state=')
   })
 })
 

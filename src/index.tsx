@@ -13,6 +13,7 @@ import { isSameOrigin } from './lib/origin-guard'
 import { signSession, verifySession } from './lib/cookie-session'
 import { verifyTurnstile } from './lib/turnstile'
 import { categorize } from './lib/mistral'
+import { listFromCategories, shareUrlFor } from './lib/share-url'
 import { proxyPosthog, captureServer, distinctIdFrom } from './lib/posthog'
 
 export interface Env {
@@ -147,6 +148,42 @@ app.post('/api/categorize', async c => {
   return c.json({ categories: result.categories })
 })
 
+app.post('/api/integrations/categorize', async c => {
+  const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
+  const limit = await c.env.AI_RATE_LIMIT.limit({ key: ip })
+  if (!limit.success) {
+    return c.json({ code: 'rate-limited' }, 429)
+  }
+
+  const body = await c.req.json<{ text?: string }>().catch(() => ({}) as { text?: string })
+  const text = (body.text ?? '').trim()
+  if (!text || text.length > MAX_INPUT_CHARS) {
+    return c.json({ code: 'missing-text' }, 400)
+  }
+
+  const result = await categorize(text, c.env.MISTRAL_API_KEY)
+  if (!result.ok) {
+    fireAndForget(
+      c,
+      captureServer(c.env, {
+        event: 'worker_request_error',
+        distinctId: distinctIdFrom(c.req.raw),
+        properties: {
+          route: '/api/integrations/categorize',
+          status: 502,
+          code: 'categorize-failed',
+          reason: result.reason,
+        },
+      }),
+    )
+    return c.json({ code: 'categorize-failed' }, 502)
+  }
+
+  return c.json({
+    url: await shareUrlFor(new URL(c.req.url).origin, listFromCategories(result.categories)),
+  })
+})
+
 app.all('/basket/*', c => proxyPosthog(c.req.raw, c.env))
 
 app.get('/', jsxRenderer(), c =>
@@ -163,5 +200,42 @@ app.get('/views/history', c => c.html(<HistoryView />))
 app.get('/views/templates', c => c.html(<TemplatesView />))
 
 app.get('/privacy', c => c.html(<PrivacyView />))
+
+app.get('/integrations', c =>
+  c.text(
+    `# Lazy List integrations
+
+POST /api/integrations/categorize
+
+Send free shopping-list text and receive a ready-to-open share URL. This endpoint is open for non-browser callers such as Siri Shortcuts, Alfred, webhooks, bots, and agents. It intentionally skips the browser Origin guard, session cookie, and Turnstile challenge because those callers do not have a browser context. Calls are still rate-limited per caller IP with the same AI rate-limit binding as the browser AI endpoint.
+
+Request:
+
+\`\`\`bash
+curl -s -X POST https://lazy-shopping.michalczukm.xyz/api/integrations/categorize \\
+  -H 'Content-Type: application/json' \\
+  -d '{"text":"mleko, chleb"}'
+\`\`\`
+
+Success response:
+
+\`\`\`json
+{"url":"https://lazy-shopping.michalczukm.xyz/?state=..."}
+\`\`\`
+
+Error responses:
+
+\`\`\`json
+{"code":"missing-text"}
+{"code":"rate-limited"}
+{"code":"categorize-failed"}
+\`\`\`
+
+Give the returned URL to the user. Opening it renders the categorized list without needing a Mistral key in the browser.
+`,
+    200,
+    { 'Content-Type': 'text/markdown; charset=UTF-8' },
+  ),
+)
 
 export default app

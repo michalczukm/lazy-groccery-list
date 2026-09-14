@@ -65,6 +65,11 @@ export const PrivacyView: FC = () => (
             przekazuje go do <strong>Mistral AI</strong> w celu pokategoryzowania produktów. Nie
             zapisujemy tego tekstu na serwerze — jest przetwarzany i odsyłany jako gotowa lista.
           </p>
+          <p>
+            Ten sam mechanizm może być użyty przez otwarty endpoint integracyjny dla skrótów,
+            webhooków, botów i agentów. W takim przypadku wysłany tekst również trafia do naszego
+            serwera i do Mistral AI, a odpowiedzią jest link do udostępnienia gotowej listy.
+          </p>
         </Section>
 
         <Section title="Ochrona przed botami — Cloudflare Turnstile">
@@ -80,6 +85,10 @@ export const PrivacyView: FC = () => (
               polityka prywatności Cloudflare Turnstile
             </a>
             .
+          </p>
+          <p>
+            Endpoint integracyjny nie używa Turnstile ani ciasteczka sesji, ponieważ jest
+            przeznaczony dla narzędzi bez przeglądarki. Chronimy go limitem zapytań po adresie IP.
           </p>
         </Section>
 
@@ -130,7 +139,8 @@ export const PrivacyView: FC = () => (
         <Section title="Adres IP">
           <p>
             Adres IP wykorzystujemy doraźnie — do ograniczania liczby zapytań (ochrona przed
-            nadużyciami) oraz do weryfikacji Turnstile. Nie przechowujemy go na stałe.
+            nadużyciami, także w endpointcie integracyjnym) oraz do weryfikacji Turnstile. Nie
+            przechowujemy go na stałe.
           </p>
         </Section>
 
@@ -150,6 +160,10 @@ export const PrivacyView: FC = () => (
             adresie URL. Udostępniasz ją dobrowolnie i to Ty decydujesz, komu wyślesz link. Gdy
             otworzysz otrzymany link, lista zapisuje się w pamięci Twojej przeglądarki (IndexedDB) —
             tak samo jak Twoje własne listy — i zostaje u Ciebie, dopóki jej nie usuniesz.
+          </p>
+          <p>
+            Endpoint integracyjny tworzy taki sam link po pokategoryzowaniu przesłanego tekstu. Link
+            zawiera zakodowaną treść listy, więc traktuj go jak samą listę zakupów.
           </p>
         </Section>
 
@@ -179,7 +193,7 @@ export const PrivacyView: FC = () => (
         </Section>
 
         <p class="text-[12px] text-muted mt-10 border-t border-fg/10 pt-4">
-          Ostatnia aktualizacja: 1 sierpnia 2026
+          Ostatnia aktualizacja: 14 września 2026
         </p>
       </main>
     </body>
