@@ -20,11 +20,13 @@ export const InputView: FC = () => (
 
     <div id="templates-chips" />
 
-    <a
-      href="/privacy"
-      class="block text-center text-[12px] text-muted mt-3 hover:text-fg/60 active:text-fg/60"
-    >
-      Polityka prywatności
-    </a>
+    <div class="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[12px] text-muted">
+      <a href="/integrations" class="hover:text-fg/60 active:text-fg/60">
+        Integracje dla agentów
+      </a>
+      <a href="/privacy" class="hover:text-fg/60 active:text-fg/60">
+        Polityka prywatności
+      </a>
+    </div>
   </div>
 )
