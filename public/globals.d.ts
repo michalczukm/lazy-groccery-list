@@ -26,6 +26,7 @@ declare global {
     saved: boolean
     shareId?: string
     shareUpdatedAt?: number
+    shareUpdatedBy?: string
     categories: Category[]
   }
 
