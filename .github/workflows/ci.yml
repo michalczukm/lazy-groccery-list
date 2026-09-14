@@ -67,35 +67,26 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # `wrangler versions upload` is invoked directly rather than through a
-      # package.json script, so it does not pick up the `pnpm vendor` prefix that
-      # `pnpm dev`/`pnpm deploy` carry. Without this step public/vendor would be
-      # empty (it is gitignored) and the preview would ship a broken importmap.
       - name: Vendor client deps
         run: pnpm vendor
 
-      # Uploads a new *version* of the same worker (does NOT shift prod traffic).
-      # Wrangler may print a preview URL; when it cannot, the PR still keeps the
-      # verify job green and records that preview deployment was skipped.
-      - name: Upload preview version
-        id: upload
+      - name: Generate preview config
+        id: preview-config
+        run: |
+          worker_name=$(node scripts/pr-preview-config.js "${{ github.event.pull_request.number }}" --source wrangler.jsonc --out wrangler.preview.json)
+          echo "worker_name=$worker_name" >> "$GITHUB_OUTPUT"
+
+      # Deploys a separate per-PR Worker so Durable Object migrations can be
+      # applied to the preview Worker without touching production traffic.
+      - name: Deploy preview worker
+        id: deploy-preview
         run: |
           set -o pipefail
-          set +e
-          pnpm exec wrangler versions upload --minify 2>&1 | tee upload.log
-          status=${PIPESTATUS[0]}
-          set -e
-          if [ "$status" -ne 0 ]; then
-            if grep -q "code: 10211" upload.log && grep -qi "Durable Object migration" upload.log; then
-              echo "skipped=durable-object-migration" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            exit "$status"
-          fi
-          url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' upload.log | head -n1 || true)
+          pnpm exec wrangler deploy --config wrangler.preview.json --name "${{ steps.preview-config.outputs.worker_name }}" --minify 2>&1 | tee deploy.log
+          url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -n1)
           if [ -z "$url" ]; then
-            echo "skipped=no-preview-url" >> "$GITHUB_OUTPUT"
-            exit 0
+            echo "::error::Could not find preview URL in wrangler output"
+            exit 1
           fi
           echo "url=$url" >> "$GITHUB_OUTPUT"
         env:
@@ -103,36 +94,21 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Comment preview URL on PR
-        if: steps.upload.outputs.skipped == ''
         uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: pr-preview
           message: |
-            ### 🚀 PR preview deployed
+            ### PR preview deployed
 
-            A preview version of this PR is live at:
+            A per-PR preview Worker is live at:
 
-            **${{ steps.upload.outputs.url }}**
+            **${{ steps.deploy-preview.outputs.url }}**
 
-            Uses the same secrets and bindings as production, but does not
-            affect production traffic. Updated on every push.
+            Worker: `${{ steps.preview-config.outputs.worker_name }}`
 
-            <sub>commit `${{ github.event.pull_request.head.sha }}`</sub>
-
-      - name: Comment skipped preview on PR
-        if: steps.upload.outputs.skipped != ''
-        uses: marocchino/sticky-pull-request-comment@v3
-        with:
-          header: pr-preview
-          message: |
-            ### PR preview skipped
-
-            Cloudflare/Wrangler could not provide a usable PR preview URL for
-            this branch, so preview deployment is skipped. This can happen for
-            Workers with Durable Object migrations or when
-            `wrangler versions upload` succeeds without printing a preview URL.
-
-            Verification still ran in CI.
+            Uses the same secrets and bindings as production, keeps production
+            routes/custom domains removed, and does not affect production
+            traffic. Updated on every push and deleted when the PR closes.
 
             <sub>commit `${{ github.event.pull_request.head.sha }}`</sub>
 
