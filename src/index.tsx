@@ -14,6 +14,7 @@ import { signSession, verifySession } from './lib/cookie-session'
 import { verifyTurnstile } from './lib/turnstile'
 import { categorize } from './lib/mistral'
 import { proxyPosthog, captureServer, distinctIdFrom } from './lib/posthog'
+import { ListSyncRoom, isValidSyncRoom } from './lib/list-sync-room'
 
 export interface Env {
   MISTRAL_API_KEY: string
@@ -21,6 +22,7 @@ export interface Env {
   SESSION_HMAC_SECRET: string
   TURNSTILE_SITE_KEY: string
   AI_RATE_LIMIT: RateLimit
+  LIST_SYNC_ROOMS: DurableObjectNamespace<ListSyncRoom>
   POSTHOG_KEY?: string
   POSTHOG_HOST?: string
 }
@@ -147,6 +149,20 @@ app.post('/api/categorize', async c => {
   return c.json({ categories: result.categories })
 })
 
+app.get('/api/list-sync/:room', c => {
+  if (c.req.header('Upgrade') !== 'websocket') {
+    return c.json({ code: 'websocket-required' }, 426)
+  }
+
+  const room = c.req.param('room')
+  if (!isValidSyncRoom(room)) {
+    return c.json({ code: 'invalid-room' }, 400)
+  }
+
+  const id = c.env.LIST_SYNC_ROOMS.idFromName(room)
+  return c.env.LIST_SYNC_ROOMS.get(id).fetch(c.req.raw)
+})
+
 app.all('/basket/*', c => proxyPosthog(c.req.raw, c.env))
 
 app.get('/', jsxRenderer(), c =>
@@ -165,3 +181,4 @@ app.get('/views/templates', c => c.html(<TemplatesView />))
 app.get('/privacy', c => c.html(<PrivacyView />))
 
 export default app
+export { ListSyncRoom }
