@@ -2,7 +2,7 @@
 
 ## What it does
 
-Share button (↑ icon, top-right of list view) encodes the current list as a gzip+base64url URL param (`?state=...`). On load, `handleSharedState` decodes it and renders the list without requiring a Mistral key.
+Share button (↑ icon, top-right of list view) encodes the current list as a gzip+base64url URL param (`?state=...`) and adds a random share room (`&share=...`). On load, `handleSharedState` decodes it and renders the list without requiring a Mistral key. Tabs with the same share room then connect to `/api/list-sync/:room` over WebSocket; the Cloudflare Durable Object relays changes but does not persist list content.
 
 ## Manual test steps
 
@@ -25,6 +25,9 @@ Share button (↑ icon, top-right of list view) encodes the current list as a gz
 7. The URL bar should revert to `/` after load (`history.replaceState`).
 8. The list is persisted to IndexedDB (`saved: true`) on import, so it survives a
    reload and item toggles auto-save — it does not flush after sharing (issue #31).
+9. Keep the original tab and shared tab open at the same time.
+10. Toggle an item in one tab.
+11. The other tab should update within a second, and a reload in either tab should keep the latest local copy.
 
 ## Automated testing (Chrome DevTools MCP)
 
@@ -44,6 +47,7 @@ document
 // 3. Wait ~3s then verify
 await new Promise(r => setTimeout(r, 3000))
 console.assert(capturedUrl?.includes('?state='), 'URL should contain ?state=')
+console.assert(capturedUrl?.includes('&share='), 'URL should contain &share=')
 
 // 4. Navigate to shared URL
 location.href = capturedUrl

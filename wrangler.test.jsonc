@@ -13,6 +13,10 @@
     "TURNSTILE_SITE_KEY": "test-site-key",
     "POSTHOG_KEY": "phc_test",
   },
+  "durable_objects": {
+    "bindings": [{ "name": "LIST_SYNC_ROOMS", "class_name": "ListSyncRoom" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ListSyncRoom"] }],
   // `unsafe.bindings`: experimental wrapper for ratelimit binding (matches wrangler.jsonc).
   "unsafe": {
     "bindings": [
