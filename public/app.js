@@ -7,9 +7,11 @@ import { PlusIcon, CheckIcon } from './icons.js'
 import { Meatballs } from './meatballs.js'
 import { encodeState, decodeState } from './share-state.js'
 import {
+  compareSyncMessages,
   createShareId,
   isListSyncMessage,
   listToSyncMessage,
+  preferNewestSharedList,
   sanitizeShareId,
   syncMessageToList,
 } from './list-sync.js'
@@ -121,6 +123,17 @@ let activeSync = null
 let syncReconnectTimer = null
 let applyingRemoteSync = false
 
+/**
+ * @param {ShoppingListData} list
+ * @returns {{ shareUpdatedAt: number, shareUpdatedBy: string }}
+ */
+function nextShareUpdate(list) {
+  return {
+    shareUpdatedAt: Math.max(Date.now(), (list.shareUpdatedAt ?? 0) + 1),
+    shareUpdatedBy: syncClientId,
+  }
+}
+
 function stopListSync() {
   if (syncReconnectTimer) {
     clearTimeout(syncReconnectTimer)
@@ -169,7 +182,13 @@ function startListSync(list) {
     if (data.shareId !== shareId) return
     const current = currentList.value
     if (!current || current.shareId !== shareId) return
-    if ((current.shareUpdatedAt ?? 0) >= data.updatedAt) return
+    if (
+      compareSyncMessages(
+        { updatedAt: data.updatedAt, clientId: data.clientId },
+        { updatedAt: current.shareUpdatedAt ?? 0, clientId: current.shareUpdatedBy ?? '' },
+      ) <= 0
+    )
+      return
 
     applyingRemoteSync = true
     try {
@@ -191,7 +210,7 @@ function startListSync(list) {
 
 /** @param {ShoppingListData} list */
 async function saveSyncedList(list) {
-  const next = list.shareId ? { ...list, shareUpdatedAt: Date.now() } : list
+  const next = list.shareId ? { ...list, ...nextShareUpdate(list) } : list
   await DB.save(next)
   currentList.value = next
   startListSync(next)
@@ -1032,7 +1051,7 @@ function fmtDateFull(ts) {
 async function shareList(list) {
   try {
     const shareId = sanitizeShareId(list.shareId) ?? createShareId()
-    const sharedList = { ...list, shareId, shareUpdatedAt: Date.now() }
+    const sharedList = { ...list, shareId, ...nextShareUpdate(list) }
     await DB.save(sharedList)
     currentList.value = sharedList
     startListSync(sharedList)
@@ -1060,7 +1079,7 @@ async function handleSharedState() {
   try {
     const payload = await decodeState(state)
     const shareId = sanitizeShareId(params.get('share')) ?? undefined
-    currentList.value = /** @type {ShoppingListData} */ ({
+    const sharedList = /** @type {ShoppingListData} */ ({
       id: Date.now(),
       title: payload.title,
       date: payload.date,
@@ -1075,6 +1094,8 @@ async function handleSharedState() {
         items: c.items.map(i => ({ name: i.name, checked: i.checked })),
       })),
     })
+    const list = shareId ? preferNewestSharedList(sharedList, await DB.getAll()) : sharedList
+    currentList.value = list
     await DB.save(/** @type {ShoppingListData} */ (currentList.value))
     startListSync(currentList.value)
     history.replaceState(null, '', '/')

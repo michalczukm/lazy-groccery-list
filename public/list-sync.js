@@ -35,6 +35,16 @@ export function createShareId() {
 }
 
 /**
+ * @param {{ updatedAt: number, clientId: string }} a
+ * @param {{ updatedAt: number, clientId: string }} b
+ * @returns {number}
+ */
+export function compareSyncMessages(a, b) {
+  if (a.updatedAt !== b.updatedAt) return a.updatedAt - b.updatedAt
+  return a.clientId.localeCompare(b.clientId)
+}
+
+/**
  * @param {ShoppingListData} list
  * @param {string} clientId
  * @returns {{ type: 'list-state', clientId: string, shareId: string | undefined, updatedAt: number, title: string, date: number, categories: Array<{ name: string, items: Item[] }> }}
@@ -52,6 +62,26 @@ export function listToSyncMessage(list, clientId) {
       items: c.items.map(i => ({ name: i.name, checked: i.checked })),
     })),
   }
+}
+
+/**
+ * @param {ShoppingListData} sharedList
+ * @param {ShoppingListData[]} savedLists
+ * @returns {ShoppingListData}
+ */
+export function preferNewestSharedList(sharedList, savedLists) {
+  const shareId = sanitizeShareId(sharedList.shareId)
+  if (!shareId) return sharedList
+  const sharedUpdatedAt = sharedList.shareUpdatedAt ?? 0
+  const local = savedLists
+    .filter(list => list.shareId === shareId)
+    .sort((a, b) => {
+      const bySync = (b.shareUpdatedAt ?? 0) - (a.shareUpdatedAt ?? 0)
+      if (bySync !== 0) return bySync
+      return b.date - a.date
+    })[0]
+  if (!local) return sharedList
+  return (local.shareUpdatedAt ?? 0) >= sharedUpdatedAt ? local : sharedList
 }
 
 /**
@@ -88,6 +118,7 @@ export function syncMessageToList(message, current) {
     saved: true,
     shareId: message.shareId,
     shareUpdatedAt: message.updatedAt,
+    shareUpdatedBy: message.clientId,
     categories: message.categories.map(c => ({
       name: c.name,
       collapsed: false,

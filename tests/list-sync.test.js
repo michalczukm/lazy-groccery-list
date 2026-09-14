@@ -3,6 +3,7 @@ import {
   createShareId,
   isListSyncMessage,
   listToSyncMessage,
+  preferNewestSharedList,
   sanitizeShareId,
   syncMessageToList,
 } from '../public/list-sync.js'
@@ -92,6 +93,7 @@ describe('list sync messages', () => {
       saved: true,
       shareId: 'room_abc',
       shareUpdatedAt: 2000,
+      shareUpdatedBy: 'client-a',
     })
     expect(synced.categories).toEqual([
       {
@@ -101,5 +103,44 @@ describe('list sync messages', () => {
         items: [{ name: 'Mleko', checked: false }],
       },
     ])
+  })
+})
+
+describe('shared list conflict resolution', () => {
+  it('keeps a newer local list for the same share ID over a stale URL snapshot', () => {
+    const staleUrlList = {
+      id: 1,
+      title: 'Old URL',
+      date: 1000,
+      saved: true,
+      shareId: 'room_abc',
+      shareUpdatedAt: 100,
+      categories: [
+        {
+          name: 'nabiał',
+          collapsed: false,
+          manualExpand: false,
+          items: [{ name: 'Stare mleko', checked: false }],
+        },
+      ],
+    }
+    const newerLocalList = {
+      id: 2,
+      title: 'Newer local',
+      date: 2000,
+      saved: true,
+      shareId: 'room_abc',
+      shareUpdatedAt: 500,
+      categories: [
+        {
+          name: 'pieczywo',
+          collapsed: false,
+          manualExpand: false,
+          items: [{ name: 'Nowy chleb', checked: true }],
+        },
+      ],
+    }
+
+    expect(preferNewestSharedList(staleUrlList, [newerLocalList])).toBe(newerLocalList)
   })
 })
