@@ -1,0 +1,53 @@
+name: Cleanup PR preview
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  cleanup-preview:
+    name: Delete PR preview Worker
+    # Only same-repo PRs have access to the Cloudflare secrets used to create previews.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.5.0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/krypton
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate preview Worker name
+        id: preview-config
+        run: |
+          worker_name=$(node scripts/pr-preview-config.js "${{ github.event.pull_request.number }}" --source wrangler.jsonc --out wrangler.preview.json)
+          echo "worker_name=$worker_name" >> "$GITHUB_OUTPUT"
+
+      - name: Delete preview Worker
+        run: |
+          set +e
+          pnpm exec wrangler delete "${{ steps.preview-config.outputs.worker_name }}" --force 2>&1 | tee delete.log
+          status=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$status" -eq 0 ]; then
+            exit 0
+          fi
+
+          if grep -Eiq 'not found|does not exist|unknown_worker' delete.log; then
+            echo "Preview Worker already absent."
+            exit 0
+          fi
+
+          exit "$status"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
