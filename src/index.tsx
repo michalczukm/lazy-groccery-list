@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import type { ExecutionContext } from 'hono'
+import type { Context, ExecutionContext } from 'hono'
 import { jsxRenderer } from 'hono/jsx-renderer'
 import { secureHeaders } from 'hono/secure-headers'
 import { setCookie, getCookie } from 'hono/cookie'
@@ -99,6 +99,43 @@ const fireAndForget = (c: { executionCtx: ExecutionContext }, work: Promise<unkn
   }
 }
 
+type AppContext = Context<{ Bindings: Env }>
+
+const integrationCategorize = async (c: AppContext, text: string) => {
+  const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
+  const limit = await c.env.AI_RATE_LIMIT.limit({ key: ip })
+  if (!limit.success) {
+    return c.json({ code: 'rate-limited' }, 429)
+  }
+
+  const normalizedText = text.trim()
+  if (!normalizedText || normalizedText.length > MAX_INPUT_CHARS) {
+    return c.json({ code: 'missing-text' }, 400)
+  }
+
+  const result = await categorize(normalizedText, c.env.MISTRAL_API_KEY)
+  if (!result.ok) {
+    fireAndForget(
+      c,
+      captureServer(c.env, {
+        event: 'worker_request_error',
+        distinctId: distinctIdFrom(c.req.raw),
+        properties: {
+          route: '/api/integrations/categorize',
+          status: 502,
+          code: 'categorize-failed',
+          reason: result.reason,
+        },
+      }),
+    )
+    return c.json({ code: 'categorize-failed' }, 502)
+  }
+
+  return c.json({
+    url: await shareUrlFor(new URL(c.req.url).origin, listFromCategories(result.categories)),
+  })
+}
+
 app.post('/api/categorize', async c => {
   if (!isSameOrigin(c.req.raw)) {
     return c.json({ code: 'forbidden' }, 403)
@@ -151,39 +188,12 @@ app.post('/api/categorize', async c => {
 })
 
 app.post('/api/integrations/categorize', async c => {
-  const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
-  const limit = await c.env.AI_RATE_LIMIT.limit({ key: ip })
-  if (!limit.success) {
-    return c.json({ code: 'rate-limited' }, 429)
-  }
-
   const body = await c.req.json<{ text?: string }>().catch(() => ({}) as { text?: string })
-  const text = (body.text ?? '').trim()
-  if (!text || text.length > MAX_INPUT_CHARS) {
-    return c.json({ code: 'missing-text' }, 400)
-  }
+  return integrationCategorize(c, body.text ?? '')
+})
 
-  const result = await categorize(text, c.env.MISTRAL_API_KEY)
-  if (!result.ok) {
-    fireAndForget(
-      c,
-      captureServer(c.env, {
-        event: 'worker_request_error',
-        distinctId: distinctIdFrom(c.req.raw),
-        properties: {
-          route: '/api/integrations/categorize',
-          status: 502,
-          code: 'categorize-failed',
-          reason: result.reason,
-        },
-      }),
-    )
-    return c.json({ code: 'categorize-failed' }, 502)
-  }
-
-  return c.json({
-    url: await shareUrlFor(new URL(c.req.url).origin, listFromCategories(result.categories)),
-  })
+app.get('/api/integrations/categorize', async c => {
+  return integrationCategorize(c, new URL(c.req.url).searchParams.get('text') ?? '')
 })
 
 app.get('/api/list-sync/:room', c => {
@@ -205,54 +215,58 @@ app.all('/basket/*', c => proxyPosthog(c.req.raw, c.env))
 app.get('/', jsxRenderer(), c =>
   c.render(
     <Layout turnstileSiteKey={c.env.TURNSTILE_SITE_KEY} posthogKey={c.env.POSTHOG_KEY}>
-      <InputView />
+      <InputView integrationUrl={`${new URL(c.req.url).origin}/integrations`} />
     </Layout>,
   ),
 )
 
-app.get('/views/input', c => c.html(<InputView />))
+app.get('/views/input', c =>
+  c.html(<InputView integrationUrl={`${new URL(c.req.url).origin}/integrations`} />),
+)
 app.get('/views/list', c => c.html(<ListView />))
 app.get('/views/history', c => c.html(<HistoryView />))
 app.get('/views/templates', c => c.html(<TemplatesView />))
 
 app.get('/privacy', c => c.html(<PrivacyView />))
 
-app.get('/integrations', c =>
-  c.text(
-    `# Lazy List integrations
+app.get('/integrations', c => {
+  const origin = new URL(c.req.url).origin
+  return c.html(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lazy List integrations</title>
+  </head>
+  <body>
+    <main>
+      <h1>Lazy List integrations</h1>
+      <p>Use this open endpoint to turn free shopping-list text into a ready-to-open Lazy List share URL.</p>
+      <p>The endpoint intentionally skips browser-only Origin, session cookie, and Turnstile checks so non-browser callers such as Siri Shortcuts, Alfred, webhooks, bots, and agents can use it. Calls are still rate-limited per caller IP with the same AI rate-limit binding as the browser AI endpoint.</p>
 
-POST /api/integrations/categorize
+      <h2>Recommended for agents</h2>
+      <p>Call <code>GET /api/integrations/categorize?text=...</code> with the user's shopping text URL-encoded in the <code>text</code> query parameter.</p>
+      <pre><code>curl -s "${origin}/api/integrations/categorize?text=mleko%2C%20chleb"</code></pre>
 
-Send free shopping-list text and receive a ready-to-open share URL. This endpoint is open for non-browser callers such as Siri Shortcuts, Alfred, webhooks, bots, and agents. It intentionally skips the browser Origin guard, session cookie, and Turnstile challenge because those callers do not have a browser context. Calls are still rate-limited per caller IP with the same AI rate-limit binding as the browser AI endpoint.
-
-Request:
-
-\`\`\`bash
-curl -s -X POST https://lazy-shopping.michalczukm.xyz/api/integrations/categorize \\
+      <h2>POST alternative</h2>
+      <p>Call <code>POST /api/integrations/categorize</code> with JSON body <code>{"text":"..."}</code>.</p>
+      <pre><code>curl -s -X POST "${origin}/api/integrations/categorize" \\
   -H 'Content-Type: application/json' \\
-  -d '{"text":"mleko, chleb"}'
-\`\`\`
+  -d '{"text":"mleko, chleb"}'</code></pre>
 
-Success response:
+      <h2>Success response</h2>
+      <pre><code>{"url":"${origin}/?state=..."}</code></pre>
 
-\`\`\`json
-{"url":"https://lazy-shopping.michalczukm.xyz/?state=..."}
-\`\`\`
-
-Error responses:
-
-\`\`\`json
-{"code":"missing-text"}
+      <h2>Error responses</h2>
+      <pre><code>{"code":"missing-text"}
 {"code":"rate-limited"}
-{"code":"categorize-failed"}
-\`\`\`
+{"code":"categorize-failed"}</code></pre>
 
-Give the returned URL to the user. Opening it renders the categorized list without needing a Mistral key in the browser.
-`,
-    200,
-    { 'Content-Type': 'text/markdown; charset=UTF-8' },
-  ),
-)
+      <p>Give the returned URL to the user. Opening it renders the categorized list without needing a Mistral key in the browser.</p>
+    </main>
+  </body>
+</html>`)
+})
 
 export default app
 export { ListSyncRoom }
