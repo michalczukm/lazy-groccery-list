@@ -83,7 +83,7 @@ pnpm run deploy
 - **PR preview** — same-repo PRs deploy a separate per-PR Worker and post a unique
   `*.workers.dev` preview URL as a PR comment. Fork PRs skip it (no secret access). Preview
   Workers are new Cloudflare scripts, so CI seeds preview-safe runtime config directly:
-  Cloudflare's invisible Turnstile test keys and a per-PR session HMAC secret. If
-  `MISTRAL_API_KEY` is present as a GitHub secret, CI also uploads it to the preview Worker;
-  otherwise the preview still deploys, but AI calls return `upstream-error`.
+  Cloudflare's invisible Turnstile test keys and a per-PR session HMAC secret. CI also uploads
+  `MISTRAL_API_KEY` from GitHub secrets, then smoke-checks `/api/integrations/categorize` against
+  the deployed preview so missing or invalid AI config fails before a preview URL is posted.
 - Push to `main` deploys prod.
