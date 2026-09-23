@@ -101,7 +101,11 @@ const fireAndForget = (c: { executionCtx: ExecutionContext }, work: Promise<unkn
 
 type AppContext = Context<{ Bindings: Env }>
 
-const integrationCategorize = async (c: AppContext, text: string) => {
+const integrationCategorize = async (
+  c: AppContext,
+  text: string,
+  options?: { redirect?: boolean },
+) => {
   const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
   const limit = await c.env.AI_RATE_LIMIT.limit({ key: ip })
   if (!limit.success) {
@@ -131,9 +135,12 @@ const integrationCategorize = async (c: AppContext, text: string) => {
     return c.json({ code: 'categorize-failed' }, 502)
   }
 
-  return c.json({
-    url: await shareUrlFor(new URL(c.req.url).origin, listFromCategories(result.categories)),
-  })
+  const url = await shareUrlFor(new URL(c.req.url).origin, listFromCategories(result.categories))
+  if (options?.redirect) {
+    return c.redirect(url)
+  }
+
+  return c.json({ url })
 }
 
 app.post('/api/categorize', async c => {
@@ -193,7 +200,10 @@ app.post('/api/integrations/categorize', async c => {
 })
 
 app.get('/api/integrations/categorize', async c => {
-  return integrationCategorize(c, new URL(c.req.url).searchParams.get('text') ?? '')
+  const searchParams = new URL(c.req.url).searchParams
+  return integrationCategorize(c, searchParams.get('text') ?? '', {
+    redirect: searchParams.get('mode') === 'redirect',
+  })
 })
 
 app.get('/api/list-sync/:room', c => {
@@ -243,6 +253,10 @@ app.get('/integrations', c => {
       <h1>Lazy List integrations</h1>
       <p>Use this open endpoint to turn free shopping-list text into a ready-to-open Lazy List share URL.</p>
       <p>The endpoint intentionally skips browser-only Origin, session cookie, and Turnstile checks so non-browser callers such as Siri Shortcuts, Alfred, webhooks, bots, and agents can use it. Calls are still rate-limited per caller IP with the same AI rate-limit binding as the browser AI endpoint.</p>
+
+      <h2>Simple chats and limited environments</h2>
+      <p>If you cannot call APIs or process JSON, return a URL in this format to the user. Put the user's shopping text URL-encoded in the <code>text</code> query parameter.</p>
+      <pre><code>${origin}/api/integrations/categorize?mode=redirect&amp;text=mleko%2C%20chleb</code></pre>
 
       <h2>Recommended for agents</h2>
       <p>Call <code>GET /api/integrations/categorize?text=...</code> with the user's shopping text URL-encoded in the <code>text</code> query parameter.</p>

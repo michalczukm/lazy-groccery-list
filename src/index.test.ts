@@ -384,6 +384,43 @@ describe('GET /api/integrations/categorize', () => {
       ],
     })
   })
+
+  it('redirects to the generated share URL when mode=redirect is set', async () => {
+    const originalFetch = globalThis.fetch
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = typeof input === 'string' ? input : ((input as Request).url ?? String(input))
+      if (url.includes('api.mistral.ai')) {
+        return Response.json({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  categories: [
+                    { name: 'nabiał', items: ['mleko'] },
+                    { name: 'pieczywo', items: ['chleb'] },
+                  ],
+                }),
+              },
+            },
+          ],
+        })
+      }
+      return originalFetch(input as RequestInfo, init)
+    })
+
+    const res = await SELF.fetch(
+      'https://lazy-shopping.michalczukm.xyz/api/integrations/categorize?mode=redirect&text=mleko%2C%20chleb',
+      { redirect: 'manual' },
+    )
+
+    expect(res.status).toBe(302)
+    const location = res.headers.get('location')
+    expect(location).not.toBeNull()
+    const url = new URL(location as string)
+    expect(url.origin).toBe('https://lazy-shopping.michalczukm.xyz')
+    expect(url.pathname).toBe('/')
+    expect(url.searchParams.get('state')).toMatch(/^[A-Za-z0-9_-]+$/)
+  })
 })
 
 describe('GET /integrations', () => {
@@ -396,6 +433,22 @@ describe('GET /integrations', () => {
     expect(html).toContain('GET /api/integrations/categorize?text=')
     expect(html).toContain('curl')
     expect(html).toContain('?state=')
+  })
+
+  it('leads with simple chat instructions that return a redirect URL', async () => {
+    const res = await SELF.fetch('https://example.com/integrations')
+    const html = await res.text()
+    const firstSection = html.slice(
+      html.indexOf('<h2>'),
+      html.indexOf('<h2>', html.indexOf('<h2>') + 1),
+    )
+
+    expect(firstSection).toContain('Simple chats and limited environments')
+    expect(firstSection).toContain(
+      '/api/integrations/categorize?mode=redirect&amp;text=mleko%2C%20chleb',
+    )
+    expect(firstSection).toContain('URL-encoded')
+    expect(firstSection).toContain('text')
   })
 })
 
