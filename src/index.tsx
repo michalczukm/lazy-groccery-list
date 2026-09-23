@@ -8,6 +8,7 @@ import { InputView } from './views/input'
 import { ListView } from './views/list'
 import { HistoryView } from './views/history'
 import { TemplatesView } from './views/templates'
+import { IntegrationsView } from './views/integrations'
 import { PrivacyView } from './views/privacy'
 import { isSameOrigin } from './lib/origin-guard'
 import { signSession, verifySession } from './lib/cookie-session'
@@ -239,48 +240,7 @@ app.get('/views/templates', c => c.html(<TemplatesView />))
 
 app.get('/privacy', c => c.html(<PrivacyView />))
 
-app.get('/integrations', c => {
-  const origin = new URL(c.req.url).origin
-  return c.html(`<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Lazy List integrations</title>
-  </head>
-  <body>
-    <main>
-      <h1>Lazy List integrations</h1>
-      <p>Use this open endpoint to turn free shopping-list text into a ready-to-open Lazy List share URL.</p>
-      <p>The endpoint intentionally skips browser-only Origin, session cookie, and Turnstile checks so non-browser callers such as Siri Shortcuts, Alfred, webhooks, bots, and agents can use it. Calls are still rate-limited per caller IP with the same AI rate-limit binding as the browser AI endpoint.</p>
-
-      <h2>Simple chats and limited environments</h2>
-      <p>If you cannot call APIs or process JSON, return a URL in this format to the user. Put the user's shopping text URL-encoded in the <code>text</code> query parameter.</p>
-      <pre><code>${origin}/api/integrations/categorize?mode=redirect&amp;text=mleko%2C%20chleb</code></pre>
-
-      <h2>Recommended for agents</h2>
-      <p>Call <code>GET /api/integrations/categorize?text=...</code> with the user's shopping text URL-encoded in the <code>text</code> query parameter.</p>
-      <pre><code>curl -s "${origin}/api/integrations/categorize?text=mleko%2C%20chleb"</code></pre>
-
-      <h2>POST alternative</h2>
-      <p>Call <code>POST /api/integrations/categorize</code> with JSON body <code>{"text":"..."}</code>.</p>
-      <pre><code>curl -s -X POST "${origin}/api/integrations/categorize" \\
-  -H 'Content-Type: application/json' \\
-  -d '{"text":"mleko, chleb"}'</code></pre>
-
-      <h2>Success response</h2>
-      <pre><code>{"url":"${origin}/?state=..."}</code></pre>
-
-      <h2>Error responses</h2>
-      <pre><code>{"code":"missing-text"}
-{"code":"rate-limited"}
-{"code":"categorize-failed"}</code></pre>
-
-      <p>Give the returned URL to the user. Opening it renders the categorized list without needing a Mistral key in the browser.</p>
-    </main>
-  </body>
-</html>`)
-})
+app.get('/integrations', c => c.html(<IntegrationsView origin={new URL(c.req.url).origin} />))
 
 export default app
 export { ListSyncRoom }
