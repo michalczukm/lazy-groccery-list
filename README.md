@@ -80,5 +80,10 @@ pnpm run deploy
 `.github/workflows/ci.yml`:
 
 - **Verify** (every PR + push to `main`) — typecheck, test, lint, fmt check.
-- **PR preview** — same-repo PRs upload a new worker _version_ (`wrangler versions upload`, does not shift prod traffic) and post a unique `*.workers.dev` preview URL as a PR comment. Fork PRs skip it (no secret access).
+- **PR preview** — same-repo PRs deploy a separate per-PR Worker and post a unique
+  `*.workers.dev` preview URL as a PR comment. Fork PRs skip it (no secret access). Preview
+  Workers are new Cloudflare scripts, so CI seeds preview-safe runtime config directly:
+  Cloudflare's invisible Turnstile test keys and a per-PR session HMAC secret. CI also uploads
+  `MISTRAL_API_KEY` from GitHub secrets, then smoke-checks `/api/integrations/categorize` against
+  the deployed preview so missing or invalid AI config fails before a preview URL is posted.
 - Push to `main` deploys prod.

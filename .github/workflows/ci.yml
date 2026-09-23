@@ -75,6 +75,25 @@ jobs:
         run: |
           worker_name=$(node scripts/pr-preview-config.js "${{ github.event.pull_request.number }}" --source wrangler.jsonc --out wrangler.preview.json)
           echo "worker_name=$worker_name" >> "$GITHUB_OUTPUT"
+        env:
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY || secrets.TURNSTILE_SITE_KEY }}
+
+      - name: Configure preview worker secrets
+        run: |
+          put_secret() {
+            printf '%s' "${!1}" | pnpm exec wrangler secret put "$1" --config wrangler.preview.json --name "${{ steps.preview-config.outputs.worker_name }}"
+          }
+
+          if [ -z "$MISTRAL_API_KEY" ]; then
+            echo "::error::MISTRAL_API_KEY is not configured in GitHub secrets; PR preview AI cannot be verified."
+            exit 1
+          fi
+
+          put_secret MISTRAL_API_KEY
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
 
       # Deploys a separate per-PR Worker so Durable Object migrations can be
       # applied to the preview Worker without touching production traffic.
@@ -92,6 +111,9 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Check preview AI integration
+        run: node scripts/check-preview-ai.js "${{ steps.deploy-preview.outputs.url }}"
 
       - name: Comment preview URL on PR
         uses: marocchino/sticky-pull-request-comment@v3
