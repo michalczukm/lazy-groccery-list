@@ -20,6 +20,7 @@ import { mergeAmendInto } from './merge-amend.js'
 import { listToMarkdown } from './list-markdown.js'
 import { listToTemplate, templateToList } from './template-shape.js'
 import { deleteCurrentListFlow } from './list-actions.js'
+import { requestTitleSuggestion } from './list-title.js'
 import { executeTurnstile } from './turnstile.js'
 import { getItemLinkSegments, stopItemLinkClick } from './item-link.js'
 import { createScreenWakeLockController } from './wake-lock.js'
@@ -250,6 +251,75 @@ function closeAmendModal() {
 /** @param {MouseEvent} e */
 function handleAmendOverlayClick(e) {
   if (/** @type {HTMLElement} */ (e.target).id === 'amend-modal-overlay') closeAmendModal()
+}
+
+let renameSuggestionForListId = 0
+
+function openRenameModal() {
+  const list = currentList.value
+  if (!list) {
+    toast('Brak aktywnej listy')
+    return
+  }
+  const input = /** @type {HTMLInputElement | null} */ (document.getElementById('rename-input'))
+  const suggestion = /** @type {HTMLElement | null} */ (
+    document.getElementById('rename-suggestion')
+  )
+  const overlay = /** @type {HTMLElement} */ (document.getElementById('rename-modal-overlay'))
+  if (input) input.value = list.title
+  if (suggestion) suggestion.textContent = 'Proponuję nazwę…'
+  overlay.classList.remove('hidden')
+  setTimeout(() => input?.focus(), 50)
+
+  const requestId = ++renameSuggestionForListId
+  ensureSession()
+    .then(() => requestTitleSuggestion(list))
+    .then(title => {
+      if (requestId !== renameSuggestionForListId) return
+      if (currentList.value?.id !== list.id) return
+      if (!title) {
+        if (suggestion) suggestion.textContent = 'Możesz wpisać własną nazwę.'
+        return
+      }
+      if (input && input.value.trim() === list.title) input.value = title
+      if (suggestion) suggestion.textContent = `Propozycja: ${title}`
+    })
+    .catch(() => {
+      if (requestId === renameSuggestionForListId && suggestion)
+        suggestion.textContent = 'Możesz wpisać własną nazwę.'
+    })
+}
+
+function closeRenameModal() {
+  renameSuggestionForListId++
+  /** @type {HTMLElement} */ (document.getElementById('rename-modal-overlay')).classList.add(
+    'hidden',
+  )
+}
+
+/** @param {MouseEvent} e */
+function handleRenameOverlayClick(e) {
+  if (/** @type {HTMLElement} */ (e.target).id === 'rename-modal-overlay') closeRenameModal()
+}
+
+async function renameCurrentList() {
+  const list = currentList.value
+  if (!list) {
+    toast('Brak aktywnej listy')
+    return
+  }
+  const input = /** @type {HTMLInputElement} */ (document.getElementById('rename-input'))
+  const title = input.value.trim()
+  if (!title) {
+    toast('Wpisz nazwę listy')
+    return
+  }
+  const renamed = { ...list, title }
+  if (renamed.saved) await saveSyncedList(renamed)
+  else currentList.value = renamed
+  updateHeader(currentView)
+  closeRenameModal()
+  toast('Nazwa zmieniona')
 }
 // ── Routing ───────────────────────────────────────────────────────────────────
 function showBottomNav() {
@@ -715,6 +785,7 @@ function ShoppingList() {
           </button>
           <${Meatballs}
             items=${[
+              { icon: '✏️', label: 'Zmień nazwę', onClick: openRenameModal },
               { icon: '📌', label: 'Utwórz szablon', onClick: makeTemplateFromCurrent },
               {
                 icon: '📝',
@@ -1195,6 +1266,10 @@ window.App = {
   closeAmendModal,
   handleAmendOverlayClick,
   amendCurrentList,
+  openRenameModal,
+  closeRenameModal,
+  handleRenameOverlayClick,
+  renameCurrentList,
   toggleTheme,
   toggleFontSize,
 }

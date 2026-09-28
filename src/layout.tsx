@@ -203,6 +203,49 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
         </div>
       </div>
 
+      {/* Rename list modal */}
+      <div
+        id="rename-modal-overlay"
+        class="hidden fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+        onclick="App.handleRenameOverlayClick(event)"
+      >
+        <div class="w-full max-w-md bg-surface border border-fg/10 rounded-2xl p-5 shadow-2xl">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-fg/90 text-[16px] font-semibold">Zmień nazwę listy</h2>
+            <button
+              class="text-muted bg-transparent border-none cursor-pointer text-[18px] p-1 active:text-fg/80"
+              onclick="App.closeRenameModal()"
+              aria-label="Zamknij"
+            >
+              ✕
+            </button>
+          </div>
+
+          <input
+            id="rename-input"
+            class="w-full border border-fg/10 rounded-xl p-3 text-[15px] outline-none bg-black/30 text-fg/90 placeholder:text-muted focus:border-accent/40"
+            maxlength={60}
+            autocomplete="off"
+          />
+          <div id="rename-suggestion" class="min-h-[1.25rem] mt-2 text-[12px] text-muted" />
+
+          <div class="flex gap-2 mt-3">
+            <button
+              class="flex-1 bg-transparent text-fg/60 py-3 rounded-xl text-[14px] font-medium cursor-pointer border border-fg/10 active:opacity-70"
+              onclick="App.closeRenameModal()"
+            >
+              Anuluj
+            </button>
+            <button
+              class="flex-1 bg-surface text-accent py-3 rounded-xl text-[14px] font-semibold cursor-pointer border border-accent/20 active:scale-[0.98] active:opacity-85"
+              onclick="App.renameCurrentList()"
+            >
+              Zapisz
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       <header
         class="bg-surface shrink-0 px-5 text-fg"

@@ -39,8 +39,8 @@ export const PrivacyView: FC = () => (
           <p>
             Nie zakładasz konta, nie ma reklam. Zbieramy tylko anonimowe statystyki użycia i raporty
             błędów — żeby wiedzieć, czy apka działa poprawnie. Twoje listy zakupów żyją w Twojej
-            przeglądarce. Wysyłamy do przetworzenia tylko tekst, który sam wpiszesz, i tylko po to,
-            żeby go pokategoryzować.
+            przeglądarce. Wysyłamy do przetworzenia tylko tekst lub listę, dla której prosisz o
+            pomoc AI, i tylko po to, żeby ją pokategoryzować albo zaproponować jej nazwę.
           </p>
         </Section>
 
@@ -64,6 +64,12 @@ export const PrivacyView: FC = () => (
             Gdy generujesz listę, wpisany przez Ciebie tekst trafia do naszego serwera, który
             przekazuje go do <strong>Mistral AI</strong> w celu pokategoryzowania produktów. Nie
             zapisujemy tego tekstu na serwerze — jest przetwarzany i odsyłany jako gotowa lista.
+          </p>
+          <p>
+            Gdy zmieniasz nazwę listy i korzystasz z podpowiedzi AI, obecna nazwa, kategorie i
+            produkty z tej listy trafiają do naszego serwera, który przekazuje je do{' '}
+            <strong>Mistral AI</strong> w celu zaproponowania krótkiej nazwy. Podpowiedź jest tylko
+            propozycją — możesz ją zmienić przed zapisaniem.
           </p>
           <p>
             Ten sam mechanizm może być użyty przez otwarty endpoint integracyjny dla skrótów,
@@ -204,7 +210,7 @@ export const PrivacyView: FC = () => (
         </Section>
 
         <p class="text-[12px] text-muted mt-10 border-t border-fg/10 pt-4">
-          Ostatnia aktualizacja: 14 września 2026
+          Ostatnia aktualizacja: 28 września 2026
         </p>
       </main>
     </body>

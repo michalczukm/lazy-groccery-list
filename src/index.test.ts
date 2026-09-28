@@ -139,6 +139,69 @@ describe('POST /api/categorize', () => {
   })
 })
 
+describe('POST /api/suggest-title', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('requires the same browser session as categorize', async () => {
+    const res = await SELF.fetch('https://example.com/api/suggest-title', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: 'https://example.com' },
+      body: JSON.stringify({ currentTitle: 'Zakupy dziś', categories: [] }),
+    })
+
+    expect(res.status).toBe(401)
+    expect(await res.json()).toEqual({ code: 'captcha-required' })
+  })
+
+  it('returns an AI title suggestion without logging list content', async () => {
+    const cookie = await signSession(env.SESSION_HMAC_SECRET, Math.floor(Date.now() / 1000))
+    const posthogCalls: Array<{ body: unknown }> = []
+    const originalFetch = globalThis.fetch
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = typeof input === 'string' ? input : ((input as Request).url ?? String(input))
+
+      if (url.includes('api.mistral.ai')) {
+        expect(String(init?.body)).toContain('mleko')
+        return Response.json({
+          choices: [{ message: { content: JSON.stringify({ title: 'Śniadania i pieczywo' }) } }],
+        })
+      }
+
+      if (url.endsWith('/i/v0/e')) {
+        posthogCalls.push({ body: JSON.parse(String(init?.body)) })
+        return new Response(null, { status: 200 })
+      }
+
+      return originalFetch(input as RequestInfo, init)
+    })
+
+    const request = new Request('https://example.com/api/suggest-title', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: 'https://example.com',
+        Cookie: `lazy_list_session=${cookie}`,
+        'X-POSTHOG-DISTINCT-ID': 'rename-test',
+      },
+      body: JSON.stringify({
+        currentTitle: 'Zakupy 28 wrz',
+        categories: [{ name: 'nabiał', items: ['mleko'] }],
+      }),
+    })
+
+    const ctx = createExecutionContext()
+    const res = await worker.fetch(request, env, ctx)
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ title: 'Śniadania i pieczywo' })
+
+    await waitOnExecutionContext(ctx)
+    expect(JSON.stringify(posthogCalls)).not.toContain('mleko')
+  })
+})
+
 describe('POST /api/integrations/categorize', () => {
   afterEach(() => {
     vi.restoreAllMocks()

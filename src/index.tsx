@@ -13,7 +13,7 @@ import { PrivacyView } from './views/privacy'
 import { isSameOrigin } from './lib/origin-guard'
 import { signSession, verifySession } from './lib/cookie-session'
 import { verifyTurnstile } from './lib/turnstile'
-import { categorize } from './lib/mistral'
+import { categorize, suggestTitle } from './lib/mistral'
 import { listFromCategories, shareUrlFor } from './lib/share-url'
 import { proxyPosthog, captureServer, distinctIdFrom } from './lib/posthog'
 import { ListSyncRoom, isValidSyncRoom } from './lib/list-sync-room'
@@ -193,6 +193,80 @@ app.post('/api/categorize', async c => {
     return c.json({ code: 'upstream-error' }, 502)
   }
   return c.json({ categories: result.categories })
+})
+
+app.post('/api/suggest-title', async c => {
+  if (!isSameOrigin(c.req.raw)) {
+    return c.json({ code: 'forbidden' }, 403)
+  }
+
+  const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
+  const limit = await c.env.AI_RATE_LIMIT.limit({ key: ip })
+  if (!limit.success) {
+    return c.json({ code: 'rate-limited' }, 429)
+  }
+
+  const cookie = getCookie(c, SESSION_COOKIE)
+  if (!cookie) {
+    return c.json({ code: 'captcha-required' }, 401)
+  }
+  const session = await verifySession(
+    cookie,
+    c.env.SESSION_HMAC_SECRET,
+    SESSION_MAX_AGE_SEC,
+    Math.floor(Date.now() / 1000),
+  )
+  if (!session.valid) {
+    return c.json({ code: 'captcha-required' }, 401)
+  }
+
+  const body: { currentTitle?: string; categories?: Array<{ name?: string; items?: string[] }> } =
+    await c.req
+      .json<{ currentTitle?: string; categories?: Array<{ name?: string; items?: string[] }> }>()
+      .catch(() => ({}))
+  const categories = Array.isArray(body.categories)
+    ? body.categories
+        .map(category => ({
+          name: typeof category.name === 'string' ? category.name.trim() : '',
+          items: Array.isArray(category.items)
+            ? category.items.filter(item => typeof item === 'string').map(item => item.trim())
+            : [],
+        }))
+        .filter(category => category.name && category.items.length)
+    : []
+  const itemChars = categories.reduce(
+    (sum, category) => sum + category.name.length + category.items.join('\n').length,
+    0,
+  )
+  if (!categories.length || itemChars > MAX_INPUT_CHARS) {
+    return c.json({ code: 'invalid-input' }, 400)
+  }
+
+  const result = await suggestTitle(
+    {
+      currentTitle: typeof body.currentTitle === 'string' ? body.currentTitle.slice(0, 120) : '',
+      categories,
+    },
+    c.env.MISTRAL_API_KEY,
+  )
+  if (!result.ok) {
+    fireAndForget(
+      c,
+      captureServer(c.env, {
+        event: 'worker_request_error',
+        distinctId: distinctIdFrom(c.req.raw),
+        properties: {
+          route: '/api/suggest-title',
+          status: 502,
+          code: 'suggest-title-failed',
+          reason: result.reason,
+        },
+      }),
+    )
+    return c.json({ code: 'suggest-title-failed' }, 502)
+  }
+
+  return c.json({ title: result.title })
 })
 
 app.post('/api/integrations/categorize', async c => {
