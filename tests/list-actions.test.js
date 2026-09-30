@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { deleteCurrentListFlow } from '../public/list-actions.js'
+import { deleteCurrentListFlow, removeItemFromListFlow } from '../public/list-actions.js'
 
 const sharedList = () => ({
   id: 123,
@@ -79,5 +79,52 @@ describe('deleteCurrentListFlow', () => {
     expect(deps.stopSync).not.toHaveBeenCalled()
     expect(deps.navigateToHistory).not.toHaveBeenCalled()
     expect(deps.showToast).toHaveBeenCalledWith('Nie udało się usunąć listy', 4000, true)
+  })
+})
+
+describe('removeItemFromListFlow', () => {
+  it('removes a confirmed item from its category without removing the category', async () => {
+    let current = sharedList()
+    const deps = {
+      getCurrentList: () => current,
+      setCurrentList: vi.fn(next => {
+        current = next
+      }),
+      saveList: vi.fn(async () => {}),
+      showToast: vi.fn(),
+      confirmDelete: vi.fn(() => true),
+    }
+
+    await removeItemFromListFlow(deps, 0, 0)
+
+    expect(deps.confirmDelete).toHaveBeenCalledWith('Usunąć „Mleko” z listy?')
+    expect(current.categories).toEqual([
+      {
+        name: 'nabiał',
+        collapsed: false,
+        manualExpand: false,
+        items: [],
+      },
+    ])
+    expect(deps.setCurrentList).toHaveBeenCalledWith(current)
+    expect(deps.saveList).toHaveBeenCalledWith(current)
+    expect(deps.showToast).toHaveBeenCalledWith('Produkt usunięty')
+  })
+
+  it('leaves the list untouched when item removal confirmation is cancelled', async () => {
+    const current = sharedList()
+    const deps = {
+      getCurrentList: () => current,
+      setCurrentList: vi.fn(),
+      saveList: vi.fn(async () => {}),
+      showToast: vi.fn(),
+      confirmDelete: vi.fn(() => false),
+    }
+
+    await removeItemFromListFlow(deps, 0, 0)
+
+    expect(deps.setCurrentList).not.toHaveBeenCalled()
+    expect(deps.saveList).not.toHaveBeenCalled()
+    expect(deps.showToast).not.toHaveBeenCalled()
   })
 })
