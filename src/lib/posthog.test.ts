@@ -113,8 +113,8 @@ describe('proxyPosthog', () => {
   })
 
   it('never forwards the Referer header upstream', async () => {
-    // A share link keeps its payload in the query string (?state=...). Referer would
-    // carry that whole URL to a third party if it were ever forwarded.
+    // Legacy share links kept their payload in the query string. Referer would carry that
+    // whole URL to a third party if it were ever forwarded.
     let seen: Request | undefined
     const fetchImpl = (async (input: Request) => {
       seen = input as Request

@@ -315,9 +315,12 @@ describe('POST /api/integrations/categorize', () => {
     const url = new URL(body.url)
     expect(url.origin).toBe('https://lazy-shopping.michalczukm.xyz')
     expect(url.pathname).toBe('/')
-    expect(url.searchParams.get('state')).toMatch(/^[A-Za-z0-9_-]+$/)
+    expect(url.search).toBe('')
 
-    const shared = await decodeIntegrationState(url.searchParams.get('state') as string)
+    const params = new URLSearchParams(url.hash.slice(1))
+    expect(params.get('state')).toMatch(/^[A-Za-z0-9_-]+$/)
+
+    const shared = await decodeIntegrationState(params.get('state') as string)
     expect(shared).toEqual({
       title: expect.stringMatching(/^Zakupy /),
       date: expect.any(Number),
@@ -435,9 +438,12 @@ describe('GET /api/integrations/categorize', () => {
     const url = new URL(body.url)
     expect(url.origin).toBe('https://lazy-shopping.michalczukm.xyz')
     expect(url.pathname).toBe('/')
-    expect(url.searchParams.get('state')).toMatch(/^[A-Za-z0-9_-]+$/)
+    expect(url.search).toBe('')
 
-    const shared = await decodeIntegrationState(url.searchParams.get('state') as string)
+    const params = new URLSearchParams(url.hash.slice(1))
+    expect(params.get('state')).toMatch(/^[A-Za-z0-9_-]+$/)
+
+    const shared = await decodeIntegrationState(params.get('state') as string)
     expect(shared).toEqual({
       title: expect.stringMatching(/^Zakupy /),
       date: expect.any(Number),
@@ -482,7 +488,8 @@ describe('GET /api/integrations/categorize', () => {
     const url = new URL(location as string)
     expect(url.origin).toBe('https://lazy-shopping.michalczukm.xyz')
     expect(url.pathname).toBe('/')
-    expect(url.searchParams.get('state')).toMatch(/^[A-Za-z0-9_-]+$/)
+    expect(url.search).toBe('')
+    expect(new URLSearchParams(url.hash.slice(1)).get('state')).toMatch(/^[A-Za-z0-9_-]+$/)
   })
 })
 
@@ -495,7 +502,7 @@ describe('GET /integrations', () => {
     expect(html).toContain('POST /api/integrations/categorize')
     expect(html).toContain('GET /api/integrations/categorize?text=')
     expect(html).toContain('curl')
-    expect(html).toContain('?state=')
+    expect(html).toContain('#state=')
   })
 
   it('leads with simple chat instructions that return a redirect URL', async () => {

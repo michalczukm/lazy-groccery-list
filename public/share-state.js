@@ -22,6 +22,33 @@ export async function encodeState(list) {
 }
 
 /**
+ * @param {string} origin
+ * @param {string} state
+ * @param {string | undefined} [shareId]
+ * @returns {string}
+ */
+export function shareUrlFor(origin, state, shareId) {
+  const url = new URL('/', origin)
+  const params = new URLSearchParams()
+  params.set('state', state)
+  if (shareId) params.set('share', shareId)
+  url.hash = params.toString()
+  return url.toString()
+}
+
+/**
+ * @param {string} search
+ * @param {string} hash
+ * @returns {URLSearchParams}
+ */
+export function sharedStateParamsFrom(search, hash) {
+  const fragment = hash.startsWith('#') ? hash.slice(1) : hash
+  const fragmentParams = new URLSearchParams(fragment)
+  if (fragmentParams.has('state')) return fragmentParams
+  return new URLSearchParams(search)
+}
+
+/**
  * @param {string} str
  * @returns {Promise<{ title: string, date: number, categories: Array<{ name: string, items: Item[] }> }>}
  */
