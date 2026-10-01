@@ -19,7 +19,7 @@ import {
 import { mergeAmendInto } from './merge-amend.js'
 import { listToMarkdown } from './list-markdown.js'
 import { listToTemplate, templateToList } from './template-shape.js'
-import { deleteCurrentListFlow } from './list-actions.js'
+import { deleteCurrentListFlow, removeItemFromListFlow } from './list-actions.js'
 import { requestTitleSuggestion } from './list-title.js'
 import { executeTurnstile } from './turnstile.js'
 import { getItemLinkSegments, stopItemLinkClick } from './item-link.js'
@@ -758,6 +758,28 @@ function ShoppingList() {
     }
   }
 
+  /**
+   * @param {number} ci
+   * @param {number} ii
+   * @param {Event} e
+   */
+  function removeItem(ci, ii, e) {
+    e.stopPropagation()
+    removeItemFromListFlow(
+      {
+        getCurrentList: () => currentList.value,
+        setCurrentList: next => {
+          currentList.value = next
+        },
+        saveList: saveSyncedList,
+        showToast: toast,
+        confirmDelete: msg => confirm(msg),
+      },
+      ci,
+      ii,
+    )
+  }
+
   /** @param {number} ci */
   function toggleCat(ci) {
     const cur = /** @type {ShoppingListData} */ (list)
@@ -866,6 +888,14 @@ function ShoppingList() {
                             : html`<span key=${segmentIndex}>${segment.text}</span>`,
                         )}
                       </span>
+                      <button
+                        class="ml-auto shrink-0 bg-transparent border-none text-muted text-[15px] cursor-pointer p-2 active:text-red-400 transition-colors"
+                        onClick=${(/** @type {Event} */ e) => removeItem(ci, ii, e)}
+                        title="Usuń produkt"
+                        aria-label=${`Usuń ${item.name}`}
+                      >
+                        🗑
+                      </button>
                     </div>
                   `
                 })}
