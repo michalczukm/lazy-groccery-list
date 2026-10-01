@@ -129,7 +129,7 @@ export const IntegrationsView: FC<{ origin: string }> = ({ origin }) => (
           <Sub title="Success response">
             <p>The API returns:</p>
             <pre>
-              <code>{`{"url":"${origin}/?state=..."}`}</code>
+              <code>{`{"url":"${origin}/#state=..."}`}</code>
             </pre>
             <p>
               Extract the value of <code>url</code> and give <strong>that URL</strong> to the user.

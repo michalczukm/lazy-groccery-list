@@ -162,11 +162,13 @@ export const PrivacyView: FC = () => (
 
         <Section title="Udostępnianie list">
           <p>
-            Gdy tworzysz link do udostępnienia listy, jej zawartość jest zakodowana bezpośrednio w
-            adresie URL, razem z losowym identyfikatorem pokoju współdzielenia. Udostępniasz ją
-            dobrowolnie i to Ty decydujesz, komu wyślesz link. Gdy otworzysz otrzymany link, lista
-            zapisuje się w pamięci Twojej przeglądarki (IndexedDB) — tak samo jak Twoje własne listy
-            — i zostaje u Ciebie, dopóki jej nie usuniesz.
+            Gdy tworzysz link do udostępnienia listy, jej zawartość jest zakodowana w fragmencie
+            adresu URL (części po znaku <code class="text-accent">#</code>), razem z losowym
+            identyfikatorem pokoju współdzielenia. Fragment nie jest wysyłany do serwera podczas
+            otwierania strony. Udostępniasz link dobrowolnie i to Ty decydujesz, komu go wyślesz.
+            Gdy otworzysz otrzymany link, lista zapisuje się w pamięci Twojej przeglądarki
+            (IndexedDB) — tak samo jak Twoje własne listy — i zostaje u Ciebie, dopóki jej nie
+            usuniesz.
           </p>
           <p>
             Jeśli dwie osoby mają otwartą tę samą udostępnioną listę, zmiany synchronizują się na
@@ -210,7 +212,7 @@ export const PrivacyView: FC = () => (
         </Section>
 
         <p class="text-[12px] text-muted mt-10 border-t border-fg/10 pt-4">
-          Ostatnia aktualizacja: 28 września 2026
+          Ostatnia aktualizacja: 30 września 2026
         </p>
       </main>
     </body>

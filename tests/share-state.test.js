@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { encodeState, decodeState } from '../public/share-state.js'
+import {
+  encodeState,
+  decodeState,
+  shareUrlFor,
+  sharedStateParamsFrom,
+} from '../public/share-state.js'
 
 const sample = {
   id: 9999,
@@ -75,6 +80,32 @@ describe('encodeState / decodeState round-trip', () => {
     }
     const decoded = await decodeState(await encodeState(list))
     expect(decoded.categories[0].items[0].name).toBe('Chleb żytni')
+  })
+})
+
+describe('share URL shape', () => {
+  it('puts share payloads in the URL fragment so they are not sent to the server', () => {
+    const url = new URL(shareUrlFor('https://lazy-shopping.example', 'encoded-state', 'room_123'))
+
+    expect(url.origin).toBe('https://lazy-shopping.example')
+    expect(url.pathname).toBe('/')
+    expect(url.search).toBe('')
+
+    const params = new URLSearchParams(url.hash.slice(1))
+    expect(params.get('state')).toBe('encoded-state')
+    expect(params.get('share')).toBe('room_123')
+  })
+
+  it('reads new fragment links before falling back to old query links', () => {
+    expect(
+      sharedStateParamsFrom('', '#state=fragment-state&share=fragment-room').get('state'),
+    ).toBe('fragment-state')
+    expect(sharedStateParamsFrom('?state=query-state&share=query-room', '').get('state')).toBe(
+      'query-state',
+    )
+    expect(sharedStateParamsFrom('?state=query-state', '#state=fragment-state').get('state')).toBe(
+      'fragment-state',
+    )
   })
 })
 

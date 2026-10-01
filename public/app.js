@@ -5,7 +5,7 @@ import confetti from 'canvas-confetti'
 import { html } from './html.js'
 import { PlusIcon, CheckIcon } from './icons.js'
 import { Meatballs } from './meatballs.js'
-import { encodeState, decodeState } from './share-state.js'
+import { encodeState, decodeState, shareUrlFor, sharedStateParamsFrom } from './share-state.js'
 import {
   compareSyncMessages,
   createShareVersionAllocator,
@@ -1209,7 +1209,7 @@ async function shareList(list) {
     currentList.value = sharedList
     startListSync(sharedList)
     const encoded = await encodeState(sharedList)
-    const url = `${location.origin}/?state=${encoded}&share=${shareId}`
+    const url = shareUrlFor(location.origin, encoded, shareId)
     if (navigator.share) {
       await navigator.share({ title: sharedList.title, url })
     } else if (navigator.clipboard?.writeText) {
@@ -1226,7 +1226,7 @@ async function shareList(list) {
 
 /** @returns {Promise<boolean>} */
 async function handleSharedState() {
-  const params = new URLSearchParams(location.search)
+  const params = sharedStateParamsFrom(location.search, location.hash)
   const state = params.get('state')
   if (!state) return false
   try {
