@@ -17,6 +17,7 @@ import {
   syncMessageToList,
 } from './list-sync.js'
 import { mergeAmendInto } from './merge-amend.js'
+import { trackVisualViewport } from './visual-viewport.js'
 import { listToMarkdown } from './list-markdown.js'
 import { listToTemplate, templateToList } from './template-shape.js'
 import { deleteCurrentListFlow, removeItemFromListFlow } from './list-actions.js'
@@ -230,6 +231,9 @@ async function saveSyncedList(list) {
 }
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
+/** @type {() => void} */
+let stopTrackingAmendViewport = () => {}
+
 function openAmendModal() {
   if (!currentList.value) {
     toast('Brak aktywnej listy')
@@ -241,9 +245,15 @@ function openAmendModal() {
   if (amendElement) amendElement.value = ''
   const overlay = /** @type {HTMLElement} */ (document.getElementById('amend-modal-overlay'))
   overlay.classList.remove('hidden')
+  stopTrackingAmendViewport()
+  stopTrackingAmendViewport = window.visualViewport
+    ? trackVisualViewport(overlay, window.visualViewport)
+    : () => {}
   setTimeout(() => amendElement?.focus(), 50)
 }
 function closeAmendModal() {
+  stopTrackingAmendViewport()
+  stopTrackingAmendViewport = () => {}
   /** @type {HTMLElement} */ (document.getElementById('amend-modal-overlay')).classList.add(
     'hidden',
   )

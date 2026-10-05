@@ -163,10 +163,10 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
       {/* Amend list modal */}
       <div
         id="amend-modal-overlay"
-        class="hidden fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+        class="hidden fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 overflow-y-auto"
         onclick="App.handleAmendOverlayClick(event)"
       >
-        <div class="w-full max-w-md bg-surface border border-fg/10 rounded-2xl p-5 shadow-2xl">
+        <div class="w-full max-w-md bg-surface border border-fg/10 rounded-2xl p-5 shadow-2xl max-h-full overflow-y-auto">
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-fg/90 text-[16px] font-semibold">Dodaj do listy</h2>
             <button
