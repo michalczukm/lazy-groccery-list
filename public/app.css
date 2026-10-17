@@ -82,7 +82,7 @@ html.large .app-shell {
 .workspace-nav {
   display: flex;
   flex-shrink: 0;
-  padding: var(--lazy-space-2) 8px calc(var(--lazy-space-2) + env(safe-area-inset-bottom, 0px));
+  padding: var(--lazy-space-1) 8px calc(var(--lazy-space-1) + env(safe-area-inset-bottom, 0px));
   background: var(--lazy-color-surface);
   border-top: 1px solid var(--lazy-color-line);
   gap: 4px;
@@ -90,11 +90,10 @@ html.large .app-shell {
 .nav-item {
   display: flex;
   flex: 1;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: var(--lazy-space-1);
-  min-height: 60px;
+  min-height: var(--lazy-control-size);
   padding: var(--lazy-space-2);
   color: var(--lazy-color-muted);
   background: transparent;
@@ -102,6 +101,13 @@ html.large .app-shell {
   border-radius: var(--lazy-radius-control);
   font-size: var(--lazy-text-small);
   font-weight: var(--lazy-font-semibold);
+}
+.nav-label {
+  display: none;
+}
+.nav-item > .icon {
+  width: 1.5rem;
+  height: 1.5rem;
 }
 .nav-item:hover {
   background: var(--lazy-color-soft);
@@ -395,7 +401,10 @@ html.large .app-shell {
   max-width: calc(100vw - 32px);
   white-space: normal;
   text-align: center;
-  bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(
+    var(--lazy-control-size) + var(--lazy-space-2) + var(--lazy-space-3) +
+      env(safe-area-inset-bottom, 0px)
+  );
   opacity: 0;
   transform: translateX(-50%) translateY(8px);
   border: 1px solid var(--lazy-color-line);
@@ -451,6 +460,9 @@ html.large .app-shell {
     padding: var(--lazy-space-3) var(--lazy-space-4);
     font-size: var(--lazy-text-body);
     min-height: 52px;
+  }
+  .nav-label {
+    display: inline;
   }
   .sidebar-logo {
     display: block;

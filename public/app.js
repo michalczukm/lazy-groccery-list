@@ -318,7 +318,7 @@ function showMainApp() {
 // ── Navigation ────────────────────────────────────────────────────────────────
 /** @type {Record<string, { title: string, sub: string }>} */
 const META = {
-  input: { title: 'Lazy List', sub: 'Nowa lista' },
+  input: { title: 'lazy-list', sub: 'Nowa lista' },
   list: { title: 'Lista', sub: '' },
   history: { title: 'Historia', sub: 'Poprzednie listy' },
   templates: { title: 'Szablony', sub: 'Zapisane szablony' },
@@ -364,7 +364,17 @@ function updateHeader(name) {
   if (!m) return
   const titleEl = document.getElementById('header-title')
   const subEl = document.getElementById('header-sub')
-  if (titleEl) titleEl.textContent = m.title
+  if (titleEl) {
+    titleEl.textContent = m.title
+    titleEl.classList.toggle('lazy-wordmark', name === 'input')
+    titleEl.classList.toggle('lazy-heading', name !== 'input')
+    if (name === 'input') {
+      const dot = document.createElement('span')
+      dot.setAttribute('aria-hidden', 'true')
+      dot.textContent = '.'
+      titleEl.append(dot)
+    }
+  }
   if (subEl)
     subEl.textContent = name === 'list' && currentList.value ? currentList.value.title : m.sub
 }

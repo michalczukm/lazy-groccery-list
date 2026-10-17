@@ -182,8 +182,8 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
       <header class="workspace-header">
         <div class="flex items-center justify-between">
           <div>
-            <h1 id="header-title" class="lazy-heading">
-              Lazy List
+            <h1 id="header-title" class="lazy-wordmark">
+              lazy-list<span aria-hidden="true">.</span>
             </h1>
             <div id="header-sub" class="header-description">
               Nowa lista
@@ -225,41 +225,47 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
       <nav id="bottom-nav" class="workspace-nav" aria-label="Główna nawigacja">
         <div class="sidebar-logo">
           <span class="lazy-wordmark">
-            Lazy List<span aria-hidden="true">.</span>
+            lazy-list<span aria-hidden="true">.</span>
           </span>
         </div>
         <button
           class="lazy-button nav-item active"
           data-view="input"
+          aria-label="Nowa"
+          title="Nowa"
           hx-get="/views/input"
           hx-target="#main-content"
           hx-swap="innerHTML"
           onclick="App.handleNavClick(this)"
         >
           <Icon name="edit" />
-          Nowa
+          <span class="nav-label">Nowa</span>
         </button>
         <button
           class="lazy-button nav-item"
           data-view="list"
+          aria-label="Lista"
+          title="Lista"
           hx-get="/views/list"
           hx-target="#main-content"
           hx-swap="innerHTML"
           onclick="App.handleNavClick(this)"
         >
           <Icon name="list" />
-          Lista
+          <span class="nav-label">Lista</span>
         </button>
         <button
           class="lazy-button nav-item"
           data-view="history"
+          aria-label="Historia"
+          title="Historia"
           hx-get="/views/history"
           hx-target="#main-content"
           hx-swap="innerHTML"
           onclick="App.handleNavClick(this)"
         >
           <Icon name="history" />
-          Historia
+          <span class="nav-label">Historia</span>
         </button>
         <a href="/privacy" class="sidebar-link lazy-note mt-auto mx-4 mb-1">
           Polityka prywatności
