@@ -18,11 +18,12 @@ export const PrivacyView: FC = () => (
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Polityka prywatności — Lazy List</title>
       <link rel="icon" href="/icon.svg" />
-      <meta name="theme-color" content="#1a1a2e" />
+      <meta name="theme-color" content="#222722" />
       <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
       <script dangerouslySetInnerHTML={{ __html: THEME_ANTIFLASH }} />
       <script src="https://cdn.tailwindcss.com" />
       <script dangerouslySetInnerHTML={{ __html: THEME_CONFIG }} />
+      <link rel="stylesheet" href="/app.css" />
       <style dangerouslySetInnerHTML={{ __html: THEME_VARS }} />
     </head>
 
@@ -32,7 +33,7 @@ export const PrivacyView: FC = () => (
           ← Wróć
         </a>
 
-        <h1 class="text-[22px] font-bold tracking-tight">🔒 Polityka prywatności</h1>
+        <h1 class="text-[22px] font-bold tracking-tight">Polityka prywatności</h1>
         <p class="text-[13px] text-muted mt-1">Lazy List — prosta apka do list zakupów.</p>
 
         <Section title="W skrócie">

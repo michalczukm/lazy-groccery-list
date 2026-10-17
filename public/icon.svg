@@ -1,4 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="110" fill="#1a1a2e"/>
-  <text x="256" y="340" font-size="280" text-anchor="middle" dominant-baseline="middle">🛒</text>
+  <rect width="512" height="512" rx="110" fill="#222722"/>
+  <g fill="none" stroke="#e8c46b" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M160 200h192l24 176H136l24-176Z"/>
+    <path d="M208 200v-24a48 48 0 0 1 96 0v24"/>
+    <path d="m212 285 30 30 60-64"/>
+  </g>
 </svg>

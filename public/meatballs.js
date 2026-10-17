@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import { html } from './html.js'
-import { DotsIcon } from './icons.js'
+import { DotsIcon, Icon } from './icons.js'
 
 /**
  * @param {{ items: Array<{ icon: string, label: string, onClick: () => void }> }} props
@@ -19,7 +19,7 @@ export function Meatballs({ items }) {
   }, [open])
   return html` <div class="relative">
     <button
-      class="text-muted bg-transparent border-none cursor-pointer p-1 active:text-accent transition-colors"
+      class="icon-button text-muted bg-transparent border-none"
       onClick=${() => setOpen(o => !o)}
       title="Więcej"
       aria-label="Więcej opcji"
@@ -31,7 +31,7 @@ export function Meatballs({ items }) {
     ${open &&
     html`<div class="fixed inset-0 z-40" onClick=${() => setOpen(false)} />
       <div
-        class="absolute right-0 top-full mt-1 z-50 min-w-[180px] bg-surface border border-fg/10 rounded-xl py-1 shadow-lg"
+        class="action-menu absolute right-0 top-full mt-1 z-50 bg-surface border border-fg/10 rounded-xl py-1 shadow-lg"
         role="menu"
       >
         ${items.map(
@@ -45,7 +45,7 @@ export function Meatballs({ items }) {
                 it.onClick()
               }}
             >
-              <span>${it.icon}</span><span>${it.label}</span>
+              <${Icon} name=${it.icon} /><span>${it.label}</span>
             </button>
           `,
         )}
