@@ -1,5 +1,5 @@
 import type { FC, PropsWithChildren } from 'hono/jsx'
-import { THEME_ANTIFLASH, THEME_CONFIG, THEME_VARS } from '../theme'
+import { FONT_SIZE_ANTIFLASH, FONT_SIZE_CSS, THEME_ANTIFLASH, THEME_CONFIG } from '../theme'
 
 const TURNSTILE_PRIVACY_URL = 'https://www.cloudflare.com/en-gb/turnstile-privacy-policy/'
 const POSTHOG_PRIVACY_URL = 'https://posthog.com/privacy'
@@ -7,12 +7,12 @@ const POSTHOG_PRIVACY_URL = 'https://posthog.com/privacy'
 const Section: FC<{ title: string } & PropsWithChildren> = ({ title, children }) => (
   <section class="mt-6">
     <h2 class="text-[16px] font-semibold text-accent mb-1.5">{title}</h2>
-    <div class="text-[14px] leading-relaxed text-fg/70 space-y-2">{children}</div>
+    <div class="text-fg space-y-2">{children}</div>
   </section>
 )
 
 export const PrivacyView: FC = () => (
-  <html lang="pl" class="h-full">
+  <html lang="pl" class="lazy-theme h-full" data-lazy-theme="dark">
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -20,20 +20,22 @@ export const PrivacyView: FC = () => (
       <link rel="icon" href="/icon.svg" />
       <meta name="theme-color" content="#222722" />
       <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+      <link rel="stylesheet" href="/vendor/lazy-theme/theme.css" />
       <script dangerouslySetInnerHTML={{ __html: THEME_ANTIFLASH }} />
+      <script dangerouslySetInnerHTML={{ __html: FONT_SIZE_ANTIFLASH }} />
       <script src="https://cdn.tailwindcss.com" />
       <script dangerouslySetInnerHTML={{ __html: THEME_CONFIG }} />
       <link rel="stylesheet" href="/app.css" />
-      <style dangerouslySetInnerHTML={{ __html: THEME_VARS }} />
+      <style dangerouslySetInnerHTML={{ __html: FONT_SIZE_CSS }} />
     </head>
 
     <body class="font-sans bg-bg text-fg min-h-full">
-      <main class="max-w-[640px] mx-auto px-5 py-8">
+      <main class="privacy-content lazy-page lazy-prose">
         <a href="/" class="inline-block text-[13px] text-accent hover:underline mb-6">
           ← Wróć
         </a>
 
-        <h1 class="text-[22px] font-bold tracking-tight">Polityka prywatności</h1>
+        <h1 class="lazy-heading">Polityka prywatności</h1>
         <p class="text-[13px] text-muted mt-1">Lazy List — prosta apka do list zakupów.</p>
 
         <Section title="W skrócie">

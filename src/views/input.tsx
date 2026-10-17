@@ -10,12 +10,12 @@ export const InputView: FC<InputViewProps> = ({ integrationUrl = '/integrations'
 
   return (
     <div class="input-view view-content">
-      <label class="input-label" for="shopping-input">
+      <label class="lazy-label input-label" for="shopping-input">
         Produkty do kupienia
       </label>
       <textarea
         id="shopping-input"
-        class="shopping-input"
+        class="lazy-field shopping-input"
         placeholder={
           'Wklej lub wpisz listę zakupów…\n\nNp:\nMleko\nJogurt grecki\nChleb\nFilet z kurczaka\nPomidory 600g'
         }
@@ -23,7 +23,7 @@ export const InputView: FC<InputViewProps> = ({ integrationUrl = '/integrations'
 
       <button
         id="process-btn"
-        class="primary-button generate-button"
+        class="lazy-button lazy-button--primary generate-button"
         onclick="App.processWithMistral()"
       >
         Generuj listę <Icon name="arrow-right" />
@@ -31,15 +31,15 @@ export const InputView: FC<InputViewProps> = ({ integrationUrl = '/integrations'
 
       <div id="templates-chips" />
 
-      <div class="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[12px] text-muted">
+      <div class="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
         <button
           type="button"
-          class="hover:text-fg/60 active:text-fg/60"
+          class="lazy-button lazy-button--text"
           onclick={`navigator.clipboard.writeText(${JSON.stringify(integrationPrompt)})`}
         >
           Kopiuj prompt
         </button>
-        <a href="/privacy" class="hover:text-fg/60 active:text-fg/60">
+        <a href="/privacy" class="lazy-button lazy-button--text">
           Polityka prywatności
         </a>
       </div>

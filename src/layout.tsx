@@ -1,11 +1,11 @@
 import type { FC, PropsWithChildren } from 'hono/jsx'
 import { Icon } from './icon'
-import { FONT_SIZE_ANTIFLASH, THEME_ANTIFLASH, THEME_CONFIG, THEME_VARS } from './theme'
+import { FONT_SIZE_ANTIFLASH, FONT_SIZE_CSS, THEME_ANTIFLASH, THEME_CONFIG } from './theme'
 
 type LayoutProps = PropsWithChildren<{ turnstileSiteKey: string; posthogKey?: string }>
 
 export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey }) => (
-  <html lang="pl" class="h-full">
+  <html lang="pl" class="lazy-theme h-full" data-lazy-theme="dark">
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -18,6 +18,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
       <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       <meta name="apple-mobile-web-app-title" content="Lazy List" />
 
+      <link rel="stylesheet" href="/vendor/lazy-theme/theme.css" />
       <script dangerouslySetInnerHTML={{ __html: THEME_ANTIFLASH }} />
       <script dangerouslySetInnerHTML={{ __html: FONT_SIZE_ANTIFLASH }} />
 
@@ -67,7 +68,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
       />
 
       <link rel="stylesheet" href="/app.css" />
-      <style dangerouslySetInnerHTML={{ __html: `${THEME_VARS} html.large { zoom: 1.15; }` }} />
+      <style dangerouslySetInnerHTML={{ __html: FONT_SIZE_CSS }} />
     </head>
 
     <body class="app-shell font-sans bg-bg text-fg">
@@ -105,7 +106,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-fg/90 text-[16px] font-semibold">Dodaj do listy</h2>
             <button
-              class="icon-button text-muted"
+              class="lazy-button lazy-button--icon"
               onclick="App.closeAmendModal()"
               aria-label="Zamknij"
             >
@@ -116,21 +117,18 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
           <textarea
             id="amend-input"
             aria-label="Dodatkowe produkty"
-            class="w-full h-40 resize-none border border-fg/10 rounded-xl p-3 text-[15px] outline-none bg-black/30 text-fg/90 placeholder:text-muted focus:border-accent/40"
+            class="lazy-field h-40"
             placeholder={
               'Wklej dodatkowe produkty…\n\nNp:\nMasło\nPapryka czerwona\nMakaron spaghetti'
             }
           />
 
           <div class="flex gap-2 mt-3">
-            <button
-              class="flex-1 bg-transparent text-fg/60 py-3 rounded-xl text-[14px] font-medium cursor-pointer border border-fg/10 active:opacity-70"
-              onclick="App.closeAmendModal()"
-            >
+            <button class="lazy-button flex-1" onclick="App.closeAmendModal()">
               Anuluj
             </button>
             <button
-              class="primary-button flex-1 py-3 active:opacity-85"
+              class="lazy-button lazy-button--primary flex-1 py-3 active:opacity-85"
               onclick="App.amendCurrentList()"
             >
               Dodaj
@@ -149,7 +147,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-fg/90 text-[16px] font-semibold">Zmień nazwę listy</h2>
             <button
-              class="icon-button text-muted"
+              class="lazy-button lazy-button--icon"
               onclick="App.closeRenameModal()"
               aria-label="Zamknij"
             >
@@ -160,21 +158,18 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
           <input
             id="rename-input"
             aria-label="Nazwa listy"
-            class="w-full border border-fg/10 rounded-xl p-3 text-[15px] outline-none bg-black/30 text-fg/90 placeholder:text-muted focus:border-accent/40"
+            class="lazy-field"
             maxlength={60}
             autocomplete="off"
           />
           <div id="rename-suggestion" class="min-h-[1.25rem] mt-2 text-[12px] text-muted" />
 
           <div class="flex gap-2 mt-3">
-            <button
-              class="flex-1 bg-transparent text-fg/60 py-3 rounded-xl text-[14px] font-medium cursor-pointer border border-fg/10 active:opacity-70"
-              onclick="App.closeRenameModal()"
-            >
+            <button class="lazy-button flex-1" onclick="App.closeRenameModal()">
               Anuluj
             </button>
             <button
-              class="primary-button flex-1 py-3 active:opacity-85"
+              class="lazy-button lazy-button--primary flex-1 py-3 active:opacity-85"
               onclick="App.renameCurrentList()"
             >
               Zapisz
@@ -187,7 +182,9 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
       <header class="workspace-header">
         <div class="flex items-center justify-between">
           <div>
-            <h1 id="header-title">Lazy List</h1>
+            <h1 id="header-title" class="lazy-heading">
+              Lazy List
+            </h1>
             <div id="header-sub" class="header-description">
               Nowa lista
             </div>
@@ -196,7 +193,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
             <button
               id="font-size-toggle"
               type="button"
-              class="text-[20px] leading-none bg-transparent border-none cursor-pointer p-1 text-fg/70 active:opacity-60"
+              class="lazy-button lazy-button--icon"
               aria-label="Przełącz rozmiar tekstu"
               onclick="App.toggleFontSize()"
             >
@@ -205,7 +202,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
             <button
               id="theme-toggle"
               type="button"
-              class="text-[20px] leading-none bg-transparent border-none cursor-pointer p-1 text-fg/70 active:opacity-60"
+              class="lazy-button lazy-button--icon"
               aria-label="Przełącz motyw"
               onclick="App.toggleTheme()"
             >
@@ -227,13 +224,12 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
       {/* Bottom nav */}
       <nav id="bottom-nav" class="workspace-nav" aria-label="Główna nawigacja">
         <div class="sidebar-logo">
-          <span class="brand">
-            <span class="brand-mark" aria-hidden="true" />
-            Lazy List
+          <span class="lazy-wordmark">
+            Lazy List<span aria-hidden="true">.</span>
           </span>
         </div>
         <button
-          class="nav-item active"
+          class="lazy-button nav-item active"
           data-view="input"
           hx-get="/views/input"
           hx-target="#main-content"
@@ -244,7 +240,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
           Nowa
         </button>
         <button
-          class="nav-item"
+          class="lazy-button nav-item"
           data-view="list"
           hx-get="/views/list"
           hx-target="#main-content"
@@ -255,7 +251,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
           Lista
         </button>
         <button
-          class="nav-item"
+          class="lazy-button nav-item"
           data-view="history"
           hx-get="/views/history"
           hx-target="#main-content"
@@ -265,10 +261,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
           <Icon name="history" />
           Historia
         </button>
-        <a
-          href="/privacy"
-          class="sidebar-link mt-auto mx-4 mb-1 text-[12px] text-muted hover:text-fg/60"
-        >
+        <a href="/privacy" class="sidebar-link lazy-note mt-auto mx-4 mb-1">
           Polityka prywatności
         </a>
       </nav>
@@ -292,22 +285,19 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
           <p
             id="turnstile-challenge-error"
             role="alert"
-            class="hidden text-red-400 text-[13px] text-center mb-3"
+            class="hidden lazy-error text-[13px] text-center mb-3"
           >
             Nie udało się załadować weryfikacji.
           </p>
 
           <button
             id="turnstile-challenge-retry"
-            class="hidden w-full bg-surface text-accent py-3 rounded-xl text-[14px] font-semibold cursor-pointer border border-accent/20 mb-2 active:scale-[0.98] active:opacity-85"
+            class="hidden lazy-button lazy-button--primary w-full mb-2"
           >
             Spróbuj ponownie
           </button>
 
-          <button
-            id="turnstile-challenge-cancel"
-            class="w-full bg-transparent text-fg/60 py-3 rounded-xl text-[14px] font-medium cursor-pointer border border-fg/10 active:opacity-70"
-          >
+          <button id="turnstile-challenge-cancel" class="lazy-button w-full">
             Anuluj
           </button>
         </div>

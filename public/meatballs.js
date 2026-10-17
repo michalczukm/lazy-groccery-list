@@ -19,7 +19,7 @@ export function Meatballs({ items }) {
   }, [open])
   return html` <div class="relative">
     <button
-      class="icon-button text-muted bg-transparent border-none"
+      class="lazy-button lazy-button--icon"
       onClick=${() => setOpen(o => !o)}
       title="Więcej"
       aria-label="Więcej opcji"
@@ -31,14 +31,14 @@ export function Meatballs({ items }) {
     ${open &&
     html`<div class="fixed inset-0 z-40" onClick=${() => setOpen(false)} />
       <div
-        class="action-menu absolute right-0 top-full mt-1 z-50 bg-surface border border-fg/10 rounded-xl py-1 shadow-lg"
+        class="action-menu absolute right-0 top-full mt-1 z-50 bg-surface border border-fg/10 rounded-xl py-1"
         role="menu"
       >
         ${items.map(
           (it, i) => html`
             <button
               key=${i}
-              class="flex items-center gap-2.5 w-full text-left px-4 py-2.5 text-[14px] text-fg/85 bg-transparent border-none cursor-pointer active:bg-fg/5"
+              class="lazy-button w-full"
               role="menuitem"
               onClick=${() => {
                 setOpen(false)

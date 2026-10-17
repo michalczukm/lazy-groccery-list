@@ -787,7 +787,7 @@ function ShoppingList() {
             >
           </div>
           <button
-            class="icon-button text-muted bg-transparent border-none"
+            class="lazy-button lazy-button--icon"
             onClick=${() => window.App.openAmendModal()}
             title="Dodaj do listy"
             aria-label="Dodaj do listy"
@@ -851,30 +851,32 @@ function ShoppingList() {
                   const itemTextClass = `item-name ${item.checked ? 'checked' : ''}`
                   return html`
                     <div class="shopping-row" key=${ii}>
-                      <input
-                        id=${`item-${ci}-${ii}`}
-                        class="item-checkbox"
-                        type="checkbox"
-                        checked=${item.checked}
-                        onChange=${() => toggleItem(ci, ii)}
-                      />
-                      <label class=${itemTextClass} for=${`item-${ci}-${ii}`}>
-                        ${linkSegments.map((segment, segmentIndex) =>
-                          segment.href
-                            ? html`<a
-                                class="underline decoration-fg/30 underline-offset-4"
-                                href=${segment.href}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick=${stopItemLinkClick}
-                                key=${segmentIndex}
-                                >${segment.text}</a
-                              >`
-                            : html`<span key=${segmentIndex}>${segment.text}</span>`,
-                        )}
+                      <label class="lazy-check shopping-check">
+                        <input
+                          id=${`item-${ci}-${ii}`}
+                          class="item-checkbox"
+                          type="checkbox"
+                          checked=${item.checked}
+                          onChange=${() => toggleItem(ci, ii)}
+                        />
+                        <span class=${itemTextClass}>
+                          ${linkSegments.map((segment, segmentIndex) =>
+                            segment.href
+                              ? html`<a
+                                  class="underline decoration-fg/30 underline-offset-4"
+                                  href=${segment.href}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick=${stopItemLinkClick}
+                                  key=${segmentIndex}
+                                  >${segment.text}</a
+                                >`
+                              : html`<span key=${segmentIndex}>${segment.text}</span>`,
+                          )}
+                        </span>
                       </label>
                       <button
-                        class="icon-button"
+                        class="lazy-button lazy-button--icon"
                         onClick=${(/** @type {Event} */ e) => removeItem(ci, ii, e)}
                         title="Usuń produkt"
                         aria-label=${`Usuń ${item.name}`}
@@ -901,7 +903,7 @@ function ShoppingList() {
 function HistoryList({ lists, onLoad, onDelete, onClear }) {
   const header = html` <div class="collection-header">
     <h2>Historia list</h2>
-    <button class="bg-transparent border-none px-2" onClick=${onClear}>Wyczyść</button>
+    <button class="lazy-button lazy-button--text" onClick=${onClear}>Wyczyść</button>
   </div>`
 
   if (!lists.length)
@@ -923,7 +925,7 @@ function HistoryList({ lists, onLoad, onDelete, onClear }) {
         const done = items.filter(i => i.checked).length
         return html` <div class="collection-entry" key=${l.id}>
           <button
-            class="icon-button border-none"
+            class="lazy-button lazy-button--icon"
             aria-label=${`Usuń ${l.title}`}
             onClick=${() => onDelete(l.id)}
           >
@@ -956,14 +958,14 @@ function TemplatesChips({ templates, onPick, onManage }) {
   return html` <div class="template-chips">
     ${templates.map(
       t => html`
-        <button key=${t.id} class="bg-transparent" onClick=${() => onPick(t.id)}>
+        <button key=${t.id} class="lazy-button" onClick=${() => onPick(t.id)}>
           <${Icon} name="template" /> ${t.name}
           <span class="text-muted">(${t.categories.reduce((n, c) => n + c.items.length, 0)})</span>
         </button>
       `,
     )}
     <button
-      class="bg-transparent"
+      class="lazy-button"
       onClick=${onManage}
       title="Zarządzaj szablonami"
       aria-label="Zarządzaj szablonami"
@@ -1001,7 +1003,7 @@ function TemplateList({ templates, onDelete }) {
       ${templates.map(
         t => html` <div class="collection-entry" key=${t.id}>
           <button
-            class="icon-button border-none"
+            class="lazy-button lazy-button--icon"
             onClick=${() => onDelete(t.id)}
             aria-label="Usuń szablon"
           >
@@ -1219,17 +1221,22 @@ async function handleSharedState() {
 }
 
 function toggleTheme() {
-  const light = document.documentElement.classList.toggle('light')
-  localStorage.setItem('theme', light ? 'light' : 'dark')
+  const root = document.documentElement
+  const theme = root.dataset.lazyTheme === 'light' ? 'dark' : 'light'
+  root.dataset.lazyTheme = theme
+  try {
+    localStorage.setItem('theme', theme)
+  } catch {}
   const meta = document.querySelector('meta[name=theme-color]')
-  if (meta) meta.setAttribute('content', light ? '#f5f3e9' : '#222722')
+  if (meta)
+    meta.setAttribute('content', getComputedStyle(root).getPropertyValue('--lazy-color-bg').trim())
   syncThemeButton()
 }
 
 function syncThemeButton() {
   const btn = document.getElementById('theme-toggle')
   if (!btn) return
-  const light = document.documentElement.classList.contains('light')
+  const light = document.documentElement.dataset.lazyTheme === 'light'
   render(html`<${Icon} name=${light ? 'moon' : 'sun'} />`, btn)
   btn.setAttribute('aria-label', light ? 'Włącz ciemny motyw' : 'Włącz jasny motyw')
 }

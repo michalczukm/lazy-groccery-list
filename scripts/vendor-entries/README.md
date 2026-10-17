@@ -20,3 +20,7 @@ so esbuild resolves and bundles it. It is deliberately absent from the importmap
 Adding a dependency: install it, add a stub here, add an importmap entry pointing at
 `/vendor/<stub-name>.js`. Use `export { default } from '…'` for default-export
 packages (htm, canvas-confetti) and `export * from '…'` for named-export ones.
+
+The same `pnpm vendor` command runs `scripts/vendor-theme.mjs` to copy the pinned
+`@lazy/theme` CSS graph, font files, and licenses into `public/vendor/lazy-theme`.
+CSS is loaded through stylesheet links, so it needs no JavaScript stub or importmap entry.
