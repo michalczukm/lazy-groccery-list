@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'preact/hooks'
 import { effect, signal } from '@preact/signals'
 import confetti from 'canvas-confetti'
 import { html } from './html.js'
-import { PlusIcon, CheckIcon } from './icons.js'
+import { Icon, PlusIcon, CategoryIcon } from './icons.js'
 import { Meatballs } from './meatballs.js'
 import { encodeState, decodeState } from './share-state.js'
 import {
@@ -24,27 +24,6 @@ import { requestTitleSuggestion } from './list-title.js'
 import { executeTurnstile } from './turnstile.js'
 import { getItemLinkSegments, stopItemLinkClick } from './item-link.js'
 import { createScreenWakeLockController } from './wake-lock.js'
-
-// Emoji per category name. Keep in sync with CATEGORIES in src/lib/mistral.ts.
-/** @type {Record<string, string>} */
-const CATEGORY_EMOJI = {
-  nabiał: '🥛',
-  'mięso i wędliny': '🥩',
-  warzywa: '🥦',
-  owoce: '🍎',
-  pieczywo: '🍞',
-  napoje: '🥤',
-  'suche produkty': '🌾',
-  'przyprawy i sosy': '🧂',
-  'gotowe dania': '🍱',
-  'chemia i higiena': '🧴',
-  inne: '🛒',
-}
-/**
- * @param {string} name
- * @returns {string}
- */
-const emojiFor = name => CATEGORY_EMOJI[name] ?? '📦'
 
 // ── IndexedDB ──────────────────────────────────────────────────────────────────
 const DB = (() => {
@@ -339,10 +318,10 @@ function showMainApp() {
 // ── Navigation ────────────────────────────────────────────────────────────────
 /** @type {Record<string, { title: string, sub: string }>} */
 const META = {
-  input: { title: '🛒 Lazy List', sub: 'Nowa lista' },
-  list: { title: '📋 Lista', sub: '' },
-  history: { title: '📚 Historia', sub: 'Poprzednie listy' },
-  templates: { title: '📌 Szablony', sub: 'Zapisane szablony' },
+  input: { title: 'lazy-list', sub: 'Nowa lista' },
+  list: { title: 'Lista', sub: '' },
+  history: { title: 'Historia', sub: 'Poprzednie listy' },
+  templates: { title: 'Szablony', sub: 'Zapisane szablony' },
 }
 
 /**
@@ -369,8 +348,14 @@ function handleNavClick(el) {
 
 /** @param {Element | null} el */
 function setActiveNav(el) {
-  document.querySelectorAll('[data-view]').forEach(b => b.classList.remove('active'))
-  if (el) el.classList.add('active')
+  document.querySelectorAll('[data-view]').forEach(b => {
+    b.classList.remove('active')
+    b.removeAttribute('aria-current')
+  })
+  if (el) {
+    el.classList.add('active')
+    el.setAttribute('aria-current', 'page')
+  }
 }
 
 /** @param {string} name */
@@ -379,7 +364,17 @@ function updateHeader(name) {
   if (!m) return
   const titleEl = document.getElementById('header-title')
   const subEl = document.getElementById('header-sub')
-  if (titleEl) titleEl.textContent = m.title
+  if (titleEl) {
+    titleEl.textContent = m.title
+    titleEl.classList.toggle('lazy-wordmark', name === 'input')
+    titleEl.classList.toggle('lazy-heading', name !== 'input')
+    if (name === 'input') {
+      const dot = document.createElement('span')
+      dot.setAttribute('aria-hidden', 'true')
+      dot.textContent = '.'
+      titleEl.append(dot)
+    }
+  }
   if (subEl)
     subEl.textContent = name === 'list' && currentList.value ? currentList.value.title : m.sub
 }
@@ -718,8 +713,8 @@ function ShoppingList() {
   }, [allDone])
 
   if (!list)
-    return html` <div class="text-center py-16 px-6 text-muted">
-      <div class="text-[48px] mb-3">📝</div>
+    return html` <div class="empty-state">
+      <${Icon} name="list" />
       <p class="text-[14px] leading-7">Brak aktywnej listy.<br />Stwórz nową w zakładce "Nowa".</p>
     </div>`
 
@@ -792,13 +787,17 @@ function ShoppingList() {
     if (cur.saved) saveSyncedList(/** @type {ShoppingListData} */ (currentList.value))
   }
   return html` <div>
-    <div class="mb-5 pt-1">
-      <div class="flex items-center justify-between mb-2">
-        <div class="text-[17px] font-semibold text-fg/90 truncate pr-3">${list.title}</div>
-        <div class="flex items-center gap-3 shrink-0">
-          <div class="text-[12px] text-muted">${done} / ${allItems.length}</div>
+    <div class="list-summary">
+      <div class="list-toolbar">
+        <h2 class="list-heading">${list.title}</h2>
+        <div class="list-actions">
+          <div class="list-count">
+            <span class="sr-only">Kupiono</span>${done} / ${allItems.length}<span class="sr-only"
+              >produktów</span
+            >
+          </div>
           <button
-            class="text-muted bg-transparent border-none cursor-pointer p-1 active:text-accent transition-colors"
+            class="lazy-button lazy-button--icon"
             onClick=${() => window.App.openAmendModal()}
             title="Dodaj do listy"
             aria-label="Dodaj do listy"
@@ -807,94 +806,92 @@ function ShoppingList() {
           </button>
           <${Meatballs}
             items=${[
-              { icon: '✏️', label: 'Zmień nazwę', onClick: openRenameModal },
-              { icon: '📌', label: 'Utwórz szablon', onClick: makeTemplateFromCurrent },
+              { icon: 'edit', label: 'Zmień nazwę', onClick: openRenameModal },
+              { icon: 'template', label: 'Utwórz szablon', onClick: makeTemplateFromCurrent },
               {
-                icon: '📝',
+                icon: 'download',
                 label: 'Eksportuj jako Markdown',
                 onClick: exportCurrentListAsMarkdown,
               },
               {
-                icon: '🔗',
+                icon: 'share',
                 label: 'Udostępnij',
                 onClick: () => shareList(/** @type {ShoppingListData} */ (currentList.value)),
               },
-              { icon: '🗑', label: 'Usuń listę', onClick: deleteCurrentList },
+              { icon: 'trash', label: 'Usuń listę', onClick: deleteCurrentList },
             ]}
           />
         </div>
       </div>
-      <div class="h-[2px] bg-fg/[0.07] rounded-full overflow-hidden">
+      <div class="progress-track">
         <div
           class="progress-fill h-full rounded-full"
-          style=${{ width: allItems.length ? `${(done / allItems.length) * 100}%` : '0%' }}
+          style=${{ transform: `scaleX(${allItems.length ? done / allItems.length : 0})` }}
         />
       </div>
     </div>
 
-    <div class="md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-x-6 md:items-start">
+    <div class="categories">
       ${categories.map((cat, ci) => {
         const catDone = cat.items.filter(i => i.checked).length
         const catAllDone = catDone === cat.items.length && cat.items.length > 0
-        return html` <div class="border-t border-fg/[0.07] pt-1 mb-1" key=${cat.name + ci}>
-          <div
-            class="flex items-center justify-between py-2 px-1 cursor-pointer select-none"
+        return html` <div class="category" key=${cat.name + ci}>
+          <button
+            class="category-toggle"
+            aria-expanded=${!cat.collapsed}
+            aria-controls=${`category-items-${ci}`}
             onClick=${() => toggleCat(ci)}
           >
-            <div class="flex items-center gap-2 text-[11px] tracking-widest uppercase text-muted">
-              <span>${emojiFor(cat.name)}</span>
-              <span>${cat.name}</span>
-              <span class="opacity-60">(${catDone}/${cat.items.length})</span>
-              ${catAllDone &&
-              html`<span class="bg-accent/20 text-accent text-[10px] px-2 py-0.5 rounded-full"
-                >✓ gotowe</span
-              >`}
-            </div>
-            <span class="cat-chevron text-muted text-[11px] ${cat.collapsed ? 'up' : ''}">▼</span>
-          </div>
-          <div class="cat-grid ${cat.collapsed ? 'collapsed' : ''}">
+            <span class="category-name">
+              <span class="category-label"><${CategoryIcon} name=${cat.name} />${cat.name}</span>
+              <span class="category-count">${catDone} / ${cat.items.length}</span>
+              ${catAllDone && html`<span class="category-done">✓ gotowe</span>`}
+            </span>
+            <${Icon} name="chevron" className=${`cat-chevron ${cat.collapsed ? 'up' : ''}`} />
+          </button>
+          <div
+            id=${`category-items-${ci}`}
+            class="cat-grid ${cat.collapsed ? 'collapsed' : ''}"
+            inert=${cat.collapsed}
+          >
             <div class="cat-grid-inner">
               <div>
                 ${cat.items.map((item, ii) => {
                   const linkSegments = getItemLinkSegments(item.name)
-                  const itemTextClass = `text-[15px] ${
-                    item.checked ? 'text-muted line-through' : 'text-fg/90'
-                  }`
+                  const itemTextClass = `item-name ${item.checked ? 'checked' : ''}`
                   return html`
-                    <div
-                      class="flex items-center px-1 py-[13px] border-b border-fg/[0.07] last:border-0 cursor-pointer active:opacity-70"
-                      onClick=${() => toggleItem(ci, ii)}
-                      key=${ii}
-                    >
-                      <div
-                        class="w-5 h-5 rounded-[6px] border shrink-0 mr-3 flex items-center justify-center transition-all ${item.checked
-                          ? 'bg-accent border-accent'
-                          : 'border-muted'}"
-                      >
-                        ${item.checked && html`<${CheckIcon} />`}
-                      </div>
-                      <span class=${itemTextClass}>
-                        ${linkSegments.map((segment, segmentIndex) =>
-                          segment.href
-                            ? html`<a
-                                class="underline decoration-fg/30 underline-offset-4"
-                                href=${segment.href}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick=${stopItemLinkClick}
-                                key=${segmentIndex}
-                                >${segment.text}</a
-                              >`
-                            : html`<span key=${segmentIndex}>${segment.text}</span>`,
-                        )}
-                      </span>
+                    <div class="shopping-row" key=${ii}>
+                      <label class="lazy-check shopping-check">
+                        <input
+                          id=${`item-${ci}-${ii}`}
+                          class="item-checkbox"
+                          type="checkbox"
+                          checked=${item.checked}
+                          onChange=${() => toggleItem(ci, ii)}
+                        />
+                        <span class=${itemTextClass}>
+                          ${linkSegments.map((segment, segmentIndex) =>
+                            segment.href
+                              ? html`<a
+                                  class="underline decoration-fg/30 underline-offset-4"
+                                  href=${segment.href}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick=${stopItemLinkClick}
+                                  key=${segmentIndex}
+                                  >${segment.text}</a
+                                >`
+                              : html`<span key=${segmentIndex}>${segment.text}</span>`,
+                          )}
+                        </span>
+                      </label>
                       <button
-                        class="ml-auto shrink-0 bg-transparent border-none text-muted text-[15px] cursor-pointer p-2 active:text-red-400 transition-colors"
+                        class="lazy-button lazy-button--icon"
                         onClick=${(/** @type {Event} */ e) => removeItem(ci, ii, e)}
                         title="Usuń produkt"
                         aria-label=${`Usuń ${item.name}`}
                       >
-                        🗑
+                        <${Icon} name="trash" />
                       </button>
                     </div>
                   `
@@ -914,21 +911,16 @@ function ShoppingList() {
  * @returns {import('preact').VNode}
  */
 function HistoryList({ lists, onLoad, onDelete, onClear }) {
-  const header = html` <div class="flex justify-between items-center mb-4">
-    <h2 class="text-fg/60 text-[12px] font-semibold tracking-widest uppercase">Historia list</h2>
-    <button
-      class="text-red-400/60 text-[12px] cursor-pointer border-none bg-transparent py-1 px-2 active:text-red-400"
-      onClick=${onClear}
-    >
-      Wyczyść
-    </button>
+  const header = html` <div class="collection-header">
+    <h2>Historia list</h2>
+    <button class="lazy-button lazy-button--text" onClick=${onClear}>Wyczyść</button>
   </div>`
 
   if (!lists.length)
     return html` <div>
       ${header}
-      <div class="text-center py-16 px-6 text-muted">
-        <div class="text-[48px] mb-3">📭</div>
+      <div class="empty-state">
+        <${Icon} name="history" />
         <p class="text-[14px] leading-7">
           Brak zapisanych list.<br />Stwórz pierwszą w zakładce "Nowa".
         </p>
@@ -937,41 +929,29 @@ function HistoryList({ lists, onLoad, onDelete, onClear }) {
 
   return html` <div>
     ${header}
-    <div class="md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:items-start">
+    <div class="collection-grid">
       ${lists.map(l => {
         const items = l.categories.flatMap(c => c.items)
         const done = items.filter(i => i.checked).length
-        return html` <div
-          class="py-3.5 border-b border-fg/[0.07] md:border md:border-fg/10 md:rounded-xl md:p-4 cursor-pointer relative active:opacity-60 transition-opacity"
-          onClick=${() => onLoad(l.id)}
-          key=${l.id}
-        >
+        return html` <div class="collection-entry" key=${l.id}>
           <button
-            class="absolute top-3 right-3 bg-transparent border-none text-muted text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
-            onClick=${(/** @type {Event} */ e) => {
-              e.stopPropagation()
-              onDelete(l.id)
-            }}
+            class="lazy-button lazy-button--icon"
+            aria-label=${`Usuń ${l.title}`}
+            onClick=${() => onDelete(l.id)}
           >
-            🗑
+            <${Icon} name="trash" />
           </button>
-          <div class="text-[11px] text-muted mb-0.5">${fmtDateFull(l.date)}</div>
-          <div class="text-[15px] font-semibold text-fg/90 mb-2">${l.title}</div>
-          <div class="flex flex-wrap gap-1.5">
-            <span class="text-[11px] px-2 py-0.5 bg-fg/[0.06] rounded-full text-muted"
-              >📦 ${items.length} produktów</span
-            >
-            <span class="text-[11px] px-2 py-0.5 bg-fg/[0.06] rounded-full text-muted"
-              >✓ ${done} kupionych</span
-            >
-            ${l.categories.map(
-              c => html`
-                <span class="text-[11px] px-2 py-0.5 bg-fg/[0.06] rounded-full text-muted"
-                  >${emojiFor(c.name)} ${c.name}</span
-                >
-              `,
-            )}
-          </div>
+          <button class="collection-open" onClick=${() => onLoad(l.id)}>
+            <div class="collection-date">${fmtDateFull(l.date)}</div>
+            <div class="collection-title">${l.title}</div>
+            <div class="collection-meta">
+              <span><${Icon} name="bag" />${items.length} produktów</span>
+              <span><${Icon} name="check" />${done} kupionych</span>
+              ${l.categories.map(
+                c => html` <span><${CategoryIcon} name=${c.name} />${c.name}</span> `,
+              )}
+            </div>
+          </button>
         </div>`
       })}
     </div>
@@ -985,26 +965,22 @@ function HistoryList({ lists, onLoad, onDelete, onClear }) {
  */
 function TemplatesChips({ templates, onPick, onManage }) {
   if (!templates.length) return null
-  return html` <div class="flex gap-2 overflow-x-auto mt-3 pb-1 -mx-1 px-1">
+  return html` <div class="template-chips">
     ${templates.map(
       t => html`
-        <button
-          key=${t.id}
-          class="shrink-0 bg-surface border border-fg/10 text-fg/80 text-[13px] px-3 py-2 rounded-full cursor-pointer active:opacity-70 whitespace-nowrap"
-          onClick=${() => onPick(t.id)}
-        >
-          📌 ${t.name}
+        <button key=${t.id} class="lazy-button" onClick=${() => onPick(t.id)}>
+          <${Icon} name="template" /> ${t.name}
           <span class="text-muted">(${t.categories.reduce((n, c) => n + c.items.length, 0)})</span>
         </button>
       `,
     )}
     <button
-      class="shrink-0 bg-transparent border border-fg/10 text-muted text-[13px] px-3 py-2 rounded-full cursor-pointer active:opacity-70"
+      class="lazy-button"
       onClick=${onManage}
       title="Zarządzaj szablonami"
       aria-label="Zarządzaj szablonami"
     >
-      ⚙️
+      <${Icon} name="settings" />
     </button>
   </div>`
 }
@@ -1015,15 +991,15 @@ function TemplatesChips({ templates, onPick, onManage }) {
  * @returns {import('preact').VNode}
  */
 function TemplateList({ templates, onDelete }) {
-  const header = html` <div class="flex justify-between items-center mb-4">
-    <h2 class="text-fg/60 text-[12px] font-semibold tracking-widest uppercase">Szablony</h2>
+  const header = html` <div class="collection-header">
+    <h2>Szablony</h2>
   </div>`
 
   if (!templates.length)
     return html` <div>
       ${header}
-      <div class="text-center py-16 px-6 text-muted">
-        <div class="text-[48px] mb-3">📌</div>
+      <div class="empty-state">
+        <${Icon} name="template" />
         <p class="text-[14px] leading-7">
           Brak szablonów.<br />Zapisz listę jako szablon z menu ⋮ w widoku listy.
         </p>
@@ -1033,26 +1009,21 @@ function TemplateList({ templates, onDelete }) {
   // Rename templates: future (issue #9 leaves rename as a seam) — add an edit affordance here.
   return html` <div>
     ${header}
-    <div class="md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:items-start">
+    <div class="collection-grid">
       ${templates.map(
-        t => html` <div
-          class="py-3.5 border-b border-fg/[0.07] md:border md:border-fg/10 md:rounded-xl md:p-4 relative"
-          key=${t.id}
-        >
+        t => html` <div class="collection-entry" key=${t.id}>
           <button
-            class="absolute top-3 right-3 bg-transparent border-none text-muted text-[15px] cursor-pointer p-1 active:text-red-400 transition-colors"
+            class="lazy-button lazy-button--icon"
             onClick=${() => onDelete(t.id)}
             aria-label="Usuń szablon"
           >
-            🗑
+            <${Icon} name="trash" />
           </button>
-          <div class="text-[15px] font-semibold text-fg/90 mb-2 pr-8">${t.name}</div>
-          <div class="flex flex-wrap gap-1.5">
+          <div class="collection-title">${t.name}</div>
+          <div class="collection-meta">
             ${t.categories.map(
               c => html`
-                <span class="text-[11px] px-2 py-0.5 bg-fg/[0.06] rounded-full text-muted"
-                  >${emojiFor(c.name)} ${c.name} (${c.items.length})</span
-                >
+                <span><${CategoryIcon} name=${c.name} />${c.name} (${c.items.length})</span>
               `,
             )}
           </div>
@@ -1260,17 +1231,24 @@ async function handleSharedState() {
 }
 
 function toggleTheme() {
-  const light = document.documentElement.classList.toggle('light')
-  localStorage.setItem('theme', light ? 'light' : 'dark')
+  const root = document.documentElement
+  const theme = root.dataset.lazyTheme === 'light' ? 'dark' : 'light'
+  root.dataset.lazyTheme = theme
+  try {
+    localStorage.setItem('theme', theme)
+  } catch {}
   const meta = document.querySelector('meta[name=theme-color]')
-  if (meta) meta.setAttribute('content', light ? '#ffffff' : '#1a1a2e')
+  if (meta)
+    meta.setAttribute('content', getComputedStyle(root).getPropertyValue('--lazy-color-bg').trim())
   syncThemeButton()
 }
 
 function syncThemeButton() {
   const btn = document.getElementById('theme-toggle')
   if (!btn) return
-  btn.textContent = document.documentElement.classList.contains('light') ? '🌙' : '☀️'
+  const light = document.documentElement.dataset.lazyTheme === 'light'
+  render(html`<${Icon} name=${light ? 'moon' : 'sun'} />`, btn)
+  btn.setAttribute('aria-label', light ? 'Włącz ciemny motyw' : 'Włącz jasny motyw')
 }
 
 function toggleFontSize() {

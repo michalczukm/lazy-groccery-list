@@ -1,43 +1,30 @@
-// Shared theme primitives for the two standalone HTML documents (app shell in
-// layout.tsx and the privacy page). Single source of truth for the palette so
-// the two <head>s cannot drift.
+// Apply existing app preferences before first paint. Colors come from @lazy/theme.
+export const THEME_ANTIFLASH = `(function(){var t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';try{var s=localStorage.getItem('theme');if(s==='light'||s==='dark')t=s}catch(e){}document.documentElement.dataset.lazyTheme=t;var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',getComputedStyle(document.documentElement).getPropertyValue('--lazy-color-bg').trim())})()`
 
-// Blocking script: set html.light + theme-color before first paint (no FOUC).
-// Reads localStorage first, falls back to prefers-color-scheme on first visit.
-export const THEME_ANTIFLASH = `(function(){try{var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';if(t==='light')document.documentElement.classList.add('light');var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',t==='light'?'#ffffff':'#1a1a2e')}catch(e){}})()`
-
-// Blocking script: set html.large before first paint if the saved font size is
-// large (no FOUC). Mirrors THEME_ANTIFLASH; app shell only.
 export const FONT_SIZE_ANTIFLASH = `(function(){try{if(localStorage.getItem('fontSize')==='large')document.documentElement.classList.add('large')}catch(e){}})()`
 
-// Tailwind CDN colour tokens backed by CSS vars (space-separated RGB channels so
-// the `<alpha-value>` opacity syntax keeps working, e.g. text-fg/50).
-export const THEME_CONFIG = `tailwind.config = {
-  theme: { extend: { colors: {
-    bg: 'rgb(var(--bg) / <alpha-value>)',
-    surface: 'rgb(var(--surface) / <alpha-value>)',
-    fg: 'rgb(var(--fg) / <alpha-value>)',
-    muted: 'rgb(var(--muted) / <alpha-value>)',
-    accent: 'rgb(var(--accent) / <alpha-value>)',
-    'accent-pink': 'rgb(var(--accent-pink) / <alpha-value>)',
-  }}}
-}`
+export const FONT_SIZE_CSS = 'html.large { zoom: 1.15; }'
 
-// Theme variable blocks: :root = dark defaults, html.light = light overrides.
-export const THEME_VARS = `
-:root {
-  --bg: 15 15 26;
-  --surface: 26 26 46;
-  --fg: 255 255 255;
-  --muted: 138 138 152;
-  --accent: 168 237 234;
-  --accent-pink: 254 214 227;
+// Keep existing Tailwind opacity utilities while using complete shared CSS colors.
+const colorRoles = {
+  bg: 'bg',
+  surface: 'surface',
+  fg: 'ink',
+  muted: 'muted',
+  accent: 'accent',
+  danger: 'error',
 }
-html.light {
-  --bg: 245 245 247;
-  --surface: 255 255 255;
-  --fg: 17 17 20;
-  --muted: 107 107 114;
-  --accent: 15 118 110;
-  --accent-pink: 214 92 141;
-}`
+
+export const THEME_CONFIG = `tailwind.config = ${JSON.stringify({
+  theme: {
+    extend: {
+      fontFamily: { sans: ['var(--lazy-font-family)'] },
+      colors: Object.fromEntries(
+        Object.entries(colorRoles).map(([name, role]) => [
+          name,
+          `color-mix(in srgb, var(--lazy-color-${role}) calc(<alpha-value> * 100%), transparent)`,
+        ]),
+      ),
+    },
+  },
+})}`

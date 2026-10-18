@@ -1,4 +1,5 @@
 import type { FC } from 'hono/jsx'
+import { Icon } from '../icon'
 
 interface InputViewProps {
   integrationUrl?: string
@@ -8,10 +9,13 @@ export const InputView: FC<InputViewProps> = ({ integrationUrl = '/integrations'
   const integrationPrompt = `Przeczytaj instrukcje integracji Lazy List pod adresem ${integrationUrl} i użyj ich, żeby przygotować dla mnie gotowy link do listy zakupów na podstawie mojej wiadomości.`
 
   return (
-    <div class="flex flex-col h-full p-4 md:max-w-2xl md:mx-auto md:w-full">
+    <div class="input-view view-content">
+      <label class="lazy-label input-label" for="shopping-input">
+        Produkty do kupienia
+      </label>
       <textarea
         id="shopping-input"
-        class="w-full flex-1 min-h-0 resize-none border border-fg/10 rounded-xl p-3.5 text-[15px] outline-none bg-surface text-fg/90 placeholder:text-muted focus:border-accent/40"
+        class="lazy-field shopping-input"
         placeholder={
           'Wklej lub wpisz listę zakupów…\n\nNp:\nMleko\nJogurt grecki\nChleb\nFilet z kurczaka\nPomidory 600g'
         }
@@ -19,23 +23,23 @@ export const InputView: FC<InputViewProps> = ({ integrationUrl = '/integrations'
 
       <button
         id="process-btn"
-        class="block w-full bg-surface text-accent py-3.5 rounded-xl text-[15px] font-semibold cursor-pointer mt-3 border border-accent/20 active:scale-[0.98] active:opacity-85"
+        class="lazy-button lazy-button--primary generate-button"
         onclick="App.processWithMistral()"
       >
-        ✨ Generuj listę
+        Generuj listę <Icon name="arrow-right" />
       </button>
 
       <div id="templates-chips" />
 
-      <div class="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[12px] text-muted">
+      <div class="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
         <button
           type="button"
-          class="hover:text-fg/60 active:text-fg/60"
+          class="lazy-button lazy-button--text"
           onclick={`navigator.clipboard.writeText(${JSON.stringify(integrationPrompt)})`}
         >
           Kopiuj prompt
         </button>
-        <a href="/privacy" class="hover:text-fg/60 active:text-fg/60">
+        <a href="/privacy" class="lazy-button lazy-button--text">
           Polityka prywatności
         </a>
       </div>

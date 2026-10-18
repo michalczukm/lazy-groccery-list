@@ -14,11 +14,17 @@ PWA shopping list app that automatically makes your groccery list from plain tex
 - **IndexedDB** — all lists/templates stored client-side; no server-side state
 - PWA with service worker and installable manifest
 
+## Design system
+
+UI tokens, fonts, and shared controls come from [`@lazy/theme`](https://github.com/michalczukm/lazy-theme), pinned to a Git commit in `package.json` and the lockfile. `pnpm vendor` copies its CSS and licensed fonts into `public/vendor/lazy-theme` for both the app and privacy page. Deployment does not require a sibling checkout or a theme CDN.
+
+Use `lazy-*` component classes and `--lazy-*` semantic tokens; keep app composition in `public/app.css`. Theme and large-text preferences remain local to Lazy List.
+
 ## AI proxy
 
 Categorization runs browser → Worker → Mistral. The Mistral key lives only as a Worker secret — **never exposed to the browser**.
 
-1. `POST /api/categorize` — Worker calls Mistral (`mistral-small-latest`, Polish category schema), returns `{ categories: [{ name, items }] }`. Client derives emoji locally, stores list in IndexedDB.
+1. `POST /api/categorize` — Worker calls Mistral (`mistral-small-latest`, Polish category schema), returns `{ categories: [{ name, items }] }`. Client derives category icons locally, stores list in IndexedDB.
 2. `POST /api/session` — verifies a Turnstile token, sets a signed HMAC session cookie (24h).
 
 Gating on `/api/categorize`: same-origin guard (403), rate limit (`AI_RATE_LIMIT`, 20 req / 60s per IP, 429), session cookie (401 `captcha-required` when missing/invalid → client solves Turnstile and retries once). Input capped at 10 000 chars.

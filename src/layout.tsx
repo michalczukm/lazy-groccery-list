@@ -1,25 +1,24 @@
 import type { FC, PropsWithChildren } from 'hono/jsx'
-import { FONT_SIZE_ANTIFLASH, THEME_ANTIFLASH, THEME_CONFIG, THEME_VARS } from './theme'
+import { Icon } from './icon'
+import { FONT_SIZE_ANTIFLASH, FONT_SIZE_CSS, THEME_ANTIFLASH, THEME_CONFIG } from './theme'
 
 type LayoutProps = PropsWithChildren<{ turnstileSiteKey: string; posthogKey?: string }>
 
 export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey }) => (
-  <html lang="pl" class="h-full">
+  <html lang="pl" class="lazy-theme h-full" data-lazy-theme="dark">
     <head>
       <meta charset="UTF-8" />
-      <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-      />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Lazy List</title>
       <link rel="manifest" href="/manifest.json" />
       <link rel="icon" href="/icon.svg" />
-      <meta name="theme-color" content="#1a1a2e" />
+      <meta name="theme-color" content="#222722" />
       <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
       <meta name="apple-mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       <meta name="apple-mobile-web-app-title" content="Lazy List" />
 
+      <link rel="stylesheet" href="/vendor/lazy-theme/theme.css" />
       <script dangerouslySetInnerHTML={{ __html: THEME_ANTIFLASH }} />
       <script dangerouslySetInnerHTML={{ __html: FONT_SIZE_ANTIFLASH }} />
 
@@ -68,79 +67,15 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
         }}
       />
 
-      <style
-        {...({ type: 'text/tailwindcss' } as Record<string, string>)}
-        dangerouslySetInnerHTML={{
-          __html: `
-          .nav-item { @apply flex-1 flex flex-col items-center gap-0.5 py-2.5 px-2 bg-transparent border-none cursor-pointer text-muted text-[10px] tracking-wide md:flex-none md:flex-row md:items-center md:justify-start md:gap-3 md:py-3 md:px-4 md:mx-2 md:rounded-lg md:text-[14px] md:hover:bg-fg/5; }
-          .nav-item.active { @apply text-accent; }
-          .status-badge { @apply flex items-center gap-2 mb-3 text-[12px]; }
-          .status-badge.idle  { @apply text-muted; }
-          .status-badge.ready { @apply text-accent; }
-          .status-badge.error { @apply text-red-400; }
-          .sdot { @apply w-1.5 h-1.5 rounded-full shrink-0; }
-          .status-badge.idle  .sdot { @apply bg-muted; }
-          .status-badge.ready .sdot { @apply bg-accent; }
-          .status-badge.error .sdot { @apply bg-red-400; }
-        `,
-        }}
-      />
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `${THEME_VARS}
-          * { -webkit-tap-highlight-color: transparent; }
-          html.large { zoom: 1.15; }
-          .hidden { display: none !important; }
-          .sidebar-logo { display:none; }
-          .sidebar-link { display:none; }
-          .cat-grid { display:grid; grid-template-rows:1fr; transition:grid-template-rows .3s ease, opacity .25s ease; opacity:1; }
-          .cat-grid.collapsed { grid-template-rows:0fr; opacity:0; }
-          .cat-grid-inner { overflow:hidden; min-height:0; }
-          .cat-chevron { transition:transform .3s ease; }
-          .cat-chevron.up { transform:rotate(-90deg); }
-          .progress-fill { background:linear-gradient(90deg, rgb(var(--accent)), rgb(var(--accent-pink))); transition:width .4s ease; }
-          #toast { opacity:0; bottom:calc(74px + env(safe-area-inset-bottom,0px) + 10px); transform:translateX(-50%) translateY(8px); }
-          #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-          #toast.error { bottom:auto; top:calc(env(safe-area-inset-top,0px) + 16px); background:#dc2626; box-shadow:0 6px 20px rgba(220,38,38,.45); }
-          #toast.error { transform:translateX(-50%) translateY(-8px); }
-          #toast.error.show { transform:translateX(-50%) translateY(0); }
-
-          /* Desktop: left sidebar + capped, centered content column.
-             Mobile keeps the default flex-col / max-w-[480px] shell. */
-          @media (min-width: 768px) {
-            body.app-shell {
-              display: grid;
-              grid-template-columns: 200px minmax(0, 1100px);
-              grid-template-rows: auto 1fr;
-              grid-template-areas: "nav header" "nav main";
-              max-width: none;
-              justify-content: center;
-            }
-            body.app-shell > header  { grid-area: header; }
-            body.app-shell > #main-content { grid-area: main; }
-            body.app-shell > #bottom-nav {
-              grid-area: nav;
-              flex-direction: column;
-              align-items: stretch;
-              gap: 4px;
-              border-top: none;
-              border-right: 1px solid rgb(var(--fg) / 0.07);
-              padding-top: 12px;
-              padding-bottom: 0;
-            }
-            .sidebar-logo { display: flex; }
-            .sidebar-link { display: block; }
-          }
-        `,
-        }}
-      />
+      <link rel="stylesheet" href="/app.css" />
+      <style dangerouslySetInnerHTML={{ __html: FONT_SIZE_CSS }} />
     </head>
 
-    <body class="app-shell font-sans bg-bg text-fg flex flex-col max-w-[480px] mx-auto h-full overflow-hidden">
+    <body class="app-shell font-sans bg-bg text-fg">
       {/* Boot loader — covers the first paint until the client picks the right view,
           preventing the "Nowa lista" → "Lista" flash when today's list is restored. */}
       <div id="boot-loader" class="fixed inset-0 bg-bg flex items-center justify-center z-50">
-        <div class="text-[44px] opacity-50 animate-pulse">🛒</div>
+        <Icon name="bag" class="boot-icon" />
       </div>
 
       {/* Loading overlay */}
@@ -157,6 +92,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
       {/* Toast */}
       <div
         id="toast"
+        role="status"
         class="fixed left-1/2 bg-surface text-fg px-5 py-3 rounded-full text-[13px] whitespace-nowrap transition-all duration-300 z-40 pointer-events-none"
       />
 
@@ -170,34 +106,32 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-fg/90 text-[16px] font-semibold">Dodaj do listy</h2>
             <button
-              class="text-muted bg-transparent border-none cursor-pointer text-[18px] p-1 active:text-fg/80"
+              class="lazy-button lazy-button--icon"
               onclick="App.closeAmendModal()"
               aria-label="Zamknij"
             >
-              ✕
+              <Icon name="close" />
             </button>
           </div>
 
           <textarea
             id="amend-input"
-            class="w-full h-40 resize-none border border-fg/10 rounded-xl p-3 text-[15px] outline-none bg-black/30 text-fg/90 placeholder:text-muted focus:border-accent/40"
+            aria-label="Dodatkowe produkty"
+            class="lazy-field h-40"
             placeholder={
               'Wklej dodatkowe produkty…\n\nNp:\nMasło\nPapryka czerwona\nMakaron spaghetti'
             }
           />
 
           <div class="flex gap-2 mt-3">
-            <button
-              class="flex-1 bg-transparent text-fg/60 py-3 rounded-xl text-[14px] font-medium cursor-pointer border border-fg/10 active:opacity-70"
-              onclick="App.closeAmendModal()"
-            >
+            <button class="lazy-button flex-1" onclick="App.closeAmendModal()">
               Anuluj
             </button>
             <button
-              class="flex-1 bg-surface text-accent py-3 rounded-xl text-[14px] font-semibold cursor-pointer border border-accent/20 active:scale-[0.98] active:opacity-85"
+              class="lazy-button lazy-button--primary flex-1 py-3 active:opacity-85"
               onclick="App.amendCurrentList()"
             >
-              ✨ Dodaj
+              Dodaj
             </button>
           </div>
         </div>
@@ -213,31 +147,29 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-fg/90 text-[16px] font-semibold">Zmień nazwę listy</h2>
             <button
-              class="text-muted bg-transparent border-none cursor-pointer text-[18px] p-1 active:text-fg/80"
+              class="lazy-button lazy-button--icon"
               onclick="App.closeRenameModal()"
               aria-label="Zamknij"
             >
-              ✕
+              <Icon name="close" />
             </button>
           </div>
 
           <input
             id="rename-input"
-            class="w-full border border-fg/10 rounded-xl p-3 text-[15px] outline-none bg-black/30 text-fg/90 placeholder:text-muted focus:border-accent/40"
+            aria-label="Nazwa listy"
+            class="lazy-field"
             maxlength={60}
             autocomplete="off"
           />
           <div id="rename-suggestion" class="min-h-[1.25rem] mt-2 text-[12px] text-muted" />
 
           <div class="flex gap-2 mt-3">
-            <button
-              class="flex-1 bg-transparent text-fg/60 py-3 rounded-xl text-[14px] font-medium cursor-pointer border border-fg/10 active:opacity-70"
-              onclick="App.closeRenameModal()"
-            >
+            <button class="lazy-button flex-1" onclick="App.closeRenameModal()">
               Anuluj
             </button>
             <button
-              class="flex-1 bg-surface text-accent py-3 rounded-xl text-[14px] font-semibold cursor-pointer border border-accent/20 active:scale-[0.98] active:opacity-85"
+              class="lazy-button lazy-button--primary flex-1 py-3 active:opacity-85"
               onclick="App.renameCurrentList()"
             >
               Zapisz
@@ -247,16 +179,13 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
       </div>
 
       {/* Header */}
-      <header
-        class="bg-surface shrink-0 px-5 text-fg"
-        style="padding-top:calc(14px + env(safe-area-inset-top,0px));padding-bottom:14px"
-      >
+      <header class="workspace-header">
         <div class="flex items-center justify-between">
           <div>
-            <div id="header-title" class="text-[19px] font-bold tracking-tight">
-              🛒 Lazy List
-            </div>
-            <div id="header-sub" class="text-[12px] text-muted mt-0.5 min-h-[1rem]">
+            <h1 id="header-title" class="lazy-wordmark">
+              lazy-list<span aria-hidden="true">.</span>
+            </h1>
+            <div id="header-sub" class="header-description">
               Nowa lista
             </div>
           </div>
@@ -264,7 +193,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
             <button
               id="font-size-toggle"
               type="button"
-              class="text-[20px] leading-none bg-transparent border-none cursor-pointer p-1 text-fg/70 active:opacity-60"
+              class="lazy-button lazy-button--icon"
               aria-label="Przełącz rozmiar tekstu"
               onclick="App.toggleFontSize()"
             >
@@ -273,11 +202,11 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
             <button
               id="theme-toggle"
               type="button"
-              class="text-[20px] leading-none bg-transparent border-none cursor-pointer p-1 text-fg/70 active:opacity-60"
+              class="lazy-button lazy-button--icon"
               aria-label="Przełącz motyw"
               onclick="App.toggleTheme()"
             >
-              🌙
+              <Icon name="moon" />
             </button>
           </div>
         </div>
@@ -293,48 +222,52 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
       </main>
 
       {/* Bottom nav */}
-      <nav
-        id="bottom-nav"
-        class="flex bg-surface shrink-0 border-t border-fg/[0.07]"
-        style="padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))"
-      >
-        <div class="sidebar-logo flex-col px-4 pb-3 mb-1 border-b border-fg/[0.07]">
-          <span class="text-[16px] font-bold tracking-tight">🛒 Lazy List</span>
+      <nav id="bottom-nav" class="workspace-nav" aria-label="Główna nawigacja">
+        <div class="sidebar-logo">
+          <span class="lazy-wordmark">
+            lazy-list<span aria-hidden="true">.</span>
+          </span>
         </div>
         <button
-          class="nav-item active"
+          class="lazy-button nav-item active"
           data-view="input"
+          aria-label="Nowa"
+          title="Nowa"
           hx-get="/views/input"
           hx-target="#main-content"
           hx-swap="innerHTML"
           onclick="App.handleNavClick(this)"
         >
-          <span class="text-xl">✏️</span>Nowa
+          <Icon name="edit" />
+          <span class="nav-label">Nowa</span>
         </button>
         <button
-          class="nav-item"
+          class="lazy-button nav-item"
           data-view="list"
+          aria-label="Lista"
+          title="Lista"
           hx-get="/views/list"
           hx-target="#main-content"
           hx-swap="innerHTML"
           onclick="App.handleNavClick(this)"
         >
-          <span class="text-xl">📋</span>Lista
+          <Icon name="list" />
+          <span class="nav-label">Lista</span>
         </button>
         <button
-          class="nav-item"
+          class="lazy-button nav-item"
           data-view="history"
+          aria-label="Historia"
+          title="Historia"
           hx-get="/views/history"
           hx-target="#main-content"
           hx-swap="innerHTML"
           onclick="App.handleNavClick(this)"
         >
-          <span class="text-xl">📚</span>Historia
+          <Icon name="history" />
+          <span class="nav-label">Historia</span>
         </button>
-        <a
-          href="/privacy"
-          class="sidebar-link mt-auto mx-4 mb-1 text-[12px] text-muted hover:text-fg/60"
-        >
+        <a href="/privacy" class="sidebar-link lazy-note mt-auto mx-4 mb-1">
           Polityka prywatności
         </a>
       </nav>
@@ -358,22 +291,19 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
           <p
             id="turnstile-challenge-error"
             role="alert"
-            class="hidden text-red-400 text-[13px] text-center mb-3"
+            class="hidden lazy-error text-[13px] text-center mb-3"
           >
             Nie udało się załadować weryfikacji.
           </p>
 
           <button
             id="turnstile-challenge-retry"
-            class="hidden w-full bg-surface text-accent py-3 rounded-xl text-[14px] font-semibold cursor-pointer border border-accent/20 mb-2 active:scale-[0.98] active:opacity-85"
+            class="hidden lazy-button lazy-button--primary w-full mb-2"
           >
             Spróbuj ponownie
           </button>
 
-          <button
-            id="turnstile-challenge-cancel"
-            class="w-full bg-transparent text-fg/60 py-3 rounded-xl text-[14px] font-medium cursor-pointer border border-fg/10 active:opacity-70"
-          >
+          <button id="turnstile-challenge-cancel" class="lazy-button w-full">
             Anuluj
           </button>
         </div>

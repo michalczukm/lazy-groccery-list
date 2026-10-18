@@ -2,7 +2,7 @@
   "name": "lazy-shopping-list",
   "type": "module",
   "scripts": {
-    "vendor": "esbuild scripts/vendor-entries/*.js --bundle --format=esm --splitting --target=es2022 --minify --sourcemap --outdir=public/vendor",
+    "vendor": "esbuild scripts/vendor-entries/*.js --bundle --format=esm --splitting --target=es2022 --minify --sourcemap --outdir=public/vendor && node scripts/vendor-theme.mjs",
     "dev": "pnpm vendor && wrangler dev",
     "deploy": "pnpm vendor && wrangler deploy --minify",
     "release": "pnpm vendor && wrangler deploy --minify",
@@ -16,6 +16,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@lazy/theme": "github:michalczukm/lazy-theme#4e03501afe2d0df97eceb3545ba1740f30402e4f",
     "@preact/signals": "1.3.4",
     "canvas-confetti": "1.6.0",
     "hono": "4.12.16",
