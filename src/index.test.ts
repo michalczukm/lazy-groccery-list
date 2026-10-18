@@ -582,6 +582,17 @@ describe('CSP', () => {
 })
 
 describe('GET / importmap', () => {
+  it('registers the import map before any module, including analytics', async () => {
+    const res = await SELF.fetch('https://example.com/')
+    const html = await res.text()
+    const importMap = html.indexOf('<script type="importmap"')
+    const firstModule = html.indexOf('<script type="module"')
+
+    expect(html).toContain('src="/analytics.js"')
+    expect(importMap).toBeGreaterThanOrEqual(0)
+    expect(firstModule).toBeGreaterThan(importMap)
+  })
+
   /** The importmap object literal embedded in the page. */
   async function fetchImports(): Promise<Record<string, string>> {
     const res = await SELF.fetch('https://example.com/')

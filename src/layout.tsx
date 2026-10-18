@@ -32,17 +32,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
         }}
       />
 
-      {posthogKey ? (
-        <>
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `window.__POSTHOG_KEY__ = ${JSON.stringify(posthogKey)};`,
-            }}
-          />
-          <script type="module" src="/analytics.js" />
-        </>
-      ) : null}
-
+      {/* Firefox requires the import map before the first module script. */}
       <script
         type="importmap"
         dangerouslySetInnerHTML={{
@@ -66,6 +56,17 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
           }),
         }}
       />
+
+      {posthogKey ? (
+        <>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `window.__POSTHOG_KEY__ = ${JSON.stringify(posthogKey)};`,
+            }}
+          />
+          <script type="module" src="/analytics.js" />
+        </>
+      ) : null}
 
       <link rel="stylesheet" href="/app.css" />
       <style dangerouslySetInnerHTML={{ __html: FONT_SIZE_CSS }} />
