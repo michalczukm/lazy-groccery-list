@@ -40,6 +40,8 @@ export const listFromCategories = (categories: Category[], now = Date.now()): Sh
 
 export const shareUrlFor = async (origin: string, list: ShareList): Promise<string> => {
   const url = new URL('/', origin)
-  url.searchParams.set('state', await encodeShareState(list))
+  const params = new URLSearchParams()
+  params.set('state', await encodeShareState(list))
+  url.hash = params.toString()
   return url.toString()
 }
