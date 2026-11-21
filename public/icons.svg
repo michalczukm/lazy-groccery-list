@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-  <symbol id="bag" viewBox="0 0 24 24"><path d="M5 7h14l2 14H3L5 7Z"/><path d="M8 7V6a4 4 0 0 1 8 0v1"/></symbol>
+  <symbol id="basket" viewBox="0 0 24 24" stroke-width="2"><path d="m15 11-1 9"/><path d="m19 11-4-7"/><path d="M2 11h20"/><path d="m3.5 11 1.6 7.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6l1.7-7.4"/><path d="M4.5 15.5h15"/><path d="m5 11 4-7"/><path d="m9 11 1 9"/></symbol>
   <symbol id="list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M3 6h1M3 12h1M3 18h1"/></symbol>
   <symbol id="edit" viewBox="0 0 24 24"><path d="m15 4 5 5M4 15 16 3a2 2 0 0 1 5 5L9 20l-6 1 1-6Z"/></symbol>
   <symbol id="history" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7M12 7v5l3 2"/></symbol>

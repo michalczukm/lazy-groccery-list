@@ -42,7 +42,7 @@ const CATEGORY_ICONS = {
   'przyprawy i sosy': 'salt',
   'gotowe dania': 'meal',
   'chemia i higiena': 'bottle',
-  inne: 'bag',
+  inne: 'basket',
 }
 
 /**
@@ -50,6 +50,6 @@ const CATEGORY_ICONS = {
  * @returns {import('preact').VNode}
  */
 export function CategoryIcon({ name }) {
-  const icon = Object.hasOwn(CATEGORY_ICONS, name) ? CATEGORY_ICONS[name] : 'bag'
+  const icon = Object.hasOwn(CATEGORY_ICONS, name) ? CATEGORY_ICONS[name] : 'basket'
   return html`<${Icon} name=${icon} className="category-icon" />`
 }

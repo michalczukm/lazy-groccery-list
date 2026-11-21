@@ -945,7 +945,7 @@ function HistoryList({ lists, onLoad, onDelete, onClear }) {
             <div class="collection-date">${fmtDateFull(l.date)}</div>
             <div class="collection-title">${l.title}</div>
             <div class="collection-meta">
-              <span><${Icon} name="bag" />${items.length} produktów</span>
+              <span><${Icon} name="basket" />${items.length} produktów</span>
               <span><${Icon} name="check" />${done} kupionych</span>
               ${l.categories.map(
                 c => html` <span><${CategoryIcon} name=${c.name} />${c.name}</span> `,
