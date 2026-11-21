@@ -11,7 +11,9 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Lazy List</title>
       <link rel="manifest" href="/manifest.json" />
-      <link rel="icon" href="/icon.svg" />
+      <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+      <link rel="icon" href="/favicon.ico" sizes="32x32" />
+      <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       <meta name="theme-color" content="#222722" />
       <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
       <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -76,7 +78,7 @@ export const Layout: FC<LayoutProps> = ({ children, turnstileSiteKey, posthogKey
       {/* Boot loader — covers the first paint until the client picks the right view,
           preventing the "Nowa lista" → "Lista" flash when today's list is restored. */}
       <div id="boot-loader" class="fixed inset-0 bg-bg flex items-center justify-center z-50">
-        <Icon name="bag" class="boot-icon" />
+        <Icon name="basket" class="boot-icon" />
       </div>
 
       {/* Loading overlay */}

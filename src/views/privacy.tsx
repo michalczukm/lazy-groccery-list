@@ -17,7 +17,9 @@ export const PrivacyView: FC = () => (
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Polityka prywatności — Lazy List</title>
-      <link rel="icon" href="/icon.svg" />
+      <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+      <link rel="icon" href="/favicon.ico" sizes="32x32" />
+      <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       <meta name="theme-color" content="#222722" />
       <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
       <link rel="stylesheet" href="/vendor/lazy-theme/theme.css" />
