@@ -72,7 +72,15 @@ const TITLE_RESPONSE_SCHEMA = {
 export type Category = { name: string; items: string[] }
 export type CategorizeResult =
   | { ok: true; categories: Category[] }
-  | { ok: false; reason: 'upstream' | 'parse' }
+  | {
+      ok: false
+      diagnostics: {
+        reason: 'upstream' | 'parse' | 'truncated'
+        mistral_status: number
+        mistral_request_id?: string
+        mistral_finish_reason?: string
+      }
+    }
 export type SuggestTitleInput = { currentTitle?: string; categories: Category[] }
 export type SuggestTitleResult =
   | { ok: true; title: string }
@@ -84,7 +92,8 @@ export const categorize = async (rawText: string, apiKey: string): Promise<Categ
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 1000,
+      // The model echoes up to 10,000 input characters plus JSON syntax.
+      max_tokens: 8192,
       temperature: 0.1,
       response_format: RESPONSE_SCHEMA,
       messages: [
@@ -94,19 +103,44 @@ export const categorize = async (rawText: string, apiKey: string): Promise<Categ
     }),
   })
 
-  if (!res.ok) return { ok: false, reason: 'upstream' }
+  const requestId = [res.headers.get('x-kong-request-id'), res.headers.get('x-request-id')].find(
+    id => id && /^[a-zA-Z0-9_-]{1,128}$/.test(id),
+  )
+  const diagnostics = {
+    mistral_status: res.status,
+    ...(requestId && { mistral_request_id: requestId }),
+  }
+  if (!res.ok) return { ok: false, diagnostics: { ...diagnostics, reason: 'upstream' } }
 
   const data = (await res.json().catch(() => null)) as {
-    choices?: Array<{ message?: { content?: string } }>
+    choices?: Array<{ finish_reason?: string; message?: { content?: string } }>
   } | null
-  const content = data?.choices?.[0]?.message?.content ?? ''
-  try {
-    const parsed = JSON.parse(content) as { categories?: Category[] }
-    if (!Array.isArray(parsed?.categories)) return { ok: false, reason: 'parse' }
-    return { ok: true, categories: parsed.categories }
-  } catch {
-    return { ok: false, reason: 'parse' }
+  const choice = data?.choices?.[0]
+  const finishReason = choice?.finish_reason
+  if (finishReason === 'length' || finishReason === 'model_length') {
+    return {
+      ok: false,
+      diagnostics: { ...diagnostics, reason: 'truncated', mistral_finish_reason: finishReason },
+    }
   }
+
+  const invalidReply: CategorizeResult = {
+    ok: false,
+    diagnostics: {
+      ...diagnostics,
+      reason: 'parse',
+      ...(['stop', 'error', 'tool_calls', 'content_filter'].includes(finishReason ?? '') && {
+        mistral_finish_reason: finishReason,
+      }),
+    },
+  }
+  try {
+    const parsed = JSON.parse(choice?.message?.content ?? '') as { categories?: Category[] }
+    if (Array.isArray(parsed?.categories)) return { ok: true, categories: parsed.categories }
+  } catch {
+    return invalidReply
+  }
+  return invalidReply
 }
 
 export const suggestTitle = async (

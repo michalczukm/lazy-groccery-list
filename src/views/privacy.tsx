@@ -116,6 +116,10 @@ export const PrivacyView: FC = () => (
             i błąd zgłoszony przez serwer można ze sobą powiązać.
           </p>
           <p>
+            Przy błędzie kategoryzacji zapisujemy też techniczne dane odpowiedzi Mistral AI: status
+            HTTP, powód zakończenia generowania i identyfikator zapytania, jeśli są dostępne.
+          </p>
+          <p>
             Automatycznie wysyłane są też techniczne informacje o Twojej przeglądarce i urządzeniu,
             które PostHog zbiera standardowo: pełny ciąg identyfikujący przeglądarkę (user-agent),
             rozmiar ekranu i okna przeglądarki, język przeglądarki, strefa czasowa oraz
@@ -213,7 +217,7 @@ export const PrivacyView: FC = () => (
         </Section>
 
         <p class="text-[12px] text-muted mt-10 border-t border-fg/10 pt-4">
-          Ostatnia aktualizacja: 28 września 2026
+          Ostatnia aktualizacja: 21 listopada 2026
         </p>
       </main>
     </body>
