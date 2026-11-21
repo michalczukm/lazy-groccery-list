@@ -129,7 +129,7 @@ const integrationCategorize = async (
           route: '/api/integrations/categorize',
           status: 502,
           code: 'categorize-failed',
-          reason: result.reason,
+          ...result.diagnostics,
         },
       }),
     )
@@ -186,7 +186,7 @@ app.post('/api/categorize', async c => {
           route: '/api/categorize',
           status: 502,
           code: 'upstream-error',
-          reason: result.reason,
+          ...result.diagnostics,
         },
       }),
     )

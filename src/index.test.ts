@@ -14,6 +14,63 @@ async function decodeIntegrationState(str: string): Promise<unknown> {
   return JSON.parse(new TextDecoder().decode(await bufPromise))
 }
 
+describe('long grocery lists', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it.each(['app', 'integration'])('preserves all 89 lines through the %s route', async route => {
+    const items = Array.from({ length: 89 }, (_, i) => `jabłka — ${i + 1} g (na szarlotkę)`)
+    const categories = [{ name: 'owoce', items }]
+    const text = items.join('\n')
+    const simulatedCompletionTokens = 2_000
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      expect(input).toBe('https://api.mistral.ai/v1/chat/completions')
+      const { max_tokens, messages } = JSON.parse(String(init?.body))
+      expect(messages.at(-1).content).toContain(text)
+      const content = JSON.stringify({ categories })
+      return Response.json({
+        choices: [
+          max_tokens < simulatedCompletionTokens
+            ? { finish_reason: 'length', message: { content: content.slice(0, -1) } }
+            : { finish_reason: 'stop', message: { content } },
+        ],
+      })
+    })
+
+    const cookie = await signSession(env.SESSION_HMAC_SECRET, Math.floor(Date.now() / 1000))
+    const request =
+      route === 'app'
+        ? new Request('https://example.com/api/categorize', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Origin: 'https://example.com',
+              Cookie: `lazy_list_session=${cookie}`,
+            },
+            body: JSON.stringify({ text }),
+          })
+        : new Request(
+            `https://example.com/api/integrations/categorize?mode=redirect&text=${encodeURIComponent(text)}`,
+          )
+
+    const res = await worker.fetch(
+      request,
+      { ...env, POSTHOG_KEY: undefined },
+      createExecutionContext(),
+    )
+    if (route === 'app') {
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual({ categories })
+    } else {
+      expect(res.status).toBe(302)
+      const state = new URL(res.headers.get('Location')!).searchParams.get('state')!
+      const shared = await decodeIntegrationState(state)
+      expect(shared).toMatchObject({
+        categories: [{ name: 'owoce', items: items.map(name => ({ name, checked: false })) }],
+      })
+    }
+  })
+})
+
 describe('POST /api/session', () => {
   it('returns 403 when Origin does not match request URL origin', async () => {
     const res = await SELF.fetch('https://example.com/api/session', {
@@ -91,7 +148,13 @@ describe('POST /api/categorize', () => {
 
         if (url.includes('api.mistral.ai')) {
           // Simulate the AI upstream failing, driving categorize() into its 'upstream' branch.
-          return new Response('upstream down', { status: 500 })
+          return new Response('upstream down', {
+            status: 500,
+            headers: {
+              'x-kong-request-id': 'invalid request ID',
+              'x-request-id': 'mistral-upstream-500',
+            },
+          })
         }
 
         if (url.endsWith('/i/v0/e')) {
@@ -133,6 +196,8 @@ describe('POST /api/categorize', () => {
           status: 502,
           code: 'upstream-error',
           reason: 'upstream',
+          mistral_status: 500,
+          mistral_request_id: 'mistral-upstream-500',
         },
       })
     })
@@ -238,12 +303,16 @@ describe('POST /api/integrations/categorize', () => {
     expect(await res.json()).toEqual({ code: 'rate-limited' })
   })
 
-  it('returns categorize-failed without logging request text when Mistral fails', async () => {
+  it('returns categorize-failed and logs invalid JSON without including the reply', async () => {
     const posthogCalls: Array<{ body: unknown }> = []
     const originalFetch = globalThis.fetch
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = typeof input === 'string' ? input : ((input as Request).url ?? String(input))
-      if (url.includes('api.mistral.ai')) return new Response('upstream down', { status: 500 })
+      if (url.includes('api.mistral.ai')) {
+        return Response.json({
+          choices: [{ finish_reason: 'stop', message: { content: 'invalid-private-reply' } }],
+        })
+      }
       if (url.endsWith('/i/v0/e')) {
         posthogCalls.push({ body: JSON.parse(String(init?.body)) })
         return new Response(null, { status: 200 })
@@ -266,6 +335,7 @@ describe('POST /api/integrations/categorize', () => {
 
     expect(JSON.stringify(posthogCalls)).not.toContain('mleko')
     expect(JSON.stringify(posthogCalls)).not.toContain('chleb')
+    expect(JSON.stringify(posthogCalls)).not.toContain('invalid-private-reply')
     expect(posthogCalls[0].body).toMatchObject({
       event: 'worker_request_error',
       distinct_id: 'integration-test',
@@ -273,7 +343,9 @@ describe('POST /api/integrations/categorize', () => {
         route: '/api/integrations/categorize',
         status: 502,
         code: 'categorize-failed',
-        reason: 'upstream',
+        reason: 'parse',
+        mistral_status: 200,
+        mistral_finish_reason: 'stop',
       },
     })
   })
@@ -362,12 +434,19 @@ describe('GET /api/integrations/categorize', () => {
     expect(await res.json()).toEqual({ code: 'rate-limited' })
   })
 
-  it('returns categorize-failed without logging request text when Mistral fails', async () => {
+  it('returns categorize-failed and logs truncation without including request text or reply', async () => {
     const posthogCalls: Array<{ body: unknown }> = []
     const originalFetch = globalThis.fetch
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = typeof input === 'string' ? input : ((input as Request).url ?? String(input))
-      if (url.includes('api.mistral.ai')) return new Response('upstream down', { status: 500 })
+      if (url.includes('api.mistral.ai')) {
+        return Response.json(
+          {
+            choices: [{ finish_reason: 'length', message: { content: 'truncated-private-reply' } }],
+          },
+          { headers: { 'x-kong-request-id': 'mistral-truncated-200' } },
+        )
+      }
       if (url.endsWith('/i/v0/e')) {
         posthogCalls.push({ body: JSON.parse(String(init?.body)) })
         return new Response(null, { status: 200 })
@@ -391,6 +470,7 @@ describe('GET /api/integrations/categorize', () => {
 
     expect(JSON.stringify(posthogCalls)).not.toContain('mleko')
     expect(JSON.stringify(posthogCalls)).not.toContain('chleb')
+    expect(JSON.stringify(posthogCalls)).not.toContain('truncated-private-reply')
     expect(posthogCalls[0].body).toMatchObject({
       event: 'worker_request_error',
       distinct_id: 'integration-get-test',
@@ -398,7 +478,10 @@ describe('GET /api/integrations/categorize', () => {
         route: '/api/integrations/categorize',
         status: 502,
         code: 'categorize-failed',
-        reason: 'upstream',
+        reason: 'truncated',
+        mistral_status: 200,
+        mistral_finish_reason: 'length',
+        mistral_request_id: 'mistral-truncated-200',
       },
     })
   })
